@@ -1,0 +1,10 @@
+#ifndef TESTRANDOM_H
+#define TESTRANDOM_H
+
+// TESTING FUNCTIONS: RANDOM NUMBERS
+void TestRandomNumberFacilities(){
+  // TEST RANDOM NUMBER GENERATORS
+  
+}
+
+#endif //TESTRANDOM_CPP
