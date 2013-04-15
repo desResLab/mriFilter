@@ -18,10 +18,8 @@
 #include "mriCoordItem.h"
 #include "mriStreamline.h"
 
-
 // MRI UTILITIES
 namespace MRIUtils{
-  
   // GLOBAL VARIABLE FOR GENERATION
   //static boost::random::mt19937 intGen;
   //static boost::random::mt19937 realGen;
@@ -285,13 +283,13 @@ inline void PrintStreamlinesToVTK(std::vector<MRIStreamline*> streamlines,std::s
 
   // Eval the total Number Of Points
   int totalSLPoints = 0;
-  for (int loopA=0;loopA<streamlines.size();loopA++){
+  for (unsigned int loopA=0;loopA<streamlines.size();loopA++){
     totalSLPoints += streamlines[loopA]->totalPoints;
   }
   // Write Point Header
   fprintf(outFile,"POINTS %d float\n",totalSLPoints);
   // Write Point Coordinates
-  for (int loopA=0;loopA<streamlines.size();loopA++){
+  for (unsigned int loopA=0;loopA<streamlines.size();loopA++){
     for (int loopB=0;loopB<streamlines[loopA]->totalPoints;loopB++){
       fprintf(outFile,"%e %e %e\n",streamlines[loopA]->xCoords[loopB],streamlines[loopA]->yCoords[loopB],streamlines[loopA]->zCoords[loopB]);
     }
@@ -302,7 +300,7 @@ inline void PrintStreamlinesToVTK(std::vector<MRIStreamline*> streamlines,std::s
 
   // Write Cells Definition
   int nodeCount =0;
-  for (int loopA=0;loopA<streamlines.size();loopA++){
+  for (unsigned int loopA=0;loopA<streamlines.size();loopA++){
     fprintf(outFile,"%d ",streamlines[loopA]->totalPoints);
     for (int loopB=0;loopB<streamlines[loopA]->totalPoints;loopB++){
       fprintf(outFile,"%d ",nodeCount);
@@ -313,12 +311,9 @@ inline void PrintStreamlinesToVTK(std::vector<MRIStreamline*> streamlines,std::s
 
   // Write Cells Types Header
   fprintf(outFile,"CELL_TYPES %d\n",streamlines.size());
-  for (int loopA=0;loopA<streamlines.size();loopA++){
+  for (unsigned int loopA=0;loopA<streamlines.size();loopA++){
     fprintf(outFile,"4\n");
   }
-  // Close Output file
-  fclose(outFile);
-}
 
 }
 

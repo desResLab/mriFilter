@@ -637,17 +637,21 @@ void MRIScan::EvalStreamLineStatistics(MRIDirection dir, MRIStreamlineOptions &o
 }
 
 // Print StreamLines To File
-void MRIStreamline::PrintToFile(std::string fileName){
+void MRIStreamline::AppendToFile(int index, std::string fileName){
     // Open Output File
   FILE* outFile;
   outFile = fopen(fileName.c_str(),"a");
-  // Append To File
-  // Write Header With Total Number Of Points
-  //fprintf(outFile,"Streamline Data\n");
-  //fprintf(outFile,"%d\n",totalPoints);
+  // Write vertices
   for(int loopA=0;loopA<totalPoints;loopA++){
-    fprintf(outFile,"%e %e %e\n",xCoords[loopA],yCoords[loopA],zCoords[loopA]);
+    fprintf(outFile,"%e,%e,%e,%d\n",xCoords[loopA],yCoords[loopA],zCoords[loopA],index);
   }
+  // Write line definition
+  //fprintf(outFile,"l ");
+  //for(int loopA=0;loopA<totalPoints;loopA++){
+  //  fprintf(outFile,"%d ",-totalPoints+loopA);
+  //}
+  //fprintf(outFile,"\n");
+
   // Close Output file
   fclose(outFile);
 }

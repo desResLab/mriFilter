@@ -17,7 +17,7 @@ class MRIStreamline
     bool EvalSLIntersection(MRIDirection dir, double fixedCoord, double* &intCoords);
     void EvalSLArrivalPointDistribution(int totalSL, std::vector<MRIStreamline> streamlines, MRIDirection dir, double minCoord, double maxCoord, int totalSlices, std::vector<double> sliceCenter, std::vector<double> sliceNormArrivals);
     // Printing to File
-    void PrintToFile(std::string fileName);
+    void AppendToFile(int index,std::string fileName);
 };
 
 #endif // MRISTREAMLINE_H

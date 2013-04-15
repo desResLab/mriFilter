@@ -838,7 +838,7 @@ void MRIScan::PerformPhysicsFiltering(MRIOptions Options, bool useBCFilter, bool
   // Deallocate
   delete [] resVec;
   delete [] filteredVec;
-};
+}
 
 /*{Physics Filtering}
 Function PerformPhysicsFilteringLSMR(IsBCFilter: Boolean;

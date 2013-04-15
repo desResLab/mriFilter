@@ -35,7 +35,7 @@ class MRIScan{
     // Constructor
     MRIScan(double currentTime);
     // Destructor
-    ~MRIScan(){};
+    ~MRIScan(){}
     // INFO FUNCTIONS
     std::string WriteStatistics();
     int GetTotalFaces();
