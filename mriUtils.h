@@ -16,6 +16,7 @@
 
 #include "mriConstants.h"
 #include "mriCoordItem.h"
+#include "mriStreamline.h"
 
 
 // MRI UTILITIES
@@ -265,6 +266,58 @@ inline void PrintMatrixToFile(std::string fileName, int totalRows, int totalCols
   }
 	// Close Output file
 	fclose(outFile);  
+}
+
+// ================
+// Print Streamlines to VTK
+// ================
+inline void PrintStreamlinesToVTK(std::vector<MRIStreamline*> streamlines,std::string fileName){
+  // Open Output File
+  FILE* outFile;
+  outFile = fopen(fileName.c_str(),"w");
+  // Write Header
+  fprintf(outFile,"# vtk DataFile Version 2.0\n");
+  fprintf(outFile,"Streamline Data\n");
+  fprintf(outFile,"ASCII\n");
+
+  // Writre Data Set
+  fprintf(outFile,"DATASET UNSTRUCTURED_GRID\n");
+
+  // Eval the total Number Of Points
+  int totalSLPoints = 0;
+  for (int loopA=0;loopA<streamlines.size();loopA++){
+    totalSLPoints += streamlines[loopA]->totalPoints;
+  }
+  // Write Point Header
+  fprintf(outFile,"POINTS %d float\n",totalSLPoints);
+  // Write Point Coordinates
+  for (int loopA=0;loopA<streamlines.size();loopA++){
+    for (int loopB=0;loopB<streamlines[loopA]->totalPoints;loopB++){
+      fprintf(outFile,"%e %e %e\n",streamlines[loopA]->xCoords[loopB],streamlines[loopA]->yCoords[loopB],streamlines[loopA]->zCoords[loopB]);
+    }
+  }
+
+  // Write Cells Header
+  fprintf(outFile,"CELLS %d %d\n",streamlines.size(),streamlines.size()+totalSLPoints);
+
+  // Write Cells Definition
+  int nodeCount =0;
+  for (int loopA=0;loopA<streamlines.size();loopA++){
+    fprintf(outFile,"%d ",streamlines[loopA]->totalPoints);
+    for (int loopB=0;loopB<streamlines[loopA]->totalPoints;loopB++){
+      fprintf(outFile,"%d ",nodeCount);
+      nodeCount++;
+    }
+    fprintf(outFile,"\n");
+  }
+
+  // Write Cells Types Header
+  fprintf(outFile,"CELL_TYPES %d\n",streamlines.size());
+  for (int loopA=0;loopA<streamlines.size();loopA++){
+    fprintf(outFile,"4\n");
+  }
+  // Close Output file
+  fclose(outFile);
 }
 
 }

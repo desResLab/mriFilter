@@ -51,7 +51,9 @@ bool MRIStreamline::EvalSLIntersection(MRIDirection dir, double fixedCoord, doub
     count++;
   }
   // Exit If Not Itersection has Been Found
-  if(!found) return found;
+  if(!found){
+    return found;
+  }
   // Find Ratio
   double ratio = (fixedCoord-currentCoord)/(nextCoord-currentCoord);
   // Find Versor
@@ -180,19 +182,16 @@ void MRIScan::EvalSingleStreamLine(double* start, MRIStreamlineOptions &options,
   // Loop On all Time Steps
   bool finished = false;
   int count = 0;
-  while ((!finished)&&(count<numPoints)){
-    // Update Counter
-    count++;
-    
+  while ((!finished)&&(count<numPoints-1)){
     // USE RUNGE KUTTA SECOND ORDER SCHEME
 
     // Get the Velocity At the Current Location
-    GetPointVelocity(localxCoords[count-1],localyCoords[count-1],localzCoords[count-1],eulerVel);
+    GetPointVelocity(localxCoords[count],localyCoords[count],localzCoords[count],eulerVel);
 
     // Eval New Location Based on Extracted Velocities
-    newPoint[0] = localxCoords[count-1]+options.deltaT*eulerVel[0];
-    newPoint[1] = localyCoords[count-1]+options.deltaT*eulerVel[1];
-    newPoint[2] = localzCoords[count-1]+options.deltaT*eulerVel[2];
+    newPoint[0] = localxCoords[count]+options.deltaT*eulerVel[0];
+    newPoint[1] = localyCoords[count]+options.deltaT*eulerVel[1];
+    newPoint[2] = localzCoords[count]+options.deltaT*eulerVel[2];
 
     // Check If outside the Domain
     if ((newPoint[0]<domainSizeMin[0])||(newPoint[0]>domainSizeMax[0])) finished = true;
@@ -203,9 +202,9 @@ void MRIScan::EvalSingleStreamLine(double* start, MRIStreamlineOptions &options,
     GetPointVelocity(newPoint[0],newPoint[1],newPoint[2],otherVel);
 
     // Eval New Point
-    localxCoords[count] = localxCoords[count-1]+options.deltaT*(0.5*(eulerVel[0]+otherVel[0]));
-    localyCoords[count] = localyCoords[count-1]+options.deltaT*(0.5*(eulerVel[1]+otherVel[1]));
-    localzCoords[count] = localzCoords[count-1]+options.deltaT*(0.5*(eulerVel[2]+otherVel[2]));
+    localxCoords[count+1] = localxCoords[count]+options.deltaT*(0.5*(eulerVel[0]+otherVel[0]));
+    localyCoords[count+1] = localyCoords[count]+options.deltaT*(0.5*(eulerVel[1]+otherVel[1]));
+    localzCoords[count+1] = localzCoords[count]+options.deltaT*(0.5*(eulerVel[2]+otherVel[2]));
 
     // Check If outside the Domain
     if ((localxCoords[count]<domainSizeMin[0])||(localxCoords[count]>domainSizeMax[0])) finished = true;
@@ -213,9 +212,12 @@ void MRIScan::EvalSingleStreamLine(double* start, MRIStreamlineOptions &options,
     if ((localzCoords[count]<domainSizeMin[2])||(localzCoords[count]>domainSizeMax[2])) finished = true;
 
     // Check If Increment Is Zero
-    if ((((localxCoords[count]-localxCoords[count-1])/referenceLength)<lengthTol)&&
-        (((localyCoords[count]-localyCoords[count-1])/referenceLength)<lengthTol)&&
-        (((localzCoords[count]-localzCoords[count-1])/referenceLength)<lengthTol)) finished = true;
+    if ((((localxCoords[count+1]-localxCoords[count])/referenceLength)<lengthTol)&&
+        (((localyCoords[count+1]-localyCoords[count])/referenceLength)<lengthTol)&&
+        (((localzCoords[count+1]-localzCoords[count])/referenceLength)<lengthTol)) finished = true;
+
+    // Update Counter
+    count++;
   }
   // Add positions to Streamlines
   sL->totalPoints = count;
@@ -291,8 +293,8 @@ void MRIScan::ComputeStreamlines(MRIStreamlineOptions &options, std::vector<MRIS
       // Increment SL Number
       currentSL++;
       // Eval The Starting Point of the Current Streamline
-      firstCoord =  minWindow[0] +(maxWindow[0]-minWindow[0])*((loopA-1)/(options.gridTotals[0]-1));
-      secondCoord = minWindow[1] +(maxWindow[1]-minWindow[1])*((loopB-1)/(options.gridTotals[1]-1));
+      firstCoord =  minWindow[0] +(maxWindow[0]-minWindow[0])*((loopA-1)/double(options.gridTotals[0]-1));
+      secondCoord = minWindow[1] +(maxWindow[1]-minWindow[1])*((loopB-1)/double(options.gridTotals[1]-1));
       thirdCoord =  minCoords[2] + options.distanceFactor * distance3;
       // Set the Right Plane
       switch(options.planeSlice){
@@ -336,9 +338,9 @@ void MRIScan::EvalSLArrivalPointDistribution(int totalSL, std::vector<MRIStreaml
   // Allocate
   sliceCenter.reserve(totalSlices);
   // Initialize Slice Centers
-  sliceCenter[0] = minCoord + (refLength/(2.0*totalSlices));
+  sliceCenter[0] = minCoord + (refLength/double(2.0*totalSlices));
   for(int loopA=1;loopA<totalSlices;loopA++){
-    sliceCenter[loopA] = sliceCenter[loopA-1]+(refLength/(totalSlices));
+    sliceCenter[loopA] = sliceCenter[loopA-1]+(refLength/double(totalSlices));
   }
   // Init Slice Norm Arrivals
   sliceNormArrivals.reserve(totalSlices);
@@ -349,26 +351,33 @@ void MRIScan::EvalSLArrivalPointDistribution(int totalSL, std::vector<MRIStreaml
     // Get Last Coord
     switch(dir){
       case kdirX:
-        lastCoord = streamlines[loopA]->xCoords[streamlines[loopA]->totalPoints];
+        lastCoord = streamlines[loopA]->xCoords[streamlines[loopA]->totalPoints-1];
         break;
       case kdirY:
-        lastCoord = streamlines[loopA]->yCoords[streamlines[loopA]->totalPoints];
+        lastCoord = streamlines[loopA]->yCoords[streamlines[loopA]->totalPoints-1];
         break;
       case kdirZ:
-        lastCoord = streamlines[loopA]->zCoords[streamlines[loopA]->totalPoints];
+        lastCoord = streamlines[loopA]->zCoords[streamlines[loopA]->totalPoints-1];
         break;      
     }
     for(int loopB=0;loopB<totalSlices;loopB++){
       // Count Min and Max Slices
-      sliceMin = sliceCenter[loopB] - (refLength/(2.0*totalSlices));
-      sliceMax = sliceCenter[loopB] + (refLength/(2.0*totalSlices));
+      sliceMin = sliceCenter[loopB] - (refLength/double(2.0*totalSlices));
+      sliceMax = sliceCenter[loopB] + (refLength/double(2.0*totalSlices));
       // Check Value Within Bounds
-      if (fabs(sliceMin-minCoord)>kMathZero) biggerThanMin = (lastCoord>sliceMin);
-      else biggerThanMin = (lastCoord>=sliceMin-margin);
-
-      if (fabs(sliceMax-maxCoord)>kMathZero) smallerThanMax = (lastCoord<sliceMax);
-      else smallerThanMax = (lastCoord<=sliceMax+margin);
-
+      // Min Value
+      if (fabs(sliceMin-minCoord)>kMathZero) {
+        biggerThanMin = (lastCoord>sliceMin);
+      }else{
+        biggerThanMin = (lastCoord>=sliceMin-margin);
+      }
+      // Max Value
+      if (fabs(sliceMax-maxCoord)>kMathZero){
+        smallerThanMax = (lastCoord<sliceMax);
+      }else{
+        smallerThanMax = (lastCoord<=sliceMax+margin);
+      }
+      //  Add to Counter
       if ((biggerThanMin)&&(smallerThanMax)){
         sliceNormArrivals[loopB] = sliceNormArrivals[loopB] + 1.0;
       }
@@ -381,7 +390,7 @@ void MRIScan::EvalSLArrivalPointDistribution(int totalSL, std::vector<MRIStreaml
   }
   // Check Number of Collected Streamlines
   if (totalCollected != totalSL){
-    printf("Error: Some Streamlines are Missing");
+    printf("Error: Some Streamlines are Missing!!!\n");
   }
   // Make Cumulative
   for(int loopA=0;loopA<totalSlices;loopA++){
@@ -404,7 +413,7 @@ void EvalSLTransverseDiffusionWithTime(int totalSL, std::vector<MRIStreamline> s
   double value = 0.0;
   // Init
   double refLength = maxCoord - minCoord;
-  int totalTimeSteps = (MRIUtils::round(options.totalT/options.deltaT)+1);
+  int totalTimeSteps = (MRIUtils::round(options.totalT/double(options.deltaT))+1);
   // Allocate and Initialize
   time.reserve(totalTimeSteps);
   crossDeviations.reserve(totalTimeSteps);
@@ -420,13 +429,13 @@ void EvalSLTransverseDiffusionWithTime(int totalSL, std::vector<MRIStreamline> s
     for(int loopB=0;loopB<totalSL;loopB++){
       switch(dir){
         case kdirX: 
-          lastCoord = streamlines[loopB].xCoords[streamlines[loopB].totalPoints];
+          lastCoord = streamlines[loopB].xCoords[streamlines[loopB].totalPoints-1];
           break;
         case kdirY: 
-          lastCoord = streamlines[loopB].yCoords[streamlines[loopB].totalPoints];
+          lastCoord = streamlines[loopB].yCoords[streamlines[loopB].totalPoints-1];
           break;
         case kdirZ: 
-          lastCoord = streamlines[loopB].zCoords[streamlines[loopB].totalPoints];
+          lastCoord = streamlines[loopB].zCoords[streamlines[loopB].totalPoints-1];
           break;
       }      
       if ((fabs(lastCoord-maxCoord)<1.0e-2*refLength)&&(streamlines[loopB].totalPoints>=loopA)){
@@ -479,7 +488,9 @@ void EvalSLTransverseDiffusionWithTime(int totalSL, std::vector<MRIStreamline> s
         lastCoord = streamlines[loopB].zCoords[streamlines[loopB].totalPoints];
         break;
     }              
-    if (fabs(lastCoord - maxCoord)<1.0e-2*refLength) count++;
+    if (fabs(lastCoord - maxCoord)<1.0e-2*refLength) {
+      count++;
+    }
   }
   // Message
   printf("Cross Diffusion Statistics Based On %d samples.\n",count);
@@ -519,17 +530,17 @@ void MRIScan::EvalSLTransverseDiffusionWithSpace(int totalSL, std::vector<MRIStr
     for(int loopB=0;loopB<totalSL;loopB++){
       switch(dir){
         case kdirX: 
-          lastCoord = streamlines[loopB]->xCoords[streamlines[loopB]->totalPoints];
+          lastCoord = streamlines[loopB]->xCoords[streamlines[loopB]->totalPoints-1];
           break;
         case kdirY: 
-          lastCoord = streamlines[loopB]->yCoords[streamlines[loopB]->totalPoints];
+          lastCoord = streamlines[loopB]->yCoords[streamlines[loopB]->totalPoints-1];
           break;
         case kdirZ: 
-          lastCoord = streamlines[loopB]->zCoords[streamlines[loopB]->totalPoints];
+          lastCoord = streamlines[loopB]->zCoords[streamlines[loopB]->totalPoints-1];
           break;
       }              
       if ((fabs(lastCoord-maxCoord)<1.0e-2*refLength)&&(streamlines[loopB]->totalPoints>=loopA)){
-        streamlines[loopB]->EvalSLIntersection(currentCoord,success,sLInt);
+        success = streamlines[loopB]->EvalSLIntersection(dir,currentCoord,sLInt);
         if (success){
           // Update Counter
           count++;
@@ -557,20 +568,31 @@ void MRIScan::EvalSLTransverseDiffusionWithSpace(int totalSL, std::vector<MRIStr
     }
     // Normalize
     // Av
-    if (count>0) currentAv = (currentAv/count);
-    else currentAv = 0.0;
+    if (count>0){
+      currentAv = (currentAv/count);
+    }else{
+      currentAv = 0.0;
+    }
     // Sqr Av
-    if (count>0) currentSqrAv = (currentSqrAv/count);
-    else currentSqrAv = 0.0;
+    if (count>0){
+      currentSqrAv = (currentSqrAv/count);
+    }else{
+      currentSqrAv = 0.0;
+    }
     value = currentSqrAv - currentAv*currentAv;
-    if (value>kMathZero) crossDeviations[loopA] = sqrt(value);
-    else crossDeviations[loopA] = 0.0;
+    if (value>kMathZero){
+      crossDeviations[loopA] = sqrt(value);
+    }else{
+      crossDeviations[loopA] = 0.0;
+    }
   }
   // Eval The Number of Finishing Streamlines
   count = 0;
   for(int loopB=0;loopB<totalSL;loopB++){
-    lastCoord = streamlines[loopB]->zCoords[streamlines[loopB]->totalPoints];
-    if (fabs(lastCoord-maxCoord)<1.0e-2*refLength) count++;
+    lastCoord = streamlines[loopB]->zCoords[streamlines[loopB]->totalPoints-1];
+    if (fabs(lastCoord-maxCoord)<1.0e-2*refLength){
+      count++;
+    }
   }
   // Message
   printf("Cross Diffusion Statistics Based On %d samples.\n",count);

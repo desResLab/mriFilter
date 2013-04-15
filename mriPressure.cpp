@@ -454,7 +454,7 @@ int MRIScan::GetCellFromStack(std::vector<int> &cellStack, bool* visitedCell, bo
   }
   // Look for next Cell
   bool found = false;
-  uint count = 0;
+  unsigned int count = 0;
   while ((!found)&&(count<cellStack.size())){
     found = (visitedCell[cellStack[count]])&&(AreThereNotVisitedNeighbor(cellStack[count],visitedCell));
     // Update Count

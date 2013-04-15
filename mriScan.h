@@ -44,19 +44,20 @@ class MRIScan{
     void ReadPltFile(std::string PltFileName, bool DoReorderCells);
     void ReadScanFromVOLFiles(std::string fileNameAn, std::string fileNameX, std::string fileNameY, std::string fileNameZ);
 	
-	  // WRITE FUNCTIONS
-  	void FillPLTHeader(bool hasPressureGradient, bool hasRelativePressure,std::vector<std::string> &pltHeader, bool isFirstFile);
-	  void ExportToLSDYNA(std::string LSFileName);
-	  void ExportToCSV(std::string FileName);
-	  void ExportToTECPLOT(std::string FileName, bool isFirstFile);
-	  void ExportNodesToFile(std::string FileName);
+    // WRITE FUNCTIONS
+    void FillPLTHeader(bool hasPressureGradient, bool hasRelativePressure,std::vector<std::string> &pltHeader, bool isFirstFile);
+    void ExportToLSDYNA(std::string LSFileName);
+    void ExportToCSV(std::string FileName);
+    void ExportToTECPLOT(std::string FileName, bool isFirstFile);
+    void ExportNodesToFile(std::string FileName);
     void ExportToVOL(std::string FileName);
     void FlushToFile(std::string FileName);
     void ExportVelocitiesToFile(std::string fileName, bool append);
-	
-	  // VOL DATA
-	  int  ReadBinVolFile(std::string FileName,MRIVolData & VolData);
-	  bool ValidateVOLBinData(MRIVolData &VolDataAn, MRIVolData &VolDataX, MRIVolData &VolDataY, MRIVolData &VolDataZ);
+    void ExportToVTK(std::string fileName);
+
+    // VOL DATA
+    int  ReadBinVolFile(std::string FileName,MRIVolData & VolData);
+    bool ValidateVOLBinData(MRIVolData &VolDataAn, MRIVolData &VolDataX, MRIVolData &VolDataY, MRIVolData &VolDataZ);
     void FormGlobadDataFromVOL(MRIVolData &VolDataAn, MRIVolData &VolDataX, MRIVolData &VolDataY, MRIVolData &VolDataZ);
     void CreateVolDataRecord(int volDataType, MRIVolData &VolData);
   

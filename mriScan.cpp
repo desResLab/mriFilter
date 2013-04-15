@@ -442,7 +442,7 @@ void MRIScan::ExportToTECPLOT(std::string FileName, bool isFirstFile)
   // Write Header
 	std::string LineString;
 	std::string compString = "I";
-  for(uint loopA=0;loopA<PltFileHeader.size();loopA++)
+  for(unsigned int loopA=0;loopA<PltFileHeader.size();loopA++)
   {
     boost::trim(PltFileHeader[loopA]);
     LineString = PltFileHeader[loopA];
@@ -1252,3 +1252,34 @@ void MRIScan::ScalePositions(double factor){
   domainSizeMin[1] = 0.0;
   domainSizeMin[2] = 0.0;  
 }
+
+// ===========
+// Write to VTK File
+// ===========
+void MRIScan::ExportToVTK(std::string fileName){
+  // Open Output File
+  FILE* outFile;
+  outFile = fopen(fileName.c_str(),"w");
+  // Write Header
+  fprintf(outFile,"# vtk DataFile Version 2.0\n");
+  fprintf(outFile,"Grid Point Model\n");
+  fprintf(outFile,"ASCII\n");
+
+  // Writre Data Set
+  fprintf(outFile,"DATASET STRUCTURED_POINTS\n");
+  fprintf(outFile,"DIMENSIONS %d %d %d\n",cellTotals[0],cellTotals[1],cellTotals[2]);
+  fprintf(outFile,"ORIGIN %e %e %e\n",domainSizeMin[0],domainSizeMin[1],domainSizeMin[2]);
+  fprintf(outFile,"SPACING %e %e %e\n",cellLength[0],cellLength[1],cellLength[2]);
+  fprintf(outFile,"POINT_DATA %d\n",totalCellPoints);
+
+  // Print Scalar Concentration
+  fprintf(outFile,"SCALARS Concentration float 1\n");
+  fprintf(outFile,"LOOKUP_TABLE default\n");
+  // Print Concentrations
+  for (int loopA=0;loopA<totalCellPoints;loopA++){
+    fprintf(outFile,"%e\n",cellPoints[loopA].concentration);
+  }
+  // Close File
+  fclose(outFile);
+}
+

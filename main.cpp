@@ -514,15 +514,16 @@ int main(int argc, char **argv)
     
     // Read From File
     myScan->ReadPltFile(inFileName,true);
+
+    // Export to VTK
+    myScan->ExportToVTK("Model.vtk");
     
     // Compute Streamlines
     std::vector<MRIStreamline*> streamlines;
     myScan->ComputeStreamlines(slOptions,streamlines);
     
     // Print Streamlines To File
-    for(uint loopA=0;loopA<streamlines.size();loopA++){
-      streamlines[loopA]->PrintToFile("DebugStreamlines.txt");
-    }
+    MRIUtils::PrintStreamlinesToVTK(streamlines,"DebugStreamlines.vtk");
     
     // Eval Streamlines Statistics
     myScan->EvalStreamLineStatistics(kdirZ,slOptions,streamlines);
