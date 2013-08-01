@@ -42,6 +42,7 @@
   const int kdirX = 0;
   const int kdirY = 1;
   const int kdirZ = 2;
+  const int kdirT = 3;
   // Threshold Criteria
   const int kCriterionLessThen = 0;
   const int kCriterionGreaterThen = 1;

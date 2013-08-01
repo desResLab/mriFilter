@@ -191,22 +191,34 @@ int MRIScan::GetCellNumber(MRIReal* coords){
   int j = MRIUtils::round((coords[1]-domainSizeMin[1])/cellLength[1]);
   int k = MRIUtils::round((coords[2]-domainSizeMin[2])/cellLength[2]);
   // If OutSide Project To Max Index
-  if(i>(cellTotals[0]-1)) i = (cellTotals[0]-1);
-  if(j>(cellTotals[1]-1)) j = (cellTotals[1]-1);
-  if(k>(cellTotals[2]-1)) k = (cellTotals[2]-1);
+  if(i>(cellTotals[0]-1)){
+    i = (cellTotals[0]-1);
+  }
+  if(j>(cellTotals[1]-1)){
+    j = (cellTotals[1]-1);
+  }
+  if(k>(cellTotals[2]-1)){
+    k = (cellTotals[2]-1);
+  }
   // If OutSide Project to Min Index}
-  if(i<0) i = 0;
-  if(j<0) j = 0;
-  if(k<0) k = 0;
-	// Return 
+  if(i<0){
+    i = 0;
+  }
+  if(j<0){
+    j = 0;
+  }
+  if(k<0){
+    k = 0;
+  }
+  // Return
   int index = MapCoordsToIndex(i,j,k);
-	return index;
+  return index;
 }
 
 // Compute Global Permutation
 void MRIScan::GetGlobalPermutation(int* &GlobalPerm){
-	MRIReal Norm = 0.0;
-	MRIReal VelNorm = 0.0;
+  MRIReal Norm = 0.0;
+  MRIReal VelNorm = 0.0;
   int invalidCount = 0;
   // Fill Permutation Vector
   int NumberOfZeroNorms = 0;
@@ -217,10 +229,10 @@ void MRIScan::GetGlobalPermutation(int* &GlobalPerm){
     if ((Norm<kMathZero)&&(VelNorm<kMathZero)&&(invalidCount>1)){
       GlobalPerm[loopA] = -1;
       NumberOfZeroNorms++;
-		}else{
-			GlobalPerm[loopA] = GetCellNumber(cellPoints[loopA].position);
-		}
-	}
+    }else{
+      GlobalPerm[loopA] = GetCellNumber(cellPoints[loopA].position);
+    }
+  }
 }
 
 // Get Local Adjacent Plane

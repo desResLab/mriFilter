@@ -7,6 +7,10 @@
 
 MRIStreamline::MRIStreamline()
 {
+  totalPoints = 0;
+  xCoords.clear();
+  yCoords.clear();
+  zCoords.clear();
 }
 
 MRIStreamline::~MRIStreamline()
@@ -34,7 +38,11 @@ bool MRIStreamline::EvalSLIntersection(MRIDirection dir, double fixedCoord, doub
       case kdirZ:
         currentCoord = zCoords[count];
         nextCoord = zCoords[count+1];
-        break;      
+        break;
+      case kdirT:
+        currentCoord = sqrt(xCoords[count]*xCoords[count] + yCoords[count]*yCoords[count] + zCoords[count]*zCoords[count]);
+        nextCoord = sqrt(xCoords[count+1]*xCoords[count+1] + yCoords[count+1]*yCoords[count+1] + zCoords[count+1]*zCoords[count+1]);
+        break;
     } 
     // Check If limits are met
     if (fabs(currentCoord)<kMathZero){
@@ -194,9 +202,9 @@ void MRIScan::EvalSingleStreamLine(double* start, MRIStreamlineOptions &options,
     newPoint[2] = localzCoords[count]+options.deltaT*eulerVel[2];
 
     // Check If outside the Domain
-    if ((newPoint[0]<domainSizeMin[0])||(newPoint[0]>domainSizeMax[0])) finished = true;
-    if ((newPoint[1]<domainSizeMin[1])||(newPoint[1]>domainSizeMax[1])) finished = true;
-    if ((newPoint[2]<domainSizeMin[2])||(newPoint[2]>domainSizeMax[2])) finished = true;
+    if ((newPoint[0]<options.minBoxCoords[0])||(newPoint[0]>options.maxBoxCoords[0])) finished = true;
+    if ((newPoint[1]<options.minBoxCoords[1])||(newPoint[1]>options.maxBoxCoords[1])) finished = true;
+    if ((newPoint[2]<options.minBoxCoords[2])||(newPoint[2]>options.maxBoxCoords[2])) finished = true;
 
     // Eval Velocities at New Location
     GetPointVelocity(newPoint[0],newPoint[1],newPoint[2],otherVel);
@@ -207,9 +215,9 @@ void MRIScan::EvalSingleStreamLine(double* start, MRIStreamlineOptions &options,
     localzCoords[count+1] = localzCoords[count]+options.deltaT*(0.5*(eulerVel[2]+otherVel[2]));
 
     // Check If outside the Domain
-    if ((localxCoords[count]<domainSizeMin[0])||(localxCoords[count]>domainSizeMax[0])) finished = true;
-    if ((localyCoords[count]<domainSizeMin[1])||(localyCoords[count]>domainSizeMax[1])) finished = true;
-    if ((localzCoords[count]<domainSizeMin[2])||(localzCoords[count]>domainSizeMax[2])) finished = true;
+    if ((localxCoords[count]<options.minBoxCoords[0])||(localxCoords[count]>options.maxBoxCoords[0])) finished = true;
+    if ((localyCoords[count]<options.minBoxCoords[1])||(localyCoords[count]>options.maxBoxCoords[1])) finished = true;
+    if ((localzCoords[count]<options.minBoxCoords[2])||(localzCoords[count]>options.maxBoxCoords[2])) finished = true;
 
     // Check If Increment Is Zero
     if ((((localxCoords[count+1]-localxCoords[count])/referenceLength)<lengthTol)&&
@@ -236,55 +244,61 @@ void MRIScan::EvalSingleStreamLine(double* start, MRIStreamlineOptions &options,
 }
 
 // Recover MaxMin Coords
-void MRIScan::RecoverPlaneMaxMinCoords(MRIPlane plane, double* minCoords, double* maxCoords){
+void RecoverPlaneMaxMinCoords(int plane, MRIStreamlineOptions options, double* minCoords, double* maxCoords){
   switch(plane){
     case kPlaneXY:
-      minCoords[0] = domainSizeMin[0];
-      minCoords[1] = domainSizeMin[1];
-      minCoords[2] = domainSizeMin[2];
-      maxCoords[0] = domainSizeMax[0];
-      maxCoords[1] = domainSizeMax[1];
-      maxCoords[2] = domainSizeMax[2];
+      minCoords[0] = options.minBoxCoords[0];
+      minCoords[1] = options.minBoxCoords[1];
+      minCoords[2] = options.minBoxCoords[2];
+      maxCoords[0] = options.maxBoxCoords[0];
+      maxCoords[1] = options.maxBoxCoords[1];
+      maxCoords[2] = options.maxBoxCoords[2];
       break;
     case kPlaneYZ:
-      minCoords[0] = domainSizeMin[1];
-      minCoords[1] = domainSizeMin[2];
-      minCoords[2] = domainSizeMin[0];
-      maxCoords[0] = domainSizeMax[1];
-      maxCoords[1] = domainSizeMax[2];
-      maxCoords[2] = domainSizeMax[0];
+      minCoords[0] = options.minBoxCoords[1];
+      minCoords[1] = options.minBoxCoords[2];
+      minCoords[2] = options.minBoxCoords[0];
+      maxCoords[0] = options.maxBoxCoords[1];
+      maxCoords[1] = options.maxBoxCoords[2];
+      maxCoords[2] = options.maxBoxCoords[0];
       break;
     case kPlaneZX:
-      minCoords[0] = domainSizeMin[2];
-      minCoords[1] = domainSizeMin[0];
-      minCoords[2] = domainSizeMin[1];
-      maxCoords[0] = domainSizeMax[2];
-      maxCoords[1] = domainSizeMax[0];
-      maxCoords[2] = domainSizeMax[1];
+      minCoords[0] = options.minBoxCoords[2];
+      minCoords[1] = options.minBoxCoords[0];
+      minCoords[2] = options.minBoxCoords[1];
+      maxCoords[0] = options.minBoxCoords[2];
+      maxCoords[1] = options.minBoxCoords[0];
+      maxCoords[2] = options.minBoxCoords[1];
       break;
   }
 }
 
 // COMPUTE STREAMLINES
-void MRIScan::ComputeStreamlines(MRIStreamlineOptions &options, std::vector<MRIStreamline*> &streamlines){
+void MRIScan::ComputeStreamlines(std::string outName, MRIStreamlineOptions &options, std::vector<MRIStreamline*> &streamlines){
+  // Open File for Point Coords
+  FILE* outFile;
+  outFile = fopen(outName.c_str(),"w");
   // Init
-  double minCoords[3] = {0.0};
-  double maxCoords[3] = {0.0};
+  double minCoords[3];
+  double maxCoords[3];
   double minWindow[2] = {0.0};
   double maxWindow[2] = {0.0};
   double start[3] = {0.0};
   double firstCoord = 0.0;
   double secondCoord = 0.0;
   double thirdCoord = 0.0;
-  // Compute Streamlines
-  //streamlines.reserve(options.gridTotals[0]*options.gridTotals[1]+1);
   // Get Min and Max Coords
-  RecoverPlaneMaxMinCoords(options.planeSlice,minCoords,maxCoords);
-  // Get Max and Min Window
-  minWindow[0] = minCoords[0] + options.minCoordFactor[0] * (maxCoords[0]-minCoords[0]);
-  minWindow[1] = minCoords[1] + options.minCoordFactor[1] * (maxCoords[1]-minCoords[1]);
-  maxWindow[0] = maxCoords[0] - options.minCoordFactor[0] * (maxCoords[0]-minCoords[0]);
-  maxWindow[1] = maxCoords[1] - options.minCoordFactor[1] * (maxCoords[1]-minCoords[1]);
+  RecoverPlaneMaxMinCoords(options.planeSlice,options,minCoords,maxCoords);
+  // Get Max and Min Window for Grid: 5% Smaller
+  // 24 - 0.727273
+  double marginFactor = 24.0/33.0;
+  double margin0 = 0.5*(1.0-marginFactor)*(maxCoords[0]-minCoords[0]);
+  double margin1 = 0.5*(1.0-marginFactor)*(maxCoords[1]-minCoords[1]);
+  // Set Window Size
+  minWindow[0] = minCoords[0] + margin0;
+  minWindow[1] = minCoords[1] + margin1;
+  maxWindow[0] = maxCoords[0] - margin0;
+  maxWindow[1] = maxCoords[1] - margin1;
   double distance3 = (maxCoords[2] - minCoords[2]);
   // Initialize Streamline
   int currentSL = 0;
@@ -295,7 +309,7 @@ void MRIScan::ComputeStreamlines(MRIStreamlineOptions &options, std::vector<MRIS
       // Eval The Starting Point of the Current Streamline
       firstCoord =  minWindow[0] +(maxWindow[0]-minWindow[0])*((loopA-1)/double(options.gridTotals[0]-1));
       secondCoord = minWindow[1] +(maxWindow[1]-minWindow[1])*((loopB-1)/double(options.gridTotals[1]-1));
-      thirdCoord =  minCoords[2] + options.distanceFactor * distance3;
+      thirdCoord =  minCoords[2];
       // Set the Right Plane
       switch(options.planeSlice){
         case kPlaneXY:
@@ -314,12 +328,16 @@ void MRIScan::ComputeStreamlines(MRIStreamlineOptions &options, std::vector<MRIS
           start[2] = firstCoord;
           break;
       }
-      // Eval Streamline  
+      // Write Starting Point To File
+      fprintf(outFile,"%e %e %e\n",start[0],start[1],start[2]);
+      // Eval Streamline
       MRIStreamline* newSL = new MRIStreamline;
       EvalSingleStreamLine(start,options,newSL);
       streamlines.push_back(newSL);
     }
   }
+  // Close Output file
+  fclose(outFile);
 }
 
 // Eval Arrival Point Statistics
@@ -375,7 +393,7 @@ void MRIScan::EvalSLArrivalPointDistribution(int totalSL, std::vector<MRIStreaml
       if (fabs(sliceMax-maxCoord)>kMathZero){
         smallerThanMax = (lastCoord<sliceMax);
       }else{
-        smallerThanMax = (lastCoord<=sliceMax+margin);
+        smallerThanMax = true;
       }
       //  Add to Counter
       if ((biggerThanMin)&&(smallerThanMax)){
@@ -539,7 +557,7 @@ void MRIScan::EvalSLTransverseDiffusionWithSpace(int totalSL, std::vector<MRIStr
           lastCoord = streamlines[loopB]->zCoords[streamlines[loopB]->totalPoints-1];
           break;
       }              
-      if ((fabs(lastCoord-maxCoord)<1.0e-2*refLength)&&(streamlines[loopB]->totalPoints>=loopA)){
+      if ((lastCoord-maxCoord)>-1.0e-2*refLength){
         success = streamlines[loopB]->EvalSLIntersection(dir,currentCoord,sLInt);
         if (success){
           // Update Counter
@@ -559,7 +577,9 @@ void MRIScan::EvalSLTransverseDiffusionWithSpace(int totalSL, std::vector<MRIStr
               yDiff = sLInt[1]-streamlines[loopB]->yCoords[0];
               break;
           }              
-          dist = sqrt(xDiff*xDiff+yDiff*yDiff);
+          //dist = sqrt(xDiff*xDiff+yDiff*yDiff);
+          //dist = fabs(xDiff);
+          dist = fabs(yDiff);
           // Aggiungi
           currentAv = currentAv + dist;
           currentSqrAv = currentSqrAv + dist*dist;
@@ -569,13 +589,13 @@ void MRIScan::EvalSLTransverseDiffusionWithSpace(int totalSL, std::vector<MRIStr
     // Normalize
     // Av
     if (count>0){
-      currentAv = (currentAv/count);
+      currentAv = (currentAv/double(count));
     }else{
       currentAv = 0.0;
     }
     // Sqr Av
     if (count>0){
-      currentSqrAv = (currentSqrAv/count);
+      currentSqrAv = (currentSqrAv/double(count));
     }else{
       currentSqrAv = 0.0;
     }
@@ -590,7 +610,7 @@ void MRIScan::EvalSLTransverseDiffusionWithSpace(int totalSL, std::vector<MRIStr
   count = 0;
   for(int loopB=0;loopB<totalSL;loopB++){
     lastCoord = streamlines[loopB]->zCoords[streamlines[loopB]->totalPoints-1];
-    if (fabs(lastCoord-maxCoord)<1.0e-2*refLength){
+    if ((lastCoord-maxCoord)>-1.0e-2*refLength){
       count++;
     }
   }
@@ -599,7 +619,7 @@ void MRIScan::EvalSLTransverseDiffusionWithSpace(int totalSL, std::vector<MRIStr
 }
 
 // EVAL STREAMLINES STATISTICS
-void MRIScan::EvalStreamLineStatistics(MRIDirection dir, MRIStreamlineOptions &options, std::vector<MRIStreamline*> &streamlines){
+void MRIScan::EvalStreamLineStatistics(std::string outName, MRIDirection dir, MRIStreamlineOptions &options, std::vector<MRIStreamline*> &streamlines){
   double maxCoord = 0.0;
   double minCoord = 0.0;
   std::vector<double> sliceCenter;
@@ -611,29 +631,34 @@ void MRIScan::EvalStreamLineStatistics(MRIDirection dir, MRIStreamlineOptions &o
   // Check The Direction
   switch(dir){
     case kdirX:
-      maxCoord = domainSizeMax[0];
-      minCoord = domainSizeMin[0];
+      maxCoord = options.maxBoxCoords[0];
+      minCoord = options.minBoxCoords[0];
       break;
     case kdirY:
-      maxCoord = domainSizeMax[1];
-      minCoord = domainSizeMin[1];
+      maxCoord = options.maxBoxCoords[1];
+      minCoord = options.minBoxCoords[1];
       break;    
     case kdirZ:
-      maxCoord = domainSizeMax[2];
-      minCoord = domainSizeMin[2];
+      maxCoord = options.maxBoxCoords[2];
+      minCoord = options.minBoxCoords[2];
       break;
   }
   // SET PARAMETERS
   int totalTimeSteps = (MRIUtils::round(options.totalT/options.deltaT)+1);
   int totalSlices = 50;
+  // Write Message
+  WriteSchMessage(std::string("\n"));
+  WriteSchMessage(std::string("Evaluating Streamlines arrival Points...\n"));
   // Arrival Point Distribution
   EvalSLArrivalPointDistribution(totalSL,streamlines,dir,minCoord,maxCoord,totalSlices,sliceCenter,sliceNormArrivals);
   // Write To File
-  MRIUtils::WriteGraphToFile("SLArrivals.dat",totalSlices,sliceCenter,sliceNormArrivals);
+  MRIUtils::WriteGraphToFile(outName+"_SLArrivals.dat",totalSlices,sliceCenter,sliceNormArrivals);
+  // Write Message
+  WriteSchMessage(std::string("Evaluating Streamlines Cross Diffusion...\n"));
   // Transverse Diffusion
   EvalSLTransverseDiffusionWithSpace(totalSL,streamlines,dir,minCoord,maxCoord,totalTimeSteps,time,crossDeviations);
   // Write To File
-   MRIUtils::WriteGraphToFile("CrossDeviation.dat",totalTimeSteps,time,crossDeviations);
+   MRIUtils::WriteGraphToFile(outName+"_CrossDeviation.dat",totalTimeSteps,time,crossDeviations);
 }
 
 // Print StreamLines To File

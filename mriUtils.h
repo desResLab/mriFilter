@@ -6,8 +6,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <iostream>
+#include <fstream>
 #include <sstream>
 #include <vector>
+// String Utilities
+#include <boost/algorithm/string.hpp>
 // Random Number Generator
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
@@ -17,6 +21,7 @@
 #include "mriConstants.h"
 #include "mriCoordItem.h"
 #include "mriStreamline.h"
+#include "schMessages.h"
 
 // MRI UTILITIES
 namespace MRIUtils{
@@ -266,10 +271,13 @@ inline void PrintMatrixToFile(std::string fileName, int totalRows, int totalCols
 	fclose(outFile);  
 }
 
-// ================
+// ========================
 // Print Streamlines to VTK
-// ================
+// ========================
 inline void PrintStreamlinesToVTK(std::vector<MRIStreamline*> streamlines,std::string fileName){
+  // Write Message
+  WriteSchMessage(std::string("\n"));
+  WriteSchMessage(std::string("Writing Streamlines to VTK file...\n"));
   // Open Output File
   FILE* outFile;
   outFile = fopen(fileName.c_str(),"w");
@@ -296,7 +304,7 @@ inline void PrintStreamlinesToVTK(std::vector<MRIStreamline*> streamlines,std::s
   }
 
   // Write Cells Header
-  fprintf(outFile,"CELLS %d %d\n",streamlines.size(),streamlines.size()+totalSLPoints);
+  fprintf(outFile,"CELLS %d %d\n",(int)streamlines.size(),(int)(streamlines.size()+totalSLPoints));
 
   // Write Cells Definition
   int nodeCount =0;
@@ -310,10 +318,134 @@ inline void PrintStreamlinesToVTK(std::vector<MRIStreamline*> streamlines,std::s
   }
 
   // Write Cells Types Header
-  fprintf(outFile,"CELL_TYPES %d\n",streamlines.size());
+  fprintf(outFile,"CELL_TYPES %d\n",(int)streamlines.size());
   for (unsigned int loopA=0;loopA<streamlines.size();loopA++){
     fprintf(outFile,"4\n");
   }
+
+}
+
+// ========================
+// Print Streamlines to VTK
+// ========================
+inline void ReadStreamlinesFromLegacyVTK(std::string fileName, std::vector<MRIStreamline*> &streamlines){
+  // Write Message
+  WriteSchMessage(std::string("\n"));
+  WriteSchMessage(std::string("Reading Streamlines from file...\n"));
+  // Declare input File
+  std::ifstream infile;
+  infile.open(fileName);
+
+  // Read Data From File
+  std::string buffer;
+  std::vector<std::string> tokenizedString;
+  std::vector<double> xCoords;
+  std::vector<double> yCoords;
+  std::vector<double> zCoords;
+  std::vector<int> idx;
+
+  // Read Points
+  bool doReadPoints = false;
+  bool doReadLines = false;
+  int totPoints = 0;
+  int totLines = 0;
+  while (std::getline(infile,buffer)){
+    // Trim String
+    boost::trim(buffer);
+    // Tokenize String
+    boost::split(tokenizedString, buffer, boost::is_any_of(" ,"), boost::token_compress_on);
+
+    // Parse tokenized String
+    if (boost::to_upper_copy(tokenizedString[0]) == std::string("POINTS")){
+      // Get total number of points
+      totPoints = atoi(tokenizedString[1].c_str());
+      // Activate flags
+      doReadPoints = true;
+    }else if (boost::to_upper_copy(tokenizedString[0]) == std::string("LINES")){
+      // Get total number of Lines
+      totLines = atoi(tokenizedString[1].c_str());
+      // Activate flags
+      doReadLines = true;
+    }
+
+    // Read Nodes
+    int numPointsReadInLine = 0;
+    if(doReadPoints){
+      // Write Message
+      WriteSchMessage(std::string("Reading Streamlines Points...\n"));
+      int readPoints = 0;
+      while(readPoints<totPoints){
+        // Read line in input File
+        std::getline(infile,buffer);
+        // Trim String
+        boost::trim(buffer);
+        // Tokenize String
+        boost::split(tokenizedString, buffer, boost::is_any_of(" ,"), boost::token_compress_on);
+        // Count number of points read
+        numPointsReadInLine = floor(tokenizedString.size()/3.0);
+        // Increment Counter
+        readPoints += numPointsReadInLine;
+        // Add Points to list
+        for(int loopA=0;loopA<numPointsReadInLine;loopA++){
+          xCoords.push_back(atof(tokenizedString[loopA*3].c_str()));
+          yCoords.push_back(atof(tokenizedString[loopA*3+1].c_str()));
+          zCoords.push_back(atof(tokenizedString[loopA*3+2].c_str()));
+        }
+      }
+      // Reset flag
+      doReadPoints = false;
+    }
+
+    // Read Lines
+    if(doReadLines){
+      // Write Message
+      WriteSchMessage(std::string("Reading Streamlines Lines...\n"));
+      int readLines = 0;
+      while(readLines<totLines){
+        // Clear Container
+        idx.clear();
+        // Read line in input File
+        std::getline(infile,buffer);
+        // Trim String
+        boost::trim(buffer);
+        // Tokenize String
+        boost::split(tokenizedString, buffer, boost::is_any_of(" ,"), boost::token_compress_on);
+        // Create New Streamline
+        MRIStreamline* sl = new MRIStreamline();
+        // Add Points to list
+        for(unsigned int loopA=1;loopA<tokenizedString.size();loopA++){
+          sl->totalPoints++;
+          sl->xCoords.push_back(xCoords[atoi(tokenizedString[loopA].c_str())]);
+          sl->yCoords.push_back(yCoords[atoi(tokenizedString[loopA].c_str())]);
+          sl->zCoords.push_back(zCoords[atoi(tokenizedString[loopA].c_str())]);
+        }
+        streamlines.push_back(sl);
+        // Update Lines Count
+        readLines++;
+      }
+      // Reset flag
+      doReadLines = false;
+    }
+  }
+  // Close File
+  infile.close();
+}
+
+// ==================
+// Read List of Files
+// ==================
+inline void ReadFileList(std::string listName, std::vector<std::string> &fileList){
+  std::string buffer;
+  // Assign File
+  std::ifstream lFile;
+  lFile.open(listName.c_str());
+  // Loop through the File
+  while (std::getline(lFile,buffer)){
+    fileList.push_back(buffer);
+  }
+  // Close File
+  lFile.close();
+}
 
 }
 

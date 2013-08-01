@@ -51,4 +51,22 @@ class MRIStatisticsException: public MRIException{
 	  virtual const char* what() const throw() {return msg.c_str();}
 };
 
+// STATISTIC EVALUATION EXCEPTION
+class MRIExpansionException: public MRIException{
+  public:
+    MRIExpansionException(const char* m):MRIException(m){};
+    virtual ~MRIExpansionException() throw(){};
+    // Member Functions
+      virtual const char* what() const throw() {return msg.c_str();}
+};
+
+// STATISTIC EVALUATION EXCEPTION
+class MRIImageException: public MRIException{
+  public:
+    MRIImageException(const char* m):MRIException(m){};
+    virtual ~MRIImageException() throw(){};
+    // Member Functions
+      virtual const char* what() const throw() {return msg.c_str();}
+};
+
 #endif // MRIEXCEPTION_H

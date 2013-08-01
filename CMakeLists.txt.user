@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by Qt Creator 2.6.2, 2013-04-15T08:37:44. -->
+<!-- Written by Qt Creator 2.6.2, 2013-07-09T20:52:25. -->
 <qtcreator>
  <data>
   <variable>ProjectExplorer.Project.ActiveTarget</variable>
@@ -13,13 +13,13 @@
    <value type="bool" key="EditorConfiguration.AutoSpacesForTabs">false</value>
    <value type="bool" key="EditorConfiguration.CamelCaseNavigation">true</value>
    <valuemap type="QVariantMap" key="EditorConfiguration.CodeStyle.0">
-    <value type="QByteArray" key="language">Cpp</value>
+    <value type="QString" key="language">Cpp</value>
     <valuemap type="QVariantMap" key="value">
      <value type="QString" key="CurrentPreferences">CppGlobal</value>
     </valuemap>
    </valuemap>
    <valuemap type="QVariantMap" key="EditorConfiguration.CodeStyle.1">
-    <value type="QByteArray" key="language">QmlJS</value>
+    <value type="QString" key="language">QmlJS</value>
     <valuemap type="QVariantMap" key="value">
      <value type="QString" key="CurrentPreferences">QmlJSGlobal</value>
     </valuemap>
@@ -51,21 +51,19 @@
  <data>
   <variable>ProjectExplorer.Project.Target.0</variable>
   <valuemap type="QVariantMap">
-   <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">Laptiop</value>
-   <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName">Laptiop</value>
-   <value type="QByteArray" key="ProjectExplorer.ProjectConfiguration.Id">{0d3a0af1-5eb7-459f-8703-ff62447a18fb}</value>
+   <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">Desktop Qt 5.0.1 GCC 64bit</value>
+   <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName">Desktop Qt 5.0.1 GCC 64bit</value>
+   <value type="QByteArray" key="ProjectExplorer.ProjectConfiguration.Id">qt.501.gcc_64.essentials_kit</value>
    <value type="int" key="ProjectExplorer.Target.ActiveBuildConfiguration">0</value>
    <value type="int" key="ProjectExplorer.Target.ActiveDeployConfiguration">0</value>
    <value type="int" key="ProjectExplorer.Target.ActiveRunConfiguration">0</value>
    <valuemap type="QVariantMap" key="ProjectExplorer.Target.BuildConfiguration.0">
-    <value type="QString" key="CMakeProjectManager.CMakeBuildConfiguration.BuildDirectory">G:/Daniele/Sviluppo/CApps/test-build</value>
+    <value type="QString" key="CMakeProjectManager.CMakeBuildConfiguration.BuildDirectory">/home/danschi/Development/CApps/mpFilterApp-build</value>
     <value type="bool" key="CMakeProjectManager.CMakeBuildConfiguration.UseNinja">false</value>
     <valuemap type="QVariantMap" key="ProjectExplorer.BuildConfiguration.BuildStepList.0">
      <valuemap type="QVariantMap" key="ProjectExplorer.BuildStepList.Step.0">
       <value type="QString" key="CMakeProjectManager.MakeStep.AdditionalArguments"></value>
-      <valuelist type="QVariantList" key="CMakeProjectManager.MakeStep.BuildTargets">
-       <value type="QString">all</value>
-      </valuelist>
+      <valuelist type="QVariantList" key="CMakeProjectManager.MakeStep.BuildTargets"/>
       <value type="bool" key="CMakeProjectManager.MakeStep.Clean">false</value>
       <value type="bool" key="CMakeProjectManager.MakeStep.UseNinja">false</value>
       <value type="bool" key="ProjectExplorer.BuildStep.Enabled">true</value>
@@ -96,10 +94,7 @@
     </valuemap>
     <value type="int" key="ProjectExplorer.BuildConfiguration.BuildStepListCount">2</value>
     <value type="bool" key="ProjectExplorer.BuildConfiguration.ClearSystemEnvironment">false</value>
-    <valuelist type="QVariantList" key="ProjectExplorer.BuildConfiguration.UserEnvironmentChanges">
-     <value type="QString">LD_LIBRARY_PATH=G:\Daniele\Sviluppo\DelphiApps\CSLab\Debug\Win32;C:\Windows\System32;G:\Daniele\Sviluppo\CApps\boost_1_52_0</value>
-     <value type="QString">PATH=C:\MinGW64\bin;C:\Program Files (x86)\Google\Chrome\Application;C:\Program Files\Tecplot\Tec360 2012R1\Bin;C:\Program Files\Common Files\Microsoft Shared\Windows Live;C:\Program Files (x86)\Common Files\Microsoft Shared\Windows Live;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\ATI Technologies\ATI.ACE\Core-Static;C:\Program Files\Broadcom\Broadcom 802.11\Driver;C:\Program Files\WIDCOMM\Bluetooth Software\;C:\Program Files\WIDCOMM\Bluetooth Software\syswow64;C:\Program Files (x86)\Microsoft SQL Server\100\Tools\Binn\;C:\Program Files (x86)\Microsoft SQL Server\100\DTS\Binn\;C:\Program Files (x86)\Straus7 R24\Bin;C:\Program Files\texlive\2010\bin\win32;C:\Program Files (x86)\Windows Live\Shared;C:\Program Files\nodejs\;C:\MinGW32\bin;C:\Program Files\doxygen\bin;C:\Program Files (x86)\Pandoc\bin;C:\MinGW64\bin;C:\Program Files\MATLAB\R2011b\runtime\win64;C:\Program Files\MATLAB\R2011b\bin;C:\Program Files (x86)\QuickTime\QTSystem\;C:\Program Files (x86)\CollabNet\Subversion Client;C:\Users\Public\Documents\RAD Studio\8.0\Bpl;C:\Program Files (x86)\Android\android-sdk-windows\tools;C:\Program Files (x86)\Android\android-sdk-windows\platform-tools;G:\Daniele\Sviluppo\DelphiApps\PaloBBApp;C:\MinGW\bin;C:\MinGW\msys\1.0\bin;G:\Daniele\Sviluppo\DelphiApps\LPSolve\LPSolve;C:\Program Files\Python26;C:\Program Files (x86)\PtoC;C:\Program Files\Dakota\bin;C:\Program Files\7-Zip;C:\Users\Daniele\AppData\Roaming\npm\;C:\Program Files\mongodb-win32-x86_64-2.2.0\bin;G:\Daniele\Sviluppo\CApps\boost_1_52_0</value>
-    </valuelist>
+    <valuelist type="QVariantList" key="ProjectExplorer.BuildConfiguration.UserEnvironmentChanges"/>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">all</value>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName"></value>
     <value type="QByteArray" key="ProjectExplorer.ProjectConfiguration.Id">CMakeProjectManager.CMakeBuildConfiguration</value>
@@ -152,7 +147,7 @@
     </valuelist>
     <value type="int" key="CMakeProjectManager.BaseEnvironmentBase">2</value>
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguation.Title">mpFilterApp</value>
-    <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.Arguments">-streamLines TestInput_02.dat test.out</value>
+    <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.Arguments">-dico dicomIn.dat example</value>
     <value type="bool" key="CMakeProjectManager.CMakeRunConfiguration.UseTerminal">false</value>
     <valuelist type="QVariantList" key="CMakeProjectManager.CMakeRunConfiguration.UserEnvironmentChanges"/>
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory"></value>
@@ -163,7 +158,7 @@
     <value type="bool" key="RunConfiguration.UseCppDebugger">true</value>
     <value type="bool" key="RunConfiguration.UseMultiProcess">false</value>
     <value type="bool" key="RunConfiguration.UseQmlDebugger">false</value>
-    <value type="bool" key="RunConfiguration.UseQmlDebuggerAuto">false</value>
+    <value type="bool" key="RunConfiguration.UseQmlDebuggerAuto">true</value>
    </valuemap>
    <value type="int" key="ProjectExplorer.Target.RunConfigurationCount">1</value>
   </valuemap>
@@ -174,7 +169,7 @@
  </data>
  <data>
   <variable>ProjectExplorer.Project.Updater.EnvironmentId</variable>
-  <value type="QString">{b8e7b2e2-6d0a-4e40-ac37-de44a08886e4}</value>
+  <value type="QString">{b55197cc-9022-4891-ae25-6904f676378a}</value>
  </data>
  <data>
   <variable>ProjectExplorer.Project.Updater.FileVersion</variable>

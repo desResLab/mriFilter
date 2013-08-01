@@ -10,6 +10,7 @@
 #include "mriCell.h"
 #include "mriScan.h"
 #include "mriUtils.h"
+#include "mriImagedata.h"
 #include "mriConstants.h"
 #include "mriVolData.h"
 #include "mriException.h"
@@ -202,8 +203,7 @@ void MRIScan::ReadPltFile(std::string PltFileName, bool DoReorderCells){
   // Reading Input File Message
   WriteSchMessage(std::string("Reading input file...\n"));
   
-  while (std::getline(PltFile,Buffer))
-  {
+  while (std::getline(PltFile,Buffer)){
     // Read Line
     lineCount++;
     precentProgress = (int)(((double)lineCount/(double)totalLinesInFile)*100);
@@ -217,6 +217,9 @@ void MRIScan::ReadPltFile(std::string PltFileName, bool DoReorderCells){
     // Store Local Structure
 	try
     {
+      if(ResultArray.size() != 7){
+        throw new MRIException("");
+      }
       // Coords
       LocalXCoord = atof(ResultArray[0].c_str());
       LocalYCoord = atof(ResultArray[1].c_str());
@@ -233,15 +236,14 @@ void MRIScan::ReadPltFile(std::string PltFileName, bool DoReorderCells){
       // Set Continue
       Continue = true;		
     }
-      catch (int e)
+      catch (...)
     {
       //Set Continue
       Continue = false;
-	    std::string outString = "WARNING[*] Error Reading Line: "+MRIUtils::IntToStr(lineCount)+"; Line Skipped.\n";
+      std::string outString = "WARNING[*] Error Reading Line: "+MRIUtils::IntToStr(lineCount)+"; Line Skipped.\n";
       printf("%s",outString.c_str());
     }
-    if (Continue) 
-	  {
+    if (Continue){
       // Update Limits
       // Min
       if (LocalXCoord<domainSizeMin[0]) domainSizeMin[0] = LocalXCoord;
@@ -265,7 +267,7 @@ void MRIScan::ReadPltFile(std::string PltFileName, bool DoReorderCells){
       LocalCount++;
 	  
       // Position
-	    myCellPoint.position[0] = LocalXCoord;
+      myCellPoint.position[0] = LocalXCoord;
       myCellPoint.position[1] = LocalYCoord;
       myCellPoint.position[2] = LocalZCoord;
       // Conc
@@ -275,12 +277,12 @@ void MRIScan::ReadPltFile(std::string PltFileName, bool DoReorderCells){
       myCellPoint.velocity[1] = LocalYVel;
       myCellPoint.velocity[2] = LocalZVel;
 	  
-	    // Add to Vector
-	    cellPoints.push_back(myCellPoint);
+      // Add to Vector
+      cellPoints.push_back(myCellPoint);
 
       // Set Continue
       Continue = true;
-	  }
+    }
   }
 
   // Set The Effective Number Of Data Read
@@ -342,7 +344,6 @@ void MRIScan::ReadPltFile(std::string PltFileName, bool DoReorderCells){
 // ================
 // EXPORT TO LSDYNA
 // ================
-
 void MRIScan::ExportToLSDYNA(std::string LSFileName){
   // Export to LS-DYNA
   printf("Exporting File to LSDyna...");
@@ -487,40 +488,40 @@ void MRIScan::ExportToTECPLOT(std::string FileName, bool isFirstFile)
 int MRIScan::ReadBinVolFile(std::string FileName, MRIVolData &VolData)
 {
   // Open File
-	FILE *fp = NULL;
-	fp = fopen(FileName.c_str(),"rb");
-	if (fp == NULL)
-	{
-		printf("Error: Failed to read volume  %s\n",FileName.c_str());
-		return -1;
-	}
+  FILE *fp = NULL;
+  fp = fopen(FileName.c_str(),"rb");
+  if (fp == NULL){
+    printf("Error: Failed to read volume  %s\n",FileName.c_str());
+    return -1;
+  }
   // Read Dimensions
-    int fReadRes = 0;
-    fReadRes = fread(&VolData.GridX, sizeof(int), 1, fp);
-    fReadRes = fread(&VolData.GridY, sizeof(int), 1, fp);
-    fReadRes = fread(&VolData.GridZ, sizeof(int), 1, fp);
+  int fReadRes = 0;
+  fReadRes = fread(&VolData.GridX, sizeof(int), 1, fp);
+  fReadRes = fread(&VolData.GridY, sizeof(int), 1, fp);
+  fReadRes = fread(&VolData.GridZ, sizeof(int), 1, fp);
 	
   // Read information on Space, Slice Space and Thickness
-    fReadRes = fread(&VolData.SpaceX, sizeof(float), 1, fp);
-    fReadRes = fread(&VolData.SpaceY, sizeof(float), 1, fp);
-    fReadRes = fread(&VolData.SpaceSlice, sizeof(float), 1, fp);
-    fReadRes = fread(&VolData.SpaceThick, sizeof(float), 1, fp);
-	
-	// Set the size of the voxel information
-	int	size = VolData.GridX*VolData.GridY*VolData.GridZ;
+  fReadRes = fread(&VolData.SpaceX, sizeof(float), 1, fp);
+  fReadRes = fread(&VolData.SpaceY, sizeof(float), 1, fp);
+  fReadRes = fread(&VolData.SpaceSlice, sizeof(float), 1, fp);
+  fReadRes = fread(&VolData.SpaceThick, sizeof(float), 1, fp);
+
+  // Set the size of the voxel information
+  int	size = VolData.GridX*VolData.GridY*VolData.GridZ;
 
   // Read voxel information
-	VolData.Voxels = new short[size];
-	int len = fread(VolData.Voxels,sizeof(short),size,fp);
-	if (len != size)
-	{
-		printf("Error: Failed to read enough data !\n");
-	}
+  VolData.Voxels = new short[size];
+  int len = fread(VolData.Voxels,sizeof(short),size,fp);
+  if (len != size)
+  {
+    printf("Error: Failed to read enough data !\n");
+  }
 	
   // Close File
-	fclose(fp);	
+  fclose(fp);
 
-	return 0;
+  // Return
+  return 0;
 };
 // ------------------------
 // Write Binary Volume File
@@ -606,7 +607,7 @@ void MRIScan::FormGlobadDataFromVOL(MRIVolData &VolDataAn, MRIVolData &VolDataX,
   maxVelModule = 0.0;
   // Allocate
   //cellPoints.reserve(TotalCellPoints+1);
-	double currentModule;
+  double currentModule;
   cellPoints.resize(totalCellPoints);
   for(int LoopA=0;LoopA<totalCellPoints;LoopA++)
   {
@@ -659,7 +660,6 @@ void MRIScan::FormGlobadDataFromVOL(MRIVolData &VolDataAn, MRIVolData &VolDataX,
   }
   // Write Statistics
   std::string Stats = WriteStatistics();
-	//printf(Stats.c_str());
   // Deallocate
   delete [] coords;
 };
@@ -1253,9 +1253,9 @@ void MRIScan::ScalePositions(double factor){
   domainSizeMin[2] = 0.0;  
 }
 
-// ===========
+// =================
 // Write to VTK File
-// ===========
+// =================
 void MRIScan::ExportToVTK(std::string fileName){
   // Open Output File
   FILE* outFile;
@@ -1279,7 +1279,190 @@ void MRIScan::ExportToVTK(std::string fileName){
   for (int loopA=0;loopA<totalCellPoints;loopA++){
     fprintf(outFile,"%e\n",cellPoints[loopA].concentration);
   }
+
+  //Print velocity
+  fprintf(outFile,"VECTORS Velocity float\n");
+  // Print velocity components
+  for (int loopA=0;loopA<totalCellPoints;loopA++){
+    fprintf(outFile,"%e %e %e\n",cellPoints[loopA].velocity[0],cellPoints[loopA].velocity[1],cellPoints[loopA].velocity[2]);
+  }
+
+  // Print Pressure Gradient
+  if (hasPressureGradient){
+    fprintf(outFile,"VECTORS PressureGrad float\n");
+    // Print pressure Gradient
+    for (int loopA=0;loopA<totalCellPoints;loopA++){
+      fprintf(outFile,"%e %e %e\n",cellPoints[loopA].pressGrad[0],cellPoints[loopA].pressGrad[1],cellPoints[loopA].pressGrad[2]);
+    }
+  }
+
+  // Print Relative Pressure
+  if (hasRelativePressure){
+    fprintf(outFile,"SCALARS RelPressure float 1\n");
+    fprintf(outFile,"LOOKUP_TABLE default\n");
+    // Print Relative Pressure
+    for (int loopA=0;loopA<totalCellPoints;loopA++){
+      fprintf(outFile,"%e\n",cellPoints[loopA].relPressure);
+    }
+  }
+
   // Close File
   fclose(outFile);
 }
+
+// Eval total Number of Vortices
+int MRIScan::EvalTotalVortex(){
+  // Init
+  int total = 0;
+  int totalSlices = 0;
+  int totalStars = 0;
+  // YZ Planes
+  totalSlices = cellTotals[0];
+  totalStars = (cellTotals[1]+1)*(cellTotals[2]+1);
+  total += totalSlices * totalStars;
+  // XZ Planes
+  totalSlices = cellTotals[1];
+  totalStars = (cellTotals[0]+1)*(cellTotals[2]+1);
+  total += totalSlices * totalStars;
+  // XY Planes
+  totalSlices = cellTotals[2];
+  totalStars = (cellTotals[0]+1)*(cellTotals[1]+1);
+  total += totalSlices * totalStars;
+}
+
+// ======================
+// Read List of Row Files
+// ======================
+void MRIScan::ReadRAWFileSequence(std::string fileListName){
+
+  // Init
+  MRIImageData data;
+  std::vector<std::string> fileList;
+
+  // Read File List
+  MRIUtils::ReadFileList(fileListName,fileList);
+
+  // Read the first File
+  std::string currFile = fileList[0];
+
+  // Read
+  ReadRawImage(currFile,data);
+
+  // Set Totals
+  cellTotals[0] = data.sizeX;
+  cellTotals[1] = data.sizeY;
+  cellTotals[2] = fileList.size();
+  // Set cell Lengths
+  cellLength[0] = 1.0;
+  cellLength[1] = 1.0;
+  cellLength[2] = 1.0;
+  // Set total Points
+  totalCellPoints = cellTotals[0] * cellTotals[1] * cellTotals[2];
+
+  // Intialize Cells
+  MRICell myCellPoint;
+  myCellPoint.position[0] = 0.0;
+  myCellPoint.position[1] = 0.0;
+  myCellPoint.position[2] = 0.0;
+  myCellPoint.concentration = 0.0;
+  myCellPoint.velocity[0] = 0.0;
+  myCellPoint.velocity[1] = 0.0;
+  myCellPoint.velocity[2] = 0.0;
+  // Resize: CHECK!!!
+  cellPoints.resize(totalCellPoints,myCellPoint);
+
+  // Fill Concentration with First Image Data
+  for(int loopA=0;loopA<data.sizeX*data.sizeY;loopA++){
+    cellPoints[loopA].concentration = data.rawData[loopA];
+  }
+
+  // Intialize how many cells read so far
+  int readSoFar = data.sizeX*data.sizeY;
+  // Loop through all other images
+  for(int loopA=1;loopA<fileList.size();loopA++){
+    currFile = fileList[loopA];
+    // Read
+    ReadRawImage(currFile,data);
+    // Check Consistency
+    if((data.sizeX != cellTotals[0])||(data.sizeY != cellTotals[1])){
+      throw new MRIImageException("Error: Image Sequence not Consistent!");
+    }
+    // Fill Concentration with First Image Data
+    for(int loopB=readSoFar;loopB<readSoFar + data.sizeX*data.sizeY;loopB++){
+      cellPoints[loopB].concentration = data.rawData[loopB];
+    }
+    // Increment readSoFar
+    readSoFar += data.sizeX*data.sizeY;
+  }
+}
+
+// ====================
+// Read Raw File Header
+// ====================
+void ReadRawFileHeader(int &sizeX,int &sizeY,int &numberOfBytes,FILE *fp){
+  // Read Dimensions
+  int wordCount = 0;
+  int currentByte = 0;
+  int fReadRes = 0;
+  std::string fileWord = "";
+  while(wordCount<4){
+    currentByte = 0;
+    fileWord = "";
+    while((currentByte != 10)&&(currentByte != 32)){
+      fReadRes = fread(&currentByte, 1, 1, fp);
+      if((currentByte != 10)&&(currentByte != 32)){
+        fileWord = fileWord + char(currentByte);
+      }
+    }
+    // Recover Current Word
+    if(wordCount == 1){
+      // Size X
+      sizeX = atoi(fileWord.c_str());
+    }else if (wordCount == 2){
+      // Size Y
+      sizeY = atoi(fileWord.c_str());
+    }else if (wordCount == 3){
+      // Number Of Bytes
+      numberOfBytes = atoi(fileWord.c_str());
+      numberOfBytes = (log(numberOfBytes+1)/log(2.0));
+    }
+
+    // Update Value
+    wordCount++;
+  }
+}
+
+
+// ===================
+// Read Raw Image Data
+// ===================
+int MRIScan::ReadRawImage(std::string FileName, MRIImageData &data){
+  // Open File
+  FILE *fp = NULL;
+  fp = fopen(FileName.c_str(),"rb");
+  if (fp == NULL){
+    printf("Error: Failed to read volume  %s\n",FileName.c_str());
+    return -1;
+  }
+  // Read Raw File Header
+  int numberOfBytes = 0;
+  ReadRawFileHeader(data.sizeX,data.sizeY,numberOfBytes,fp);
+
+  // Set the size of the voxel information
+  int size = data.sizeX * data.sizeY;
+
+  // Read voxel information
+  data.rawData = new short[size];
+  int len = fread(data.rawData,1,size,fp);
+  if (len != size)
+  {
+    printf("Error: Failed to read enough data !\n");
+  }
+
+  // Close File
+  fclose(fp);
+
+  // Return
+  return 0;
+};
 

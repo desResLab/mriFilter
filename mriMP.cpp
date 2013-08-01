@@ -5,6 +5,7 @@
 #include "mriUtils.h"
 #include "mriThresholdCriteria.h"
 #include "mriException.h"
+#include "mriExpansion.h"
 #include "schMessages.h"
 
 // PRINT FASE ID INDEX
@@ -31,7 +32,6 @@ void PrintResidualVector(std::string fileName, int totalFaces, double* resVec){
   }
 	// Close Output file
 	fclose(outFile);
-  
 }
 
 // ASSEMBLE STAR SHAPE
@@ -279,6 +279,19 @@ void MRIScan::ReorderCells(int* Perm){
   // Allocate a copy of the Scan: Check if necessary!!!
   std::vector<MRICell> tempCellPoints;
   tempCellPoints.reserve(totalCellPoints);
+  // Initialize
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    // Conc
+    tempCellPoints[loopA].concentration = 0.0;
+    // Vel
+    tempCellPoints[loopA].velocity[0] = 0.0;
+    tempCellPoints[loopA].velocity[1] = 0.0;
+    tempCellPoints[loopA].velocity[2] = 0.0;
+    // Pos
+    tempCellPoints[loopA].position[0] = 0.0;
+    tempCellPoints[loopA].position[1] = 0.0;
+    tempCellPoints[loopA].position[2] = 0.0;
+  }
   // Transfer
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     if(Perm[loopA]>-1){
@@ -292,22 +305,11 @@ void MRIScan::ReorderCells(int* Perm){
       tempCellPoints[Perm[loopA]].position[0] = cellPoints[loopA].position[0];
       tempCellPoints[Perm[loopA]].position[1] = cellPoints[loopA].position[1];
       tempCellPoints[Perm[loopA]].position[2] = cellPoints[loopA].position[2];
-    }else{
-      // Conc
-      tempCellPoints[Perm[loopA]].concentration = 0.0;
-      // Vel
-      tempCellPoints[Perm[loopA]].velocity[0] = 0.0;
-      tempCellPoints[Perm[loopA]].velocity[1] = 0.0;
-      tempCellPoints[Perm[loopA]].velocity[2] = 0.0;
-      // Pos
-      tempCellPoints[Perm[loopA]].position[0] = 0.0;
-      tempCellPoints[Perm[loopA]].position[1] = 0.0;
-      tempCellPoints[Perm[loopA]].position[2] = 0.0;
-		}
+    }
   }
   // Copy Back
-	double PosNorm;
-	double VelNorm;
+  double PosNorm;
+  double VelNorm;
   int invalidCount = 0;
   int* intCoords = new int[3];
   for(int loopA=0;loopA<totalCellPoints;loopA++){
@@ -729,6 +731,9 @@ void MRIScan::PerformPhysicsFiltering(MRIOptions Options, bool useBCFilter, bool
   
   WriteSchMessage("Initial Residual Norm: "+MRIUtils::FloatToStr(resNorm)+"\n");
 
+  // Initialize Expansion
+  expansion = new MRIExpansion(EvalTotalVortex());
+
   // Apply MP Filter
   bool converged = false;
   int itCount = 0;
@@ -737,6 +742,8 @@ void MRIScan::PerformPhysicsFiltering(MRIOptions Options, bool useBCFilter, bool
   bool stopIterations = false;
   // Set Tolerance
   double itTol = Options.tolerance;
+  // Initialize Component Count
+  int componentCount = 0;
   // Start Filter Loop
   while((!converged)&&(itCount<Options.maxIterations)&&(!stopIterations)){
     // Update Iteration Count
@@ -751,10 +758,17 @@ void MRIScan::PerformPhysicsFiltering(MRIOptions Options, bool useBCFilter, bool
         //PrintFaceIDIndexes("ConstantFaceIDs.txt",totalStarFaces,facesID,facesCoeffs);
         // Find Correlation
         corrCoeff = EvalCoerrelationCoefficient(resVec,totalStarFaces,facesID,facesCoeffs);
+        // Store Correlation coefficient in Expansion
+        // sistemare per BCFilter !!!
+        if(!useBCFilter){
+          expansion->constantFluxCoeff[loopB] += corrCoeff;
+        }
         // Update Residual
         UpdateResidualAndFilter(corrCoeff,totalStarFaces,facesID,facesCoeffs,resVec,filteredVec,resNorm);
       }
     }
+    // Init componentCount
+    componentCount = -1;
     for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
       // Correlate Vorticity Patterns
       switch(loopB){
@@ -776,10 +790,16 @@ void MRIScan::PerformPhysicsFiltering(MRIOptions Options, bool useBCFilter, bool
       }
       for(int loopC=0;loopC<totalSlices;loopC++){
         for(int loopD=0;loopD<totalStars;loopD++){
+          // Increment the current component
+          componentCount++;
           // Find Star Shape
           AssembleStarShape(loopB/*Current Dimension*/,loopC/*Slice*/,loopD/*Star*/,totalStarFaces,facesID,facesCoeffs);
           // Find Correlation
           corrCoeff = EvalCoerrelationCoefficient(resVec,totalStarFaces,facesID,facesCoeffs);
+          // Store Correlation coefficient in Expansion
+          if(!useBCFilter){
+            expansion->vortexCoeff[componentCount] += corrCoeff;
+          }
           // Update Residual
           UpdateResidualAndFilter(corrCoeff,totalStarFaces,facesID,facesCoeffs,resVec,filteredVec,resNorm);
         }
@@ -839,6 +859,95 @@ void MRIScan::PerformPhysicsFiltering(MRIOptions Options, bool useBCFilter, bool
   delete [] resVec;
   delete [] filteredVec;
 }
+
+
+// ======================================
+// RECONSTRUCT FLOW FROM EXPANSION COEFFS
+// ======================================
+void MRIScan::ReconstructFromExpansion(){
+
+  // Check Expansion is available
+  if(expansion == nullptr){
+    throw new MRIExpansionException("Error. Vortex Expansion not available.");
+  }
+
+  // Init
+  int totalStarFaces = 0;
+  int currFaceID = 0;
+  double corrCoeff = 0.0;
+  int totalSlices = 0;
+  int totalStars = 0;
+  std::vector<int> facesID;
+  std::vector<double> facesCoeffs;
+
+  // Build a Face Flux Array
+  int totFaces = cellTotals[0]*cellTotals[1]*(cellTotals[2]+1)+
+                 cellTotals[1]*cellTotals[2]*(cellTotals[0]+1)+
+                 cellTotals[2]*cellTotals[0]*(cellTotals[1]+1);
+
+  // Allocate and Initialize
+  double* faceFluxVec = new double[totFaces];
+  for(int loopA=0;loopA<totFaces;loopA++){
+    faceFluxVec[loopA] = 0.0;
+  }
+
+  // Assemble Constant Flux Vectors
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    // Correlate Constant Patterns
+    // Find Star Shape
+    AssembleConstantPattern(loopA/*Current Dimension*/,totalStarFaces,facesID,facesCoeffs);
+    // Find Correlation
+    corrCoeff = expansion->constantFluxCoeff[loopA];
+    // Assemble Face Flux Vector
+    for(int loopB=0;loopB<totalStarFaces;loopB++){
+      currFaceID = facesID[loopB];
+      faceFluxVec[currFaceID] += facesCoeffs[loopB] * corrCoeff;
+    }
+  }
+
+  // Init componentCount
+  int componentCount = -1;
+  for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
+    // Correlate Vorticity Patterns
+    switch(loopB){
+      case 0:
+        // YZ Planes
+        totalSlices = cellTotals[0];
+        totalStars = (cellTotals[1]+1)*(cellTotals[2]+1);
+        break;
+      case 1:
+        // XZ Planes
+        totalSlices = cellTotals[1];
+        totalStars = (cellTotals[0]+1)*(cellTotals[2]+1);
+        break;
+      case 2:
+        // XY Planes
+        totalSlices = cellTotals[2];
+        totalStars = (cellTotals[0]+1)*(cellTotals[1]+1);
+        break;
+    }
+    for(int loopC=0;loopC<totalSlices;loopC++){
+      for(int loopD=0;loopD<totalStars;loopD++){
+        // Increment the current component
+        componentCount++;
+        // Find Star Shape
+        AssembleStarShape(loopB/*Current Dimension*/,loopC/*Slice*/,loopD/*Star*/,totalStarFaces,facesID,facesCoeffs);
+        // Find Correlation
+        corrCoeff = expansion->vortexCoeff[componentCount];
+        // Store Correlation coefficient in Expansion
+        expansion->vortexCoeff[componentCount] += corrCoeff;
+        // Assemble Face Flux Vector
+        for(int loopE=0;loopE<totalStarFaces;loopE++){
+          currFaceID = facesID[loopE];
+          faceFluxVec[currFaceID] += facesCoeffs[loopE] * corrCoeff;
+        }
+      }
+    }
+  }
+  // Recover cell velocities from face fluxes
+  RecoverCellVelocitiesRT0(false,faceFluxVec);
+}
+
 
 /*{Physics Filtering}
 Function PerformPhysicsFilteringLSMR(IsBCFilter: Boolean;

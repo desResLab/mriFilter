@@ -1,27 +1,27 @@
 #ifndef MRISTREAMLINEOPTIONS_H
 #define MRISTREAMLINEOPTIONS_H
 
+#include "mriConstants.h"
+
 class MRIStreamlineOptions
 {
   public:
     // The Plane Of the Slice
     int planeSlice;
-    // The Other Coord
-    double distanceFactor;
-    // Minimim and Maximum Coord of the Slices
-    double minCoordFactor[2];
-    double maxCoordFactor[2];
+    // Use a Box to Define Streamlines
+    double minBoxCoords[3];
+    double maxBoxCoords[3];
     // Number Of Grid Points
     int gridTotals[2];
     // Time Integration Parameters 
     double deltaT;
     double totalT;
     // Constructor and Destrustor
-    MRIStreamlineOptions();
+    MRIStreamlineOptions(double minX, double maxX, double minY, double maxY, double minZ, double maxZ);
     ~MRIStreamlineOptions();
-    
     // Member Functions
-    void SetDefaultSLOptions();
+    void setLimits(double minX, double maxX, double minY, double maxY, double minZ, double maxZ);
+    
 };
 
 #endif // MRISTREAMLINEOPTIONS_H

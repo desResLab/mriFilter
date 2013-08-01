@@ -12,6 +12,8 @@
 #include "mriStreamlineOptions.h"
 #include "mriThresholdCriteria.h"
 #include "mriConstants.h"
+#include "mriImagedata.h"
+#include "mriExpansion.h"
 #include "mriOptions.h"
 
 class MRIScan{
@@ -31,6 +33,8 @@ class MRIScan{
     bool hasPressureGradient;
     bool hasRelativePressure;
     double scanTime;
+    // MRI Expansion
+    MRIExpansion* expansion = nullptr;
     // Member Functions
     // Constructor
     MRIScan(double currentTime);
@@ -43,6 +47,11 @@ class MRIScan{
     // READ FUNCTIONS
     void ReadPltFile(std::string PltFileName, bool DoReorderCells);
     void ReadScanFromVOLFiles(std::string fileNameAn, std::string fileNameX, std::string fileNameY, std::string fileNameZ);
+    void ReadScanFromSingleVOLFile(std::string fileName);
+
+    // READ FROM RAW DATA
+    void ReadRAWFileSequence(std::string fileListName);
+    int  ReadRawImage(std::string FileName, MRIImageData &data);
 	
     // WRITE FUNCTIONS
     void FillPLTHeader(bool hasPressureGradient, bool hasRelativePressure,std::vector<std::string> &pltHeader, bool isFirstFile);
@@ -99,6 +108,7 @@ class MRIScan{
     double EvalMaxDivergence(double* filteredVec);
     void   RecoverGlobalErrorEstimates(double& AvNormError,double& AvAngleError);
     void   RecoverCellVelocitiesRT0(bool useBCFilter, double* filteredVec);
+    void   ReconstructFromExpansion();
     
     // FILTER MATRICES
     void AssembleEncodingMatrix(int &totalFaces, int &totalBasis, double** &Mat);
@@ -107,6 +117,7 @@ class MRIScan{
       
     // INFO Functions
     double EvalAverageVelocityMod();
+    int    EvalTotalVortex();
   
     // CELL SAMPLING
     void SampleVelocities(MRISamplingOptions SamplingOptions);
@@ -150,13 +161,12 @@ class MRIScan{
     void TestScanAdjacency(std::string fileName);
     
    // STREAMLINES UTILITIES 
-   void ComputeStreamlines(MRIStreamlineOptions &options, std::vector<MRIStreamline*> &streamlines);
+   void ComputeStreamlines(std::string outName, MRIStreamlineOptions &options, std::vector<MRIStreamline*> &streamlines);
    void PerformVelocityLinearInterpolation(double* coords, int CurrentCell, int xCell, int yCell, int zCell, double* &velocity);
    void GetPointVelocity(double xCoord, double yCoord, double zCoord, double* &pointVel);
    void EvalSingleStreamLine(double* start, MRIStreamlineOptions &options, MRIStreamline* &sL);
-   void RecoverPlaneMaxMinCoords(MRIPlane plane, double* minCoords, double* maxCoords);
    void EvalSLTransverseDiffusionWithSpace(int totalSL, std::vector<MRIStreamline*> &streamlines, MRIDirection dir, double minCoord, double maxCoord, int totalSteps, std::vector<double> &space, std::vector<double> &crossDeviations);
-   void EvalStreamLineStatistics(MRIDirection dir, MRIStreamlineOptions &options, std::vector<MRIStreamline*> &streamlines);
+   void EvalStreamLineStatistics(std::string outName, MRIDirection dir, MRIStreamlineOptions &options, std::vector<MRIStreamline*> &streamlines);
    void EvalSLArrivalPointDistribution(int totalSL, std::vector<MRIStreamline*> &streamlines, MRIDirection dir, double minCoord, double maxCoord, int totalSlices, std::vector<double> &sliceCenter, std::vector<double> &sliceNormArrivals);
 };
 
