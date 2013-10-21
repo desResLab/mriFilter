@@ -8,11 +8,15 @@
 #include "mriException.h"
 
 // COMPUTE PRESSURE GRADIENTS
-void MRIScan::EvalCellPressureGradients(int currentCell, MRICellMaterial material, double* timeDeriv, double** firstDerivs, double** secondDerivs, double* pressureGrad){
-  // Init Result
+void MRIScan::EvalCellPressureGradients(int currentCell, MRICellMaterial material,
+                                        double* timeDeriv, double** firstDerivs, double** secondDerivs,
+                                        double** ReynoldsStressGrad,
+                                        double* pressureGrad){
+  // INIT
   double gravityTerm = 0.0;
   double viscousTerm = 0.0;
   double convectiveTerm = 0.0;
+  double ReynoldsStressTerm = 0.0;
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
     // Eval Viscous Term
     viscousTerm = material.viscosity * (secondDerivs[0][loopA] + secondDerivs[1][loopA] + secondDerivs[2][loopA]);
@@ -21,8 +25,13 @@ void MRIScan::EvalCellPressureGradients(int currentCell, MRICellMaterial materia
                                          cellPoints[currentCell].velocity[0] * firstDerivs[0][loopA]+
                                          cellPoints[currentCell].velocity[1] * firstDerivs[1][loopA]+
                                          cellPoints[currentCell].velocity[2] * firstDerivs[2][loopA]);
+    // Eval Reynolds Stress Gradients
+    if(hasReynoldsStress){
+      ReynoldsStressTerm = material.density * (ReynoldsStressGrad[0][loopA] + ReynoldsStressGrad[1][loopA] + ReynoldsStressGrad[2][loopA]);
+    }
+
     // Eval Pressure Gradient                                
-    pressureGrad[loopA]= viscousTerm + gravityTerm - convectiveTerm;
+    pressureGrad[loopA] = viscousTerm + gravityTerm - convectiveTerm - ReynoldsStressTerm;
   }
 }
 
@@ -180,24 +189,42 @@ void MRIScan::EvalSpaceDerivs(int currentCell, double** firstDerivs, double** se
     switch(loopA){
       case 0:
         // X Deriv
-        if((currentCellCoords[0]-1)<0) firstCell = -1;
-        else firstCell = MapCoordsToIndex(currentCellCoords[0]-1,currentCellCoords[1],currentCellCoords[2]);
-        if((currentCellCoords[0]+1)>(cellTotals[0]-1)) secondCell = -1;
-        else secondCell = MapCoordsToIndex(currentCellCoords[0]+1,currentCellCoords[1],currentCellCoords[2]);
+        if((currentCellCoords[0]-1)<0){
+          firstCell = -1;
+        }else{
+          firstCell = MapCoordsToIndex(currentCellCoords[0]-1,currentCellCoords[1],currentCellCoords[2]);
+        }
+        if((currentCellCoords[0]+1)>(cellTotals[0]-1)){
+          secondCell = -1;
+        }else{
+          secondCell = MapCoordsToIndex(currentCellCoords[0]+1,currentCellCoords[1],currentCellCoords[2]);
+        }
         break;
       case 1:
         // Y Deriv
-        if((currentCellCoords[1]-1)<0) firstCell = -1;
-        else firstCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1]-1,currentCellCoords[2]);
-        if((currentCellCoords[1]+1)>(cellTotals[1]-1)) secondCell = -1;
-        else secondCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1]+1,currentCellCoords[2]);
+        if((currentCellCoords[1]-1)<0){
+          firstCell = -1;
+        }else{
+          firstCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1]-1,currentCellCoords[2]);
+        }
+        if((currentCellCoords[1]+1)>(cellTotals[1]-1)){
+          secondCell = -1;
+        }else{
+          secondCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1]+1,currentCellCoords[2]);
+        }
         break;
       case 2:
         // Z Deriv
-        if((currentCellCoords[2]-1)<0) firstCell = -1;
-        else firstCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1],currentCellCoords[2]-1);
-        if((currentCellCoords[2]+1)>(cellTotals[2]-1)) secondCell = -1;
-        else secondCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1],currentCellCoords[2]+1);
+        if((currentCellCoords[2]-1)<0){
+          firstCell = -1;
+        }else{
+          firstCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1],currentCellCoords[2]-1);
+        }
+        if((currentCellCoords[2]+1)>(cellTotals[2]-1)){
+          secondCell = -1;
+        }else{
+          secondCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1],currentCellCoords[2]+1);
+        }
         break;
     }
     // Eval Cell Distance for Coordinate LoopA
@@ -207,11 +234,17 @@ void MRIScan::EvalSpaceDerivs(int currentCell, double** firstDerivs, double** se
     double currentVComponent = 0.0;
     for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
       // First Component
-      if(firstCell>-1) firstVComponent = cellPoints[firstCell].velocity[loopB];
-      else firstVComponent = 0.0;
+      if(firstCell>-1){
+        firstVComponent = cellPoints[firstCell].velocity[loopB];
+      }else{
+        firstVComponent = 0.0;
+      }
       // Second Component
-      if(secondCell>-1) secondVComponent = cellPoints[secondCell].velocity[loopB];
-      else secondVComponent = 0.0;
+      if(secondCell>-1){
+        secondVComponent = cellPoints[secondCell].velocity[loopB];
+      }else{
+        secondVComponent = 0.0;
+      }
       // Current Component
       currentVComponent = cellPoints[currentCell].velocity[loopB];
 
@@ -252,6 +285,155 @@ void MRIScan::EvalSpaceDerivs(int currentCell, double** firstDerivs, double** se
   delete [] currentCellCoords;
 }
 
+// GET THE INDEX OF THE REYNOLDS STRESS COMPONENT
+int getReynoldsStressIndex(int loopA,int loopB){
+  // FirstDerivs
+  // DRXX/DX DRYX/DX DRZX/DX
+  // DRXY/DY DRYY/DY DRZY/DY
+  // DRXZ/DZ DRYZ/DZ DRZZ/DZ
+  // REYNOLDS STRESS INDEXES
+  // 0-RXX 1-RXY 2-RXZ 3-RYY 4-RYZ 5-RZZ
+  int result = 0;
+  switch(loopA){
+    case 0:
+      switch(loopB){
+        case 0:
+          result = 0;
+          break;
+        case 1:
+          result = 1;
+          break;
+        case 2:
+          result = 2;
+          break;
+      }
+      break;
+    case 1:
+      switch(loopB){
+        case 0:
+          result = 1;
+          break;
+        case 1:
+          result = 3;
+          break;
+        case 2:
+          result = 4;
+          break;
+      }
+      break;
+    case 2:
+      switch(loopB){
+        case 0:
+          result = 2;
+          break;
+        case 1:
+          result = 4;
+          break;
+        case 2:
+          result = 5;
+          break;
+      }
+      break;
+  }
+}
+
+// EVAL REYNOLDS STRESS GRADIENTS
+void MRIScan::EvalReynoldsStressGradient(int currentCell, double** ReynoldsStressGradient){
+  // FirstDerivs
+  // DRXX/DX DRYX/DX DRZX/DX
+  // DRXY/DY DRYY/DY DRZY/DY
+  // DRXZ/DZ DRYZ/DZ DRZZ/DZ
+  // Map Index To Coords
+  int* currentCellCoords = new int[kNumberOfDimensions];
+  MapIndexToCoords(currentCell,currentCellCoords);
+  int firstCell,secondCell;
+  // Assemble Terms
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    switch(loopA){
+      case 0:
+        // X Deriv
+        if((currentCellCoords[0]-1)<0){
+          firstCell = -1;
+        }else{
+          firstCell = MapCoordsToIndex(currentCellCoords[0]-1,currentCellCoords[1],currentCellCoords[2]);
+        }
+        if((currentCellCoords[0]+1)>(cellTotals[0]-1)){
+          secondCell = -1;
+        }else{
+          secondCell = MapCoordsToIndex(currentCellCoords[0]+1,currentCellCoords[1],currentCellCoords[2]);
+        }
+        break;
+      case 1:
+        // Y Deriv
+        if((currentCellCoords[1]-1)<0){
+          firstCell = -1;
+        }else{
+          firstCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1]-1,currentCellCoords[2]);
+        }
+        if((currentCellCoords[1]+1)>(cellTotals[1]-1)){
+          secondCell = -1;
+        }else{
+          secondCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1]+1,currentCellCoords[2]);
+        }
+        break;
+      case 2:
+        // Z Deriv
+        if((currentCellCoords[2]-1)<0){
+          firstCell = -1;
+        }else{
+          firstCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1],currentCellCoords[2]-1);
+        }
+        if((currentCellCoords[2]+1)>(cellTotals[2]-1)){
+          secondCell = -1;
+        }else{
+          secondCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1],currentCellCoords[2]+1);
+        }
+        break;
+    }
+    // Eval Cell Distance for Coordinate LoopA
+    double delta = cellLength[loopA];
+    double firstVComponent = 0.0;
+    double secondVComponent = 0.0;
+    double currentVComponent = 0.0;
+    for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
+      int ReStressIndex = getReynoldsStressIndex(loopA,loopB);
+      // First Component
+      if(firstCell>-1){
+        firstVComponent = cellPoints[firstCell].ReStress[ReStressIndex];
+      }else{
+        firstVComponent = 0.0;
+      }
+      // Second Component
+      if(secondCell>-1){
+        secondVComponent = cellPoints[secondCell].ReStress[ReStressIndex];
+      }else{
+        secondVComponent = 0.0;
+      }
+      // Current Component
+      currentVComponent = cellPoints[currentCell].ReStress[ReStressIndex];
+
+      // FIRST DERIVS
+      if(firstCell<0){
+        // Simple Euler Formula
+        ReynoldsStressGradient[loopA][loopB] = (secondVComponent-currentVComponent)/(delta);
+      }else if (secondCell<0){
+        // Simple Euler Formula
+        ReynoldsStressGradient[loopA][loopB] = (currentVComponent-firstVComponent)/(delta);
+      }else if((firstCell>-1)&&(secondCell>-1)){
+        // Central Difference Formula
+        ReynoldsStressGradient[loopA][loopB] = (secondVComponent-firstVComponent)/(2.0*delta);
+      }else{
+        // Show Error Message
+        throw MRIPressureComputationException("Error: Both First and Second Cells are Zero in EvalFirstSpaceDerivs");
+      }
+
+    }
+  }
+  // Deallocate
+  delete [] currentCellCoords;
+}
+
+
 // Print The Derivatives
 void PrintDerivatives(double** firstDerivs, double** secondDerivs){
   printf("First Derivatives\n");
@@ -271,11 +453,14 @@ void MRISequence::ComputePressureGradients(){
   
   // Allocate Local Velocity Gradients
   double* timeDerivs = new double[kNumberOfDimensions];
+  // First and Second Derivatives
   double** firstDerivs = new double*[kNumberOfDimensions];
   double** secondDerivs = new double*[kNumberOfDimensions];
+  double** ReynoldsStressGrad = new double*[kNumberOfDimensions];
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
     firstDerivs[loopA] = new double[kNumberOfDimensions];
     secondDerivs[loopA] = new double[kNumberOfDimensions];
+    ReynoldsStressGrad[loopA] = new double[kNumberOfDimensions];
   }
   double* currentGradient = new double[kNumberOfDimensions];
   
@@ -293,7 +478,10 @@ void MRISequence::ComputePressureGradients(){
     
     // Write Message
     WriteSchMessage(std::string("Computing Pressure Gradient: Step "+MRIUtils::IntToStr(loopA+1)+"/"+MRIUtils::IntToStr(totalScans)+"..."));
-    
+
+    // EVALUATE REYNOLDS STRESSES
+    sequence[loopA]->EvalReynoldsStressComponent();
+
     //Loop Through the Cells}
     for(int loopB=0;loopB<sequence[loopA]->totalCellPoints;loopB++){
       
@@ -302,13 +490,18 @@ void MRISequence::ComputePressureGradients(){
 
       // Eval First Derivatives in space
       sequence[loopA]->EvalSpaceDerivs(loopB/*Cell*/,firstDerivs,secondDerivs);
-      
+
+      // EVAL REYNOLDS STRESS GRADIENTS
+      if(sequence[loopA]->hasReynoldsStress){
+        sequence[loopA]->EvalReynoldsStressGradient(loopB/*Cell*/,ReynoldsStressGrad);
+      }
+
       //if (loopB==100){
       //  PrintDerivatives(firstDerivs,secondDerivs);
       //}
 
       // Eval First Derivatives in space
-      sequence[loopA]->EvalCellPressureGradients(loopB,*material,timeDerivs,firstDerivs,secondDerivs,currentGradient);
+      sequence[loopA]->EvalCellPressureGradients(loopB,*material,timeDerivs,firstDerivs,secondDerivs,ReynoldsStressGrad,currentGradient);
        
        // Store Gradients
        for(int loopC=0;loopC<kNumberOfDimensions;loopC++){
@@ -492,7 +685,7 @@ int findFirstNotVisited(int cellTotal, bool* visitedCell){
   return newCell;
 }
 
-// EVAL RELATIVE PREESSURES USING FLOOD-FILL
+// EVAL RELATIVE PRESSURES USING FLOOD-FILL
 void MRIScan::EvalRelativePressure(int startingCell, double refPressure){
   double* currVel = nullptr;
   double currModulus = 0.0;

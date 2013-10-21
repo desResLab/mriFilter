@@ -14,13 +14,19 @@ MRICell::MRICell()
     filteredVel[loopA] = 0.0;
     pressGrad[loopA] = 0.0;    
   }
+  for(int loopA=0;loopA<6;loopA++){
+    ReStress[loopA] = 0.0;
+  }
+
 }
 
 MRICell::~MRICell()
 {
 }
 
-// Get Value for integer
+// ============
+// GET QUANTITY
+// ============
 double MRICell::getQuantity(int qtyID){
   switch(qtyID){
     case kQtyPositionX:
@@ -64,5 +70,50 @@ double MRICell::getQuantity(int qtyID){
       break;
   }
 }
+
+// ============
+// SET QUANTITY
+// ============
+double MRICell::setQuantity(int qtyID, double value){
+  switch(qtyID){
+    case kQtyPositionX:
+      position[0] = value;
+      break;
+    case kQtyPositionY:
+      position[1] = value;
+      break;
+    case kQtyPositionZ:
+      position[2] = value;
+      break;
+    case kQtyConcentration:
+      concentration = value;
+      break;
+    case kQtyVelocityX:
+      velocity[0] = value;
+      break;
+    case kQtyVelocityY:
+      velocity[1] = value;
+      break;
+    case kQtyVelocityZ:
+      velocity[2] = value;
+      break;
+    case kQtyPressGradientX:
+      pressGrad[0] = value;
+      break;
+    case kQtyPressGradientY:
+      pressGrad[1] = value;
+      break;
+    case kQtyPressGradientZ:
+      pressGrad[2] = value;
+      break;
+    case kQtyRelPressure:
+      relPressure = value;
+      break;
+    default:
+      throw MRIStatisticsException("Error: Invalid quantity.\n");
+      break;
+  }
+}
+
 
 

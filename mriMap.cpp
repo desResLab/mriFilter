@@ -169,7 +169,7 @@ int MRIScan::FaceLocaltoGlobal(int LocalFace, int DimNumber, int SliceNumber){
 }
 
 // Map To Cells Coords
-void MRIScan::MapIndexToCoords(int index, int* &intCoords){
+void MRIScan::MapIndexToCoords(int index, int* intCoords){
   int CurrentIndex = index;
   intCoords[2] = (int)(CurrentIndex/(cellTotals[0]*cellTotals[1]));
   CurrentIndex = (CurrentIndex-intCoords[2]*cellTotals[0]*cellTotals[1]);

@@ -11,23 +11,27 @@ class MRISequence
     std::string* fileNames;
     bool isCyclic;
   public:
-    // Constructor and Destructor
-	  MRISequence(bool cyclic);
-	  ~MRISequence();
-    // ----------------
+    // Constructor and
+    MRISequence(bool cyclic);
+    // Copy Constructor
+    MRISequence(MRISequence* copySequence);
+    // Destructor
+    ~MRISequence();
+    // ================
     // MEMBER FUNCTIONS
-    //-----------------
-    
+    // ================
     // ADD AND GET FROM SEQUENCE
     void AddScan(MRIScan* scan);
+    int GetTotalScans(){return totalScans;}
     MRIScan* GetScan(int scanNumber);
-    
+
     // READ SEQUENCE FROM FILE
     void ReadFromVolSequence(std::string outfileName);
     
     // EXPORT SEQUENCE TO FILE
     void ExportToTECPLOT(std::string outfileName);
     void ExportToVOL(std::string outfileName);
+    void ExportToVTK(std::string outfileName);
     
     // DIV FREE Filtering
     void ApplyMPFilter(MRIOptions Options, bool useBCFilter, bool useConstantPatterns, MRIThresholdCriteria thresholdCriteria);
@@ -49,7 +53,7 @@ class MRISequence
   
     // STATISTICS
     void ExtractSinglePointTimeCurve(int cellNumber, int exportQty, std::string fileName);
-    
+
     // TRANFORMATION
     void Crop(double* limitBox);
     void ScaleVelocities(double factor);

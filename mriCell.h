@@ -10,6 +10,7 @@ class MRICell
     MRIReal velocity[3];
     MRIReal position[3];
     MRIReal filteredVel[3];
+    MRIReal ReStress[6];
     MRIReal pressGrad[3];
     MRIReal relPressure;
     // Constructor and Destructor
@@ -17,6 +18,7 @@ class MRICell
 	  ~MRICell();
     // Member Functions
     double getQuantity(int qtyID);
+    double setQuantity(int qtyID, double value);
 };
 
 #endif // MIRCELL_H

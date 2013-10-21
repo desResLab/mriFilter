@@ -32,12 +32,18 @@ class MRIScan{
     // Utility Functions
     bool hasPressureGradient;
     bool hasRelativePressure;
+    bool hasReynoldsStress;
     double scanTime;
     // MRI Expansion
     MRIExpansion* expansion = nullptr;
-    // Member Functions
+    // ================
+    // MEMBER FUNCTIONS
+    // ================
     // Constructor
+    // 1 - Empty
     MRIScan(double currentTime);
+    // 2 - Create a Zero Scan from another Scan
+    MRIScan(MRIScan* copyScan);
     // Destructor
     ~MRIScan(){}
     // INFO FUNCTIONS
@@ -48,6 +54,7 @@ class MRIScan{
     void ReadPltFile(std::string PltFileName, bool DoReorderCells);
     void ReadScanFromVOLFiles(std::string fileNameAn, std::string fileNameX, std::string fileNameY, std::string fileNameZ);
     void ReadScanFromSingleVOLFile(std::string fileName);
+    void ReadFromExpansionFile(std::string fileName);
 
     // READ FROM RAW DATA
     void ReadRAWFileSequence(std::string fileListName);
@@ -63,6 +70,7 @@ class MRIScan{
     void FlushToFile(std::string FileName);
     void ExportVelocitiesToFile(std::string fileName, bool append);
     void ExportToVTK(std::string fileName);
+    void WriteExpansionFile(std::string fileName);
 
     // VOL DATA
     int  ReadBinVolFile(std::string FileName,MRIVolData & VolData);
@@ -75,24 +83,30 @@ class MRIScan{
     void Crop(double* limitBox);
     void ScaleVelocities(double factor);
     void ScalePositions(double factor);
-	
+
+    // RECONSTRUCTION FROM EXPANSION COEFFICIENTS
+    void RebuildFromExpansion(MRIExpansion* expansion,bool useConstantFlux);
+
+    // RECONSTRUCTION FROM FACE FLUXES
+    void RebuildFromFaceFluxes(double* faceFluxes);
+
     // Reorder Cells
     void ReorderCells(int* Perm);
     // Get Global Permutation
     void GetGlobalPermutation(int* &GlobalPerm);
     // MAPPING FUNCTIONS
     // Get Cell Number From Coords
-    int GetCellNumber(MRIReal* coords);
+    int  GetCellNumber(MRIReal* coords);
     void GetNeighbourCells(int CurrentCell, int* &coords);
     // Get Face from Cell Vector
-    int GetFacewithCellVector(int CurrentCell, double *UnitVector);
+    int  GetFacewithCellVector(int CurrentCell, double *UnitVector);
     // Get Adjacency Face
-    int GetAdjacentFace(int GlobalNodeNumber, int AdjType);
+    int  GetAdjacentFace(int GlobalNodeNumber, int AdjType);
     // Get Unit Vector From Current Cell To Face Centre
     void GetUnitVector(int CurrentCell, double* GlobalFaceCoords, double* &myVect);
     void GetGlobalCoords(int DimNumber, int SliceNumber, double FaceCoord1, double FaceCoord2, double* &globalCoords);
     int  FaceLocaltoGlobal(int LocalFace,int DimNumber,int SliceNumber);
-    void MapIndexToCoords(int index, int* &intCoords);
+    void MapIndexToCoords(int index, int* intCoords);
     int  MapCoordsToIndex(int i, int j, int k);
     void GetLocalStarFaces(int StarNum, int CellsX, int CellsY, int &BottomFace, int &TopFace, int &LeftFace, int &RightFace);
     bool IsInnerCell(int Cell);
@@ -124,7 +138,10 @@ class MRIScan{
   
     // PRESSURE COMPUTATION
     // MAIN
-    void EvalCellPressureGradients(int currentCell, MRICellMaterial material, double* timeDeriv, double** firstDerivs, double** secondDerivs, double* pressureGrad);
+    void EvalCellPressureGradients(int currentCell, MRICellMaterial material,
+                                   double* timeDeriv, double** firstDerivs, double** secondDerivs,
+                                   double** ReynoldsStressGrad,
+                                   double* pressureGrad);
     void EvalRelativePressure(int startingCell, double refPressure);
     void PerformPressureIterations();
     // Others
@@ -135,6 +152,10 @@ class MRIScan{
     int  GetCellFromStack(std::vector<int> &cellStack, bool* visitedCell, bool* isBoundaryCell, bool &finished);
     int  GetNextStartingCell(int currentCell, bool* visitedCell, bool* isBoundaryCell, bool &finished, int &bookmark);
     int  EvalCentralCell();
+
+    // REYNOLDS STRESS COMPUTATION
+    void EvalReynoldsStressComponent();
+    void EvalReynoldsStressGradient(int currentCell, double** ReynoldsStressGradient);
     
     // APPLY SMOOTHING FILTER - LAVISION
     void ApplySmoothingFilter();
@@ -168,6 +189,9 @@ class MRIScan{
    void EvalSLTransverseDiffusionWithSpace(int totalSL, std::vector<MRIStreamline*> &streamlines, MRIDirection dir, double minCoord, double maxCoord, int totalSteps, std::vector<double> &space, std::vector<double> &crossDeviations);
    void EvalStreamLineStatistics(std::string outName, MRIDirection dir, MRIStreamlineOptions &options, std::vector<MRIStreamline*> &streamlines);
    void EvalSLArrivalPointDistribution(int totalSL, std::vector<MRIStreamline*> &streamlines, MRIDirection dir, double minCoord, double maxCoord, int totalSlices, std::vector<double> &sliceCenter, std::vector<double> &sliceNormArrivals);
+
+   // COMPARISON BETWEEN SCANS
+   double GetDiffNorm(MRIScan* otherScan);
 };
 
 #endif // MRISCAN_H

@@ -517,7 +517,7 @@ void MRIScan::AssembleStarShape(int dimNumber, int sliceNumber, int starNumber,
 
 // UPDATE THE RESIDUAL AND RESIDUAL NORM
 void UpdateResidualAndFilter(double corrCoeff, int totalFaces, std::vector<int> facesID, std::vector<double> facesCoeffs,
-                             double* &resVec, double* &filteredVels, double &resNorm){
+                             double* resVec, double* filteredVels, double &resNorm){
   resNorm = (resNorm*resNorm);
   int currentFaceID = 0;
   double currentFaceCoeff = 0.0;
@@ -697,7 +697,9 @@ void MRIScan::AssembleResidualVector(bool useBCFilter, MRIThresholdCriteria thre
   delete [] resID;
 }
 
-// Physics Filtering
+// =================
+// PHYSICS FILTERING
+// =================
 void MRIScan::PerformPhysicsFiltering(MRIOptions Options, bool useBCFilter, bool useConstantPatterns, MRIThresholdCriteria thresholdCriteria){
   // Initialization
   int totalFaces = 0;
@@ -728,11 +730,21 @@ void MRIScan::PerformPhysicsFiltering(MRIOptions Options, bool useBCFilter, bool
   }else{
     WriteSchMessage("FILTER ALGORITHM - FULL - Step "+MRIUtils::FloatToStr(scanTime)+" ---------------------------\n");
   }
+
+  // START CLOCK
+  const clock_t begin_time = clock();
   
   WriteSchMessage("Initial Residual Norm: "+MRIUtils::FloatToStr(resNorm)+"\n");
 
   // Initialize Expansion
-  expansion = new MRIExpansion(EvalTotalVortex());
+  MRIExpansion* bcExpansion = nullptr;
+  int totalVortexes = EvalTotalVortex();
+  if(!useBCFilter){
+    expansion = new MRIExpansion(totalVortexes);
+  }else{
+    bcExpansion = new MRIExpansion(totalVortexes);
+  }
+
 
   // Apply MP Filter
   bool converged = false;
@@ -762,6 +774,8 @@ void MRIScan::PerformPhysicsFiltering(MRIOptions Options, bool useBCFilter, bool
         // sistemare per BCFilter !!!
         if(!useBCFilter){
           expansion->constantFluxCoeff[loopB] += corrCoeff;
+        }else{
+          bcExpansion->constantFluxCoeff[loopB] += corrCoeff;
         }
         // Update Residual
         UpdateResidualAndFilter(corrCoeff,totalStarFaces,facesID,facesCoeffs,resVec,filteredVec,resNorm);
@@ -799,6 +813,8 @@ void MRIScan::PerformPhysicsFiltering(MRIOptions Options, bool useBCFilter, bool
           // Store Correlation coefficient in Expansion
           if(!useBCFilter){
             expansion->vortexCoeff[componentCount] += corrCoeff;
+          }else{
+            bcExpansion->vortexCoeff[componentCount] += corrCoeff;
           }
           // Update Residual
           UpdateResidualAndFilter(corrCoeff,totalStarFaces,facesID,facesCoeffs,resVec,filteredVec,resNorm);
@@ -836,8 +852,22 @@ void MRIScan::PerformPhysicsFiltering(MRIOptions Options, bool useBCFilter, bool
   // Write Divergence Message
   WriteSchMessage("Max Divergence: " + MRIUtils::FloatToStr(maxDivergence) + "\n");
 
+  // Make Diffence between Coefficient Expansions
+  if(useBCFilter){
+    for(int loopA=0;loopA<3;loopA++){
+      expansion->constantFluxCoeff[loopA] -= bcExpansion->constantFluxCoeff[loopA];
+    }
+    for(int loopA=0;loopA<totalVortexes;loopA++){
+      expansion->vortexCoeff[loopA] -= bcExpansion->vortexCoeff[loopA];
+    }
+  }
+
   // Recover Velocities from Face Fluxes
   RecoverCellVelocitiesRT0(useBCFilter,filteredVec);
+
+  // WRITE CPU TIME AND NUMBER OF ITERATIONS
+  float totalCPUTime = float( clock () - begin_time ) /  CLOCKS_PER_SEC;
+  WriteSchMessage("Total Iterations " + MRIUtils::IntToStr(itCount) + "; Total CPU Time: " + MRIUtils::FloatToStr(totalCPUTime) + "\n");
 
   // Eval Magniture and Angle Error
   RecoverGlobalErrorEstimates(maxNormError,maxAngleError);
@@ -1072,3 +1102,5 @@ End;
 
 
 end.*/
+
+

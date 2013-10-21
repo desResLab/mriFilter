@@ -11,7 +11,8 @@
   const int kNumberOfDimensions = 3;
   const int k3DNeighbors = 6;
   // Headers etc.
-  const int kHeaderCommentsLines = 13;  
+  const int kHeaderCommentsLines = 13;
+  //const int kHeaderCommentsLines = 20;
   const int kInitialMemorySize = 1000;
   // Math
   const double kMathZero = 1.0e-7;

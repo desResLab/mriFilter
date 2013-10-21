@@ -1,7 +1,9 @@
 #include <math.h>
 #include "mriExpansion.h"
 
-// Constructor
+// ===========
+// CONSTRUCTOR
+// ===========
 MRIExpansion::MRIExpansion(int totVortex){
   totalVortices = totVortex;
   constantFluxCoeff = new double[3];
@@ -13,6 +15,38 @@ MRIExpansion::MRIExpansion(int totVortex){
   // Initialize Vortex Array
   for(int loopA=0;loopA<totVortex;loopA++){
     vortexCoeff[loopA] = 0.0;
+  }
+}
+
+// ================
+// COPY CONSTRUCTOR
+// ================
+MRIExpansion::MRIExpansion(MRIExpansion* otherExp){
+  totalVortices = otherExp->totalVortices;
+  constantFluxCoeff = new double[3];
+  vortexCoeff = new double[totalVortices];
+  // Initialize Constant Flux
+  for(int loopA=0;loopA<3;loopA++){
+    constantFluxCoeff[loopA] = otherExp->constantFluxCoeff[loopA];
+  }
+  // Initialize Vortex Array
+  for(int loopA=0;loopA<totalVortices;loopA++){
+    vortexCoeff[loopA] = otherExp->vortexCoeff[loopA];
+  }
+}
+
+// ==========================
+// CONSTRUCT FROM STD::VECTOR
+// ==========================
+MRIExpansion::MRIExpansion(std::vector<double> Expansion){
+  // Call Default Constructor
+  MRIExpansion((int)Expansion.size()-3);
+  // INITIALIZE VALUES
+  for(int loopA=0;loopA<3;loopA++){
+    constantFluxCoeff[loopA] = Expansion[loopA];
+  }
+  for(int loopA=3;loopA<Expansion.size();loopA++){
+    vortexCoeff[loopA-3] = Expansion[loopA];
   }
 }
 
@@ -46,4 +80,24 @@ void MRIExpansion::ApplyVortexThreshold(double ratio){
     }
   }
 }
+
+// =============
+// PRINT TO FILE
+// =============
+void MRIExpansion::WriteToFile(std::string outFile){
+  // Open Output File
+  FILE* fid;
+  fid = fopen(outFile.c_str(),"w");
+  // Write Constant Flux Components
+  for(int loopA=0;loopA<3;loopA++){
+    fprintf(fid,"%d,%15.6e\n",loopA,constantFluxCoeff[loopA]);
+  }
+  // Write Vortex Component
+  for(int loopA=0;loopA<totalVortices;loopA++){
+    fprintf(fid,"%d,%15.6e\n",loopA,vortexCoeff[loopA]);
+  }
+  // Close Output file
+  fclose(fid);
+}
+
 

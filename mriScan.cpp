@@ -23,7 +23,55 @@ MRIScan::MRIScan(double currentTime){
   // Resent Pressure Gradient and Relative Pressure
   hasPressureGradient = false;
   hasRelativePressure = false;
+  hasReynoldsStress = false;
 }
+
+// COPY CONSTRUCTOR
+MRIScan::MRIScan(MRIScan* copyScan){
+  // Assign Scan Time
+  scanTime = copyScan->scanTime;
+  // Resent Pressure Gradient and Relative Pressure
+  hasPressureGradient = false;
+  hasRelativePressure = false;
+  hasReynoldsStress = false;
+  // Copy cells totals
+  for(int loopA=0;loopA<3;loopA++){
+    cellTotals[loopA] = copyScan->cellTotals[loopA];
+    cellLength[loopA] = copyScan->cellLength[loopA];
+    domainSizeMin[loopA] = copyScan->domainSizeMin[loopA];
+    domainSizeMax[loopA] = copyScan->domainSizeMax[loopA];
+  }
+  // Max Velocity Module
+  maxVelModule = 0.0;
+  // Total number of Cells
+  totalCellPoints = copyScan->totalCellPoints;
+  // Allocate cell points
+  cellPoints.resize(totalCellPoints);
+  // Initialize
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    // Copy position
+    cellPoints[loopA].position[0] = copyScan->cellPoints[loopA].position[0];
+    cellPoints[loopA].position[1] = copyScan->cellPoints[loopA].position[1];
+    cellPoints[loopA].position[2] = copyScan->cellPoints[loopA].position[2];
+    // Concentration
+    cellPoints[loopA].concentration = 0.0;
+    // Velocity
+    cellPoints[loopA].velocity[0] = 0.0;
+    cellPoints[loopA].velocity[1] = 0.0;
+    cellPoints[loopA].velocity[2] = 0.0;
+    // Filtered Velocity
+    cellPoints[loopA].filteredVel[0] = 0.0;
+    cellPoints[loopA].filteredVel[1] = 0.0;
+    cellPoints[loopA].filteredVel[2] = 0.0;
+    // Pressure Gradient
+    cellPoints[loopA].pressGrad[0] = 0.0;
+    cellPoints[loopA].pressGrad[1] = 0.0;
+    cellPoints[loopA].pressGrad[2] = 0.0;
+    // Relative Pressure
+    cellPoints[loopA].relPressure = 0.0;
+  }
+}
+
 
 // GET TOTAL FACES
 int MRIScan::GetTotalFaces(){
@@ -128,7 +176,9 @@ void WriteIOLog(std::string LogFileName, std::string MsgsString)
 	fclose(outFile);	
 };
 
+// =======================
 // READ SCAN FROM PLT FILE
+// =======================
 void MRIScan::ReadPltFile(std::string PltFileName, bool DoReorderCells){
   // Init Line Count
   int lineCount = 0;
@@ -225,11 +275,15 @@ void MRIScan::ReadPltFile(std::string PltFileName, bool DoReorderCells){
       LocalYCoord = atof(ResultArray[1].c_str());
       LocalZCoord = atof(ResultArray[2].c_str());
       // Concentration
+      //LocalConc = atof(ResultArray[3].c_str());
       LocalConc = atof(ResultArray[3].c_str());
       // Velocity
       LocalXVel = atof(ResultArray[4].c_str());
       LocalYVel = atof(ResultArray[5].c_str());
       LocalZVel = atof(ResultArray[6].c_str());
+      //LocalXVel = atof(ResultArray[10].c_str());
+      //LocalYVel = atof(ResultArray[11].c_str());
+      //LocalZVel = atof(ResultArray[12].c_str());
       // Check Module
       CurrentModule = sqrt((LocalXVel*LocalXVel)+(LocalYVel*LocalYVel)+(LocalZVel*LocalZVel));
       if (CurrentModule>1000.0) throw 20;
@@ -256,7 +310,9 @@ void MRIScan::ReadPltFile(std::string PltFileName, bool DoReorderCells){
 
       // Update Max Speeds
       //CurrentModule:=Sqrt(Sqr(LocalXVel)+Sqr(LocalYVel)+Sqr(LocalZVel));
-      if (CurrentModule>maxVelModule) maxVelModule = CurrentModule;
+      if (CurrentModule>maxVelModule) {
+        maxVelModule = CurrentModule;
+      }
 
       // Store Node Coords To Find Grid Size
       MRIUtils::InsertInDoubleList(LocalXCoord,TotalXCoords,XCoords);
@@ -1328,6 +1384,8 @@ int MRIScan::EvalTotalVortex(){
   totalSlices = cellTotals[2];
   totalStars = (cellTotals[0]+1)*(cellTotals[1]+1);
   total += totalSlices * totalStars;
+  // Return Value
+  return total;
 }
 
 // ======================
@@ -1464,5 +1522,257 @@ int MRIScan::ReadRawImage(std::string FileName, MRIImageData &data){
 
   // Return
   return 0;
-};
+}
+
+// ======================================
+// RECONSTRUCT FROM EXPANSION COEFFICIENT
+// ======================================
+void MRIScan::RebuildFromExpansion(MRIExpansion* expansion,bool useConstantFlux){
+  // Check Size Compatibility
+
+  // RECONSTRUCTION
+  int totalStarFaces = 0;
+  int currFaceID = 0;
+  double currFaceCoeff = 0.0;
+  std::vector<int> facesID;
+  std::vector<double> facesCoeffs;
+  // Get total number of vortexes
+  int totalVortex = EvalTotalVortex();
+  double* faceFluxVec = new double[totalVortex+3];
+
+  // INITIALIZE
+  for(int loopA=0;loopA<totalVortex+3;loopA++){
+    faceFluxVec[loopA] = 0.0;
+  }
+
+  // GLOBAL ATOMS
+  if(useConstantFlux){
+    for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
+      // Find Star Shape
+      AssembleConstantPattern(loopB/*Current Dimension*/,totalStarFaces,facesID,facesCoeffs);
+      // Add to faces
+      for(int loopC=0;loopC<totalStarFaces;loopC++){
+        currFaceID = facesID[loopC];
+        currFaceCoeff = facesCoeffs[loopC];
+        faceFluxVec[currFaceID] += currFaceCoeff*expansion->constantFluxCoeff[loopB];
+      }
+    }
+  }
+
+  // VORTEX ATOMS
+  int componentCount = -1;
+  int totalSlices = 0;
+  int totalStars = 0;
+  for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
+    // Correlate Vorticity Patterns
+    switch(loopB){
+      case 0:
+        // YZ Planes
+        totalSlices = cellTotals[0];
+        totalStars = (cellTotals[1]+1)*(cellTotals[2]+1);
+        break;
+      case 1:
+        // XZ Planes
+        totalSlices = cellTotals[1];
+        totalStars = (cellTotals[0]+1)*(cellTotals[2]+1);
+        break;
+      case 2:
+        // XY Planes
+        totalSlices = cellTotals[2];
+        totalStars = (cellTotals[0]+1)*(cellTotals[1]+1);
+        break;
+    }
+    for(int loopC=0;loopC<totalSlices;loopC++){
+      for(int loopD=0;loopD<totalStars;loopD++){
+        // Increment the current component
+        componentCount++;
+        // Find Star Shape
+        AssembleStarShape(loopB/*Current Dimension*/,loopC/*Slice*/,loopD/*Star*/,totalStarFaces,facesID,facesCoeffs);
+        // Find Correlation
+        for(int loopE=0;loopE<totalStarFaces;loopE++){
+          currFaceID = facesID[loopE];
+          currFaceCoeff = facesCoeffs[loopE];
+          faceFluxVec[currFaceID] += currFaceCoeff*expansion->vortexCoeff[componentCount];
+        }
+      }
+    }
+  }
+
+  // Recover Velocities from Face Fluxes
+  RecoverCellVelocitiesRT0(false,faceFluxVec);
+
+  // Update Velocities
+  UpdateVelocities();
+
+  // DELETE ARRAY
+  delete [] faceFluxVec;
+}
+
+// ===================
+// READ EXPANSION FILE
+// ===================
+void ReadExpansionFile(std::string fileName,int* tot,double* length,double* minlimits,double* maxlimits,MRIExpansion* exp){
+
+  // ASSIGN FILE
+  int lineCount = 0;
+  std::vector<std::string> ResultArray;
+  std::string Buffer;
+  std::ifstream inFile;
+  inFile.open(fileName.c_str());
+
+  // GET TOTAL CELLS
+  lineCount++;
+  std::getline(inFile,Buffer);
+  ResultArray = MRIUtils::ExctractSubStringFromBufferMS(Buffer);
+  tot[0] = atoi(ResultArray[0].c_str());
+  tot[1] = atoi(ResultArray[1].c_str());
+  tot[2] = atoi(ResultArray[2].c_str());
+
+  // GET CELL LENGTHS
+  lineCount++;
+  std::getline(inFile,Buffer);
+  ResultArray = MRIUtils::ExctractSubStringFromBufferMS(Buffer);
+  length[0] = atof(ResultArray[0].c_str());
+  length[1] = atof(ResultArray[1].c_str());
+  length[2] = atof(ResultArray[2].c_str());
+
+  // GET MIN LIMITS
+  lineCount++;
+  std::getline(inFile,Buffer);
+  ResultArray = MRIUtils::ExctractSubStringFromBufferMS(Buffer);
+  minlimits[0] = atof(ResultArray[0].c_str());
+  minlimits[1] = atof(ResultArray[1].c_str());
+  minlimits[2] = atof(ResultArray[2].c_str());
+
+  // GET MAX LIMITS
+  lineCount++;
+  std::getline(inFile,Buffer);
+  ResultArray = MRIUtils::ExctractSubStringFromBufferMS(Buffer);
+  maxlimits[0] = atof(ResultArray[0].c_str());
+  maxlimits[1] = atof(ResultArray[1].c_str());
+  maxlimits[2] = atof(ResultArray[2].c_str());
+
+  // GET EXPANSION COEFFICIENTS
+  std::vector<double> tempExpansion;
+  while(std::getline(inFile,Buffer)){
+    ResultArray = MRIUtils::ExctractSubStringFromBufferMS(Buffer);
+    tempExpansion.push_back(atof(ResultArray[0].c_str()));
+  }
+
+  // CREATE EXPANSION
+  exp = new MRIExpansion(tempExpansion);
+
+  // CLOSE FILE
+  inFile.close();
+}
+
+
+// ===================
+// GET DIFFERENCE NORM
+// ===================
+double MRIScan::GetDiffNorm(MRIScan* otherScan){
+  double diffNorm = 0;
+  double currDiff[3] = {0.0};
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    currDiff[0] = cellPoints[loopA].velocity[0] - otherScan->cellPoints[loopA].velocity[0];
+    currDiff[1] = cellPoints[loopA].velocity[1] - otherScan->cellPoints[loopA].velocity[1];
+    currDiff[2] = cellPoints[loopA].velocity[2] - otherScan->cellPoints[loopA].velocity[2];
+    diffNorm += sqrt(currDiff[0]*currDiff[0] + currDiff[1]*currDiff[1] + currDiff[2]*currDiff[2]);
+  }
+  return diffNorm;
+}
+
+// =============================
+// READ SCAN FROM EXPANSION FILE
+// =============================
+void MRIScan::ReadFromExpansionFile(std::string fileName){
+
+  // ALLOCATE VARIABLES
+  int tot[3];
+  double length[3];
+  double minlimits[3];
+  double maxlimits[3];
+  MRIExpansion* exp;
+
+  // READ QUANTITIES FROM FILE
+  ReadExpansionFile(fileName,tot,length,minlimits,maxlimits,exp);
+
+  // SET UP SCAN QUANTITIES
+  // CELL TOTALS
+  cellTotals[0] = tot[0];
+  cellTotals[1] = tot[1];
+  cellTotals[2] = tot[2];
+  // CELL LENGTHS
+  cellLength[0] = length[0];
+  cellLength[1] = length[1];
+  cellLength[2] = length[2];
+  // DIMENSIONS
+  // MIN
+  domainSizeMin[0] = minlimits[0];
+  domainSizeMin[1] = minlimits[2];
+  domainSizeMin[2] = minlimits[4];
+  // MAX
+  domainSizeMax[0] = maxlimits[1];
+  domainSizeMax[1] = maxlimits[3];
+  domainSizeMax[2] = maxlimits[5];
+  // MRI EXPANSION
+  expansion = new MRIExpansion(exp);
+
+  // INITIALIZE VALUES
+  hasPressureGradient = false;
+  hasRelativePressure = false;
+  scanTime = 0.0;
+  maxVelModule = 0.0;
+
+  // INITIALIZE SCAN
+  totalCellPoints = cellTotals[0]*cellTotals[1]*cellTotals[2];
+  // CREATE NEW CELL
+  MRICell newCell;
+  // INITIALIZE QUANTITIES TO ZERO
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    // ADD IT TO CELL POINTS
+    cellPoints.push_back(newCell);
+  }
+  // INITIALIZE POSITIONS
+  int intCoords[3];
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    MapIndexToCoords(loopA,intCoords);
+    cellPoints[loopA].setQuantity(kQtyPositionX,intCoords[0]*length[0]);
+    cellPoints[loopA].setQuantity(kQtyPositionY,intCoords[1]*length[1]);
+    cellPoints[loopA].setQuantity(kQtyPositionZ,intCoords[2]*length[2]);
+  }
+
+  // REBUILD SCAN
+  RebuildFromExpansion(expansion,true);
+}
+
+// ====================
+// WRITE EXPANSION FILE
+// ====================
+void MRIScan::WriteExpansionFile(std::string fileName){
+  // Open Output File
+  FILE* fid;
+  fid = fopen(fileName.c_str(),"w");
+
+  // WRITE TOTAL CELLS
+  fprintf(fid,"%15d %15d %15d\n",cellTotals[0],cellTotals[1],cellTotals[2]);
+  // GET CELL LENGTHS
+  fprintf(fid,"%15.6e %15.6e %15.6e\n",cellLength[0],cellLength[1],cellLength[2]);
+  // MIN DOMAIN SIZE
+  fprintf(fid,"%15.6e %15.6e %15.6e\n",domainSizeMin[0],domainSizeMin[1],domainSizeMin[2]);
+  // MAX DOMAIN SIZE
+  fprintf(fid,"%15.6e %15.6e %15.6e\n",domainSizeMax[0],domainSizeMax[1],domainSizeMax[2]);
+
+  // WRITE EXPANSION COEFFICIENTS
+  // Write Constant Flux Components
+  for(int loopA=0;loopA<3;loopA++){
+    fprintf(fid,"%15.6e\n",expansion->constantFluxCoeff[loopA]);
+  }
+  // Write Vortex Component
+  for(int loopA=0;loopA<expansion->totalVortices;loopA++){
+    fprintf(fid,"%15.6e\n",expansion->vortexCoeff[loopA]);
+  }
+  // Close Output file
+  fclose(fid);
+}
 

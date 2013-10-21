@@ -13,6 +13,19 @@ MRISequence::MRISequence(bool cyclic){
   isCyclic = cyclic;
 }
 
+// Copy Constructor
+MRISequence::MRISequence(MRISequence* copySequence){
+  // Copy Scans
+  totalScans = copySequence->totalScans;
+  // Copy Cyclic Property
+  isCyclic = copySequence->isCyclic;
+  // Fill with Zero Scans
+  for(int loopB=0;loopB<totalScans;loopB++){
+    MRIScan* newScan = new MRIScan(copySequence->GetScan(loopB));
+    sequence.push_back(newScan);
+  }
+}
+
 // Destructor
 MRISequence::~MRISequence(){}
 
@@ -163,6 +176,15 @@ void MRISequence::ExportToVOL(std::string outfileName){
   WriteSchMessage("\n");
   for(int loopA=0;loopA<totalScans;loopA++){
     sequence[loopA]->ExportToVOL(outfileName+"_Step"+MRIUtils::IntToStr(loopA));
+  }
+}
+
+// EXPORT TO SEQUENCE OF VTK FILES
+void MRISequence::ExportToVTK(std::string outfileName){
+  // Export All Data
+  WriteSchMessage("\n");
+  for(int loopA=0;loopA<totalScans;loopA++){
+    sequence[loopA]->ExportToVTK(outfileName+"_Step"+MRIUtils::IntToStr(loopA));
   }
 }
 
