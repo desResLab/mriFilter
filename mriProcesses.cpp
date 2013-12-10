@@ -119,10 +119,11 @@ void MRIScan::ApplySmoothingFilter(){
 // APPLY GAUSSIAN NOISE
 void MRIScan::ApplyGaussianNoise(double stDev){
   // Apply Gaussian Noise
+  WriteSchMessage(std::string("CAREFUL ADD LIBRARY SUPPORT FOR GENERATING GAUSSIAN VALUES!!!\n"));
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
     // Loop On Cells
     for(int loopB=0;loopB<totalCellPoints;loopB++){
-      cellPoints[loopB].velocity[loopA] = cellPoints[loopB].velocity[loopA] + MRIUtils::GenerateStandardGaussian(stDev);
+      //cellPoints[loopB].velocity[loopA] = cellPoints[loopB].velocity[loopA] + MRIUtils::GenerateStandardGaussian(stDev);
     }
   }
 }

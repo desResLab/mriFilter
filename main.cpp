@@ -37,6 +37,7 @@ void ConvertTECPLOToVTK(std::string inFileName,std::string outfileName){
 
   // Export to VTK
   MyMRIScan->ExportToVTK(outfileName.c_str());
+  //MyMRIScan->ExportToTECPLOT(outfileName.c_str(),true);
 
 }
 
@@ -170,27 +171,29 @@ void ProcessSingleScan(std::string inFileName,std::string outfileName,double itT
   WriteSchMessage(std::string("--------------------------------------------\n"));
 
   // SET OPTIONS AND THRESHOLD
-  MRIOptions Options(itTol,2000);
+  MRIOptions Options(itTol,maxIt);
   bool useBCFilter = false;
   bool useConstantPatterns = true;
-  //MRIThresholdCriteria criteria(kCriterionLessThen,kQtyVelModule,1.0e-4);
   int thresholdType = 0;
   if (thresholdTypeString == "conc"){
     thresholdType = kQtyConcentration;
   }else{
     thresholdType = kQtyVelModule;
   }
-  MRIThresholdCriteria criteria(kCriterionLessThen,thresholdType,thresholdValue);
+  MRIThresholdCriteria criteria(kCriterionGreaterThen,thresholdType,thresholdValue);
 
   // APPLY FULL FILTER
   MyMRISequence->ApplyMPFilter(Options,useBCFilter,useConstantPatterns,criteria);
 
   // APPLY BOUNDARY CONDITION FILTER
-  useBCFilter = true;
-  MyMRISequence->ApplyMPFilter(Options,useBCFilter,useConstantPatterns,criteria);
+  //useBCFilter = true;
+  //MyMRISequence->ApplyMPFilter(Options,useBCFilter,useConstantPatterns,criteria);
+
+  // SAVE EXPANSION TO FILE
+  MyMRISequence->GetScan(0)->WriteExpansionFile(std::string("ExpansionFile.dat"));
 
   // APPLY FINAL THRESHOLD
-  MyMRISequence->ApplyThresholding(criteria);
+  //MyMRISequence->ApplyThresholding(criteria);
 
   // Evaluate Statistics
   //MyMRISequence->EvalStatistics();
@@ -273,13 +276,13 @@ void ComputeScanMatrices(){
   // VAR
   int totalERows = 0;
   int totalECols = 0;
-  double** EMat = nullptr;
+  double** EMat = NULL;
   int totalDRows = 0;
   int totalDCols = 0;
-  double** DMat = nullptr;
+  double** DMat = NULL;
   int totalStarRows = 0;
   int totalStarCols = 0;
-  double** StarMatrix = nullptr;
+  double** StarMatrix = NULL;
 
   // Print Matrices for Matlab Analysis Of Variance
   MRIScan* MyMRIScan = new MRIScan(0.0);
@@ -329,7 +332,7 @@ void ShowFaceFluxPatterns(std::string faceFluxFileName, std::string outFileName)
   // READ FACE FLUXES FROM FILE
   int totalRows = 0;
   int totalCols = 0;
-  std::vector<std::vector<double>> faceFluxMat;
+  std::vector<std::vector<double> > faceFluxMat;
   MRIUtils::ReadMatrixFromFile(faceFluxFileName,totalRows,totalCols,faceFluxMat);
 
   // COPY THE INTERESTING COLUMN
@@ -390,7 +393,7 @@ void TEST_ExpansionCoefficients(std::string inFileName){
 
   // REBUILD FROM EXPANSION
   MRISequence* ReconstructedSequence = new MRISequence(MyMRISequence);
-  MRIScan* currScan = nullptr;
+  MRIScan* currScan = NULL;
   for(int loopA=0;loopA<ReconstructedSequence->GetTotalScans();loopA++){
     currScan = ReconstructedSequence->GetScan(loopA);
     currScan->RebuildFromExpansion(firstMRIScan->expansion,false);
@@ -398,8 +401,8 @@ void TEST_ExpansionCoefficients(std::string inFileName){
 
   // COMPARE THE TWO SCANS
   double currDiffNorm = 0.0;
-  MRIScan* currScan1 = nullptr;
-  MRIScan* currScan2 = nullptr;
+  MRIScan* currScan1 = NULL;
+  MRIScan* currScan2 = NULL;
   for(int loopA=0;loopA<MyMRISequence->GetTotalScans();loopA++){
     currScan1 = MyMRISequence->GetScan(loopA);
     currScan2 = ReconstructedSequence->GetScan(loopA);
@@ -532,6 +535,90 @@ void TEST03_EvalReynoldsStresses(std::string inFileName){
   MyRECSequence->ExportToVTK("ReynoldsStressSequence");
 }
 
+// ===========================================
+// EVAL REYNOLDS STRESSES FROM EXPANSION FILES
+// ===========================================
+void EvalPressureFromExpansion(std::string inFileName,std::string outFileName,bool exportTECPLOT){
+
+  // SET PARAMETERS
+  bool applyThreshold = true;
+  double thresholdRatio = 0.0;
+  bool doPressureSmoothing = true;
+
+  // CREATE NEW SEQUENCES
+  MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
+
+  // ADD FILE TO SEQUENCE
+  MRIScan* MyMRIScan = new MRIScan(0.0);
+  //MyMRIScan->ReadFromExpansionFile(inFileName,applyThreshold,thresholdRatio);
+  MyMRIScan->ReadPltFile(inFileName,true);
+  MyMRISequence->AddScan(MyMRIScan);
+  // APPLY MEDIAN FILTER TO VELOCITIES
+  //MyMRISequence->GetScan(0)->ApplyMedianFilter(kQtyVelocityX,1);
+  //MyMRISequence->GetScan(0)->ApplyMedianFilter(kQtyVelocityY,1);
+  //MyMRISequence->GetScan(0)->ApplyMedianFilter(kQtyVelocityZ,1);
+
+  //MyMRISequence->GetScan(0)->ThresholdQuantity(kQtyVelocityZ,1.0e10);
+
+  // EVAL REYNOLDS STRESSES AND PRESSURE GRADIENTS
+  MyMRISequence->ComputePressureGradients();
+
+  // APPLY MEDIAN FILTER TO PRESSURE GRADIENT COMPONENTS
+  // JET FILIPPO
+  //MyMRISequence->GetScan(0)->ThresholdQuantity(kQtyPressGradientMod,2500.0);
+  //MyMRISequence->GetScan(0)->ThresholdQuantity(kQtyPressGradientMod,1200.0);
+  //MyMRISequence->GetScan(0)->ThresholdQuantity(kQtyPressGradientMod,200.0);
+
+  //MyMRISequence->GetScan(0)->ThresholdQuantity(kQtyPressGradientMod,50000.0);
+
+  //MyMRISequence->GetScan(0)->ApplyMedianFilter(kQtyPressGradientX,5);
+  //MyMRISequence->GetScan(0)->ApplyMedianFilter(kQtyPressGradientY,5);
+  //MyMRISequence->GetScan(0)->ApplyMedianFilter(kQtyPressGradientZ,5);
+
+  // EVAL LOCATIONS OF NOISY POINTS
+  MyMRISequence->GetScan(0)->EvalNoisyPressureGradientPoints();
+
+  // EVAL RELATIVE PRESSURE
+  MyMRISequence->ComputeRelativePressure(doPressureSmoothing);
+
+  if(exportTECPLOT){
+    // WRITE OUTPUT FILES TO TECPLOT
+    MyMRISequence->ExportToTECPLOT(outFileName);
+  }else{
+    // WRITE OUTPUT FILES TO VTK
+    MyMRISequence->ExportToVTK(outFileName);
+  }
+}
+
+// =========================================
+// EVAL PRESSURES FROM EXPANSION COFFICIENTS
+// =========================================
+void EvalConcentrationGradient(std::string inFileName,std::string outFileName){
+
+  // CREATE NEW SEQUENCES
+  MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
+
+  bool doPressureSmoothing = false;
+
+  // ADD FILE TO SEQUENCE
+  MRIScan* MyMRIScan = new MRIScan(0.0);
+  MyMRIScan->ReadPltFile(inFileName,true);
+  MyMRIScan->ScalePositions(0.0058);
+  MyMRISequence->AddScan(MyMRIScan);
+
+  // EVAL REYNOLDS STRESSES AND PRESSURE GRADIENTS
+  MyMRISequence->GetScan(0)->ComputeQuantityGradient(kQtyConcentration);
+
+  // EVAL RELATIVE PRESSURE
+  MyMRISequence->ComputeRelativePressure(doPressureSmoothing);
+
+  // WRITE OUTPUT FILES TO VTK
+  MyMRISequence->ExportToVTK(outFileName);
+
+}
+
+
+
 // ===================
 // PERFORM RANDOM TEST
 // ===================
@@ -545,7 +632,7 @@ void PerformRandomTest(){
   MRIThresholdCriteria criteria(kCriterionLessThen,kQtyConcentration,1.0);
 
   // Generating Random Numbers
-  boost::variate_generator<boost::mt19937, boost::normal_distribution<>> generator(boost::mt19937(time(0)),boost::normal_distribution<>());
+  boost::variate_generator<boost::mt19937, boost::normal_distribution<> > generator(boost::mt19937(time(0)),boost::normal_distribution<>());
 
   // Declare Scan
   MRIScan* MyMRIScan;
@@ -574,7 +661,7 @@ void PerformRandomTest(){
 
     // Deallocate
     delete MyMRIScan;
-    MyMRIScan = nullptr;
+    MyMRIScan = NULL;
   }
 }
 
@@ -787,32 +874,34 @@ void PerformStreamlineTest2(std::string inFileName,std::string outfileName){
 // ========================================
 // BUILD FROM COEFFICIENTS AND WRITE TO PLT
 // ========================================
-void BuildFromCoeffs(std::string coeffFileName,std::string plotOut){
+void BuildFromCoeffs(std::string coeffFileName,std::string plotOut,double threshold){
 
   // CREATE NEW SEQUENCES
   MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
 
   // ADD FILE TO SEQUENCE
   MRIScan* MyMRIScan = new MRIScan(0.0);
-  MyMRIScan->ReadFromExpansionFile(coeffFileName);
+  MyMRIScan->ReadFromExpansionFile(coeffFileName,true,threshold);
   MyMRISequence->AddScan(MyMRIScan);
 
   // EXPORT TO PLT FILE
-  MyMRISequence->ExportToTECPLOT(plotOut);
+  //MyMRISequence->ExportToTECPLOT(plotOut);
+  MyMRISequence->ExportToVTK(plotOut);
 }
-
 
 // ============
 // MAIN PROGRAM
 // ============
 int main(int argc, char **argv)
 {
-  // Write Program Header
+  // WRITE PROGRAM HEADER
   WriteHeader();
-  // Testing Functionalities for the Program
-  // TestRandomNumberFacilities();
-  // Store Local Option
-  std::string firstOption(argv[1]);
+  // CHECK FIRST ARGUMENT IF AVAILABLE
+  std::string firstOption("");
+  if(argc>1){
+    firstOption = argv[1];
+  }
+  // CHECK VARIOUS OPTIONS FOR THE PROGRAM
   if ((argc == 1)||(firstOption == "-?")||(firstOption == "-help")||(firstOption == "-h")||(firstOption == "")){
     // Write Program Help
     MRIUtils::WriteProgramHelp();
@@ -841,7 +930,7 @@ int main(int argc, char **argv)
     std::string outfileName(argv[3]);
     // Get Parameters
     double itTol = atof(argv[4]);
-    int maxIt = atof(argv[5]);
+    int maxIt = atoi(argv[5]);
     std::string thresholdTypeString(argv[6]);
     double thresholdValue = atof(argv[7]);
 
@@ -938,9 +1027,85 @@ int main(int argc, char **argv)
     // GET FILE NAMES
     std::string coeffFileName(argv[2]);
     std::string plotOut(argv[3]);
+    double threshold = atof(argv[4]);
 
     // READ FROM COEFFICIENT FILE AND EXPORT TO PLT
-    BuildFromCoeffs(coeffFileName,plotOut);
+    BuildFromCoeffs(coeffFileName,plotOut,threshold);
+
+  }else if (firstOption == "-evalPressure"){
+
+    // GET FILE NAMES
+    std::string inFileName(argv[2]);
+    std::string outFileName(argv[3]);
+    int saveAsPLTInt = atoi(argv[4]);
+    bool saveAsPLT = (saveAsPLTInt == 0);
+
+    // EVAL PRESSURES FROM EXPANSION COFFICIENTS
+    EvalPressureFromExpansion(inFileName,outFileName,saveAsPLT);
+
+  }else if (firstOption == "-evalConcGrad"){
+
+    // GET FILE NAMES
+    std::string inFileName(argv[2]);
+    std::string outFileName(argv[3]);
+
+    // EVAL PRESSURES FROM EXPANSION COFFICIENTS
+    EvalConcentrationGradient(inFileName,outFileName);
+
+  }else if (firstOption == "-scaleModel"){
+
+    // GET FILE NAMES
+    std::string inFileName(argv[2]);
+    std::string outFileName(argv[3]);
+
+    // Create New Sequence
+    MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
+
+    // Add File to Sequence
+    MRIScan* MyMRIScan = new MRIScan(0.0);
+    MyMRIScan->ReadPltFile(inFileName, true);
+    //MyMRIScan->ScalePositions(0.0058);
+    //MyMRIScan->ScaleVelocities(0.5);
+    MyMRISequence->AddScan(MyMRIScan);
+
+    double limitBox[6] = {0.0};
+    // JET SPERIMENTALE
+    //limitBox[0] = 0.0;
+    //limitBox[1] = 0.18;
+    //limitBox[2] = 0.0213;
+    //limitBox[3] = 0.0668;
+    //limitBox[4] = 0.00642;
+    //limitBox[5] = 0.0499;
+    // LUNG - UPPER PART
+    //limitBox[0] = -0.025;
+    //limitBox[1] = 0.0872;
+    //limitBox[2] = -0.0268;
+    //limitBox[3] = 0.0434;
+    //limitBox[4] = -0.055;
+    //limitBox[5] = 0.0546;
+    // LUNG - TRACHEA
+    //limitBox[0] = 0.0942;
+    //limitBox[1] = 0.185;
+    //limitBox[2] = -0.00924;
+    //limitBox[3] = 0.0294;
+    //limitBox[4] = 0.0188;
+    //limitBox[5] = 0.0504;
+    // LUNG 2 - TRACHEA
+    limitBox[0] = -0.0124;
+    limitBox[1] = 0.112;
+    limitBox[2] = -0.0177;
+    limitBox[3] = 0.0259;
+    limitBox[4] = -0.00371;
+    limitBox[5] = 0.0539;
+
+    // ====
+    // CROP
+    // ====
+    MyMRISequence->Crop(limitBox);
+
+    // EXPORT FILE
+    MyMRISequence->ExportToTECPLOT(outFileName);
+    //MyMRISequence->ExportToVTK(outFileName);
 
   }else{
 

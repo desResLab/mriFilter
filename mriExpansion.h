@@ -9,20 +9,23 @@ class MRIExpansion
 public:
     // Data Members
     int totalVortices;
-    double* constantFluxCoeff = nullptr;
-    double* vortexCoeff = nullptr;
+    double* constantFluxCoeff;
+    double* vortexCoeff;
     // Constructor
     MRIExpansion(int totVortex);
     // Copy Constructor
     MRIExpansion(MRIExpansion* otherExp);
-    // Other Constructor
-    MRIExpansion(std::vector<double> Expansion);
 
     // Distructor
     ~MRIExpansion();
     // MEMBER FUNCTIONS
+    // Fill From Vector
+    void FillFromVector(std::vector<double> Expansion);
     // Threshold Vortex Expansion
     void ApplyVortexThreshold(double ratio);
+    // Eval 2-Norm of Coefficient Vector
+    double Get2Norm(bool onlyVortex);
+    // Write to text File
     void WriteToFile(std::string outFile);
 };
 

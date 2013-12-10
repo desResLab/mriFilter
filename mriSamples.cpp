@@ -5,8 +5,8 @@
 #include "schMessages.h"
 #include "mriUtils.h"
 
-#include <boost/random/mersenne_twister.hpp>
-#include <boost/random/uniform_int_distribution.hpp>
+//#include <boost/random/mersenne_twister.hpp>
+//#include <boost/random/uniform_int_distribution.hpp>
 
 // Print Bins to File
 void PrintBinsToFile(std::string fileName, int totalSamples, double binInterval, int totalBins, int* bins){
@@ -25,7 +25,7 @@ void PrintBinsToFile(std::string fileName, int totalSamples, double binInterval,
 // Sample Velocities
 void MRIScan::SampleVelocities(MRISamplingOptions SamplingOptions){
   // Initialize Generator
-  boost::random::mt19937 gen;
+  //boost::random::mt19937 gen;
   
   // Set Parameters For PDF File
   int* bins = new int[SamplingOptions.numberOfBins];
@@ -47,7 +47,8 @@ void MRIScan::SampleVelocities(MRISamplingOptions SamplingOptions){
   double currentModule;
   while(count<endIndex){
     // Draw a Random Number Between 1 and GlobalData.TotalCellPoints
-    currentCell = MRIUtils::GenerateUniformIntegers(0, totalCellPoints-1);
+    WriteSchMessage("ERROR: ADD LIBRARY TO GENERATE RANDOM NUMBERS!!!\n");
+    //currentCell = MRIUtils::GenerateUniformIntegers(0, totalCellPoints-1);
 
     // Find cell centroid
     currentXCoord = cellPoints[currentCell].position[0];

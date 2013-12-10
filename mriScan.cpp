@@ -94,7 +94,7 @@ void PrintFileListLog(int totalFiles,std::string* fileNames)
   fclose(outFile);
 };
 
-void MRIScan::FillPLTHeader(bool hasPressureGradient, bool hasRelativePressure,std::vector<std::string> &pltHeader, bool isFirstFile){
+void MRIScan::FillPLTHeader(std::vector<std::string> &pltHeader, bool isFirstFile){
   // Clear Vector
   pltHeader.clear();
   if (isFirstFile){
@@ -114,15 +114,25 @@ void MRIScan::FillPLTHeader(bool hasPressureGradient, bool hasRelativePressure,s
     if (hasRelativePressure){
       pltHeader.push_back("""relPress""");
     }
+    if (hasReynoldsStress){
+      pltHeader.push_back("""reyXX""");
+      pltHeader.push_back("""reyXY""");
+      pltHeader.push_back("""reyXZ""");
+      pltHeader.push_back("""reyYY""");
+      pltHeader.push_back("""reyYZ""");
+      pltHeader.push_back("""reyZZ""");
+    }
   }
   pltHeader.push_back("ZONE T=""SubZone""");
   pltHeader.push_back(" STRANDID=0, SOLUTIONTIME="+MRIUtils::FloatToStr(scanTime));
   pltHeader.push_back(" I=35, J=113, K=155, ZONETYPE=Ordered");
   pltHeader.push_back(" DATAPACKING=POINT");
-  if ((hasPressureGradient)&&(!hasRelativePressure)){
+  if ((hasPressureGradient)&&(!hasRelativePressure)&&(!hasReynoldsStress)){
     pltHeader.push_back(" DT=(SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE )");
-  }else if ((hasPressureGradient)&&(hasRelativePressure)){
+  }else if ((hasPressureGradient)&&(hasRelativePressure)&&(!hasReynoldsStress)){
     pltHeader.push_back(" DT=(SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE )");
+  }else if ((hasPressureGradient)&&(hasRelativePressure)&&(hasReynoldsStress)){
+    pltHeader.push_back(" DT=(SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE)");
   }else{
     pltHeader.push_back(" DT=(SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE )");
   }
@@ -175,6 +185,23 @@ void WriteIOLog(std::string LogFileName, std::string MsgsString)
 	// Close Output file
 	fclose(outFile);	
 };
+
+// =============
+// REORDER CELLS
+// =============
+void MRIScan::ReorderScan(){
+  // Determine The Direct and Inverse Permutations
+  WriteSchMessage(std::string("Computing Permutation..."));
+  int* DirectPerm = new int[totalCellPoints];
+  GetGlobalPermutation(DirectPerm);
+  WriteSchMessage(std::string("Done.\n"));
+  // Reorder Cells
+  WriteSchMessage(std::string("Reordering Cells..."));
+  ReorderCells(DirectPerm);
+  WriteSchMessage(std::string("Done.\n"));
+  // Deallocate
+  delete [] DirectPerm;
+}
 
 // =======================
 // READ SCAN FROM PLT FILE
@@ -275,7 +302,7 @@ void MRIScan::ReadPltFile(std::string PltFileName, bool DoReorderCells){
       LocalYCoord = atof(ResultArray[1].c_str());
       LocalZCoord = atof(ResultArray[2].c_str());
       // Concentration
-      //LocalConc = atof(ResultArray[3].c_str());
+      //LocalConc = atof(ResultArray[13].c_str());
       LocalConc = atof(ResultArray[3].c_str());
       // Velocity
       LocalXVel = atof(ResultArray[4].c_str());
@@ -375,19 +402,8 @@ void MRIScan::ReadPltFile(std::string PltFileName, bool DoReorderCells){
   PltFile.close();
 
   // REORDER CELLS
-  if (DoReorderCells)
-  {
-    // Determine The Direct and Inverse Permutations
-    WriteSchMessage(std::string("Computing Permutation..."));
-    int* DirectPerm = new int[totalCellPoints];
-    GetGlobalPermutation(DirectPerm);
-    WriteSchMessage(std::string("Done.\n"));
-    // Reorder Cells
-    WriteSchMessage(std::string("Reordering Cells..."));
-    ReorderCells(DirectPerm);
-    WriteSchMessage(std::string("Done.\n"));
-    // Deallocate
-    delete [] DirectPerm;    
+  if (DoReorderCells){
+    ReorderScan();
   }
   
   WriteSchMessage(std::string("\n"));
@@ -480,7 +496,9 @@ void MRIScan::ExportToCSV(std::string FileName)
   printf("Done\n");
 }
 
+// =================
 // Export To TECPLOT
+// =================
 void MRIScan::ExportToTECPLOT(std::string FileName, bool isFirstFile)
 {
   // Write Progress Message 
@@ -495,7 +513,7 @@ void MRIScan::ExportToTECPLOT(std::string FileName, bool isFirstFile)
   }
   // Fill Header
   std::vector<std::string> PltFileHeader;
-  FillPLTHeader(hasPressureGradient,hasRelativePressure,PltFileHeader,isFirstFile);
+  FillPLTHeader(PltFileHeader,isFirstFile);
   // Write Header
 	std::string LineString;
 	std::string compString = "I";
@@ -512,29 +530,38 @@ void MRIScan::ExportToTECPLOT(std::string FileName, bool isFirstFile)
   // Loop On Cells
   for(int loopA=0;loopA<totalCellPoints;loopA++)
   {
-    if ((hasPressureGradient)&&(!hasRelativePressure)){
+    if ((hasPressureGradient)&&(!hasRelativePressure)&&(!hasReynoldsStress)){
       fprintf(outFile,"%-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e\n",
                       cellPoints[loopA].position[0],cellPoints[loopA].position[1],cellPoints[loopA].position[2],
-		                  cellPoints[loopA].concentration,
-					  	        cellPoints[loopA].velocity[0],cellPoints[loopA].velocity[1],cellPoints[loopA].velocity[2],
+                      cellPoints[loopA].concentration,
+                      cellPoints[loopA].velocity[0],cellPoints[loopA].velocity[1],cellPoints[loopA].velocity[2],
                       cellPoints[loopA].pressGrad[0],cellPoints[loopA].pressGrad[1],cellPoints[loopA].pressGrad[2]);
-    }else if ((hasPressureGradient)&&(hasRelativePressure)){
+    }else if ((hasPressureGradient)&&(hasRelativePressure)&&(!hasReynoldsStress)){
       fprintf(outFile,"%-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e\n",
                       cellPoints[loopA].position[0],cellPoints[loopA].position[1],cellPoints[loopA].position[2],
-		                  cellPoints[loopA].concentration,
-					  	        cellPoints[loopA].velocity[0],cellPoints[loopA].velocity[1],cellPoints[loopA].velocity[2],
+                      cellPoints[loopA].concentration,
+                      cellPoints[loopA].velocity[0],cellPoints[loopA].velocity[1],cellPoints[loopA].velocity[2],
                       cellPoints[loopA].pressGrad[0],cellPoints[loopA].pressGrad[1],cellPoints[loopA].pressGrad[2],
                       cellPoints[loopA].relPressure);
+    }else if ((hasPressureGradient)&&(hasRelativePressure)&&(hasReynoldsStress)){
+      fprintf(outFile,"%-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e\n",
+                      cellPoints[loopA].position[0],cellPoints[loopA].position[1],cellPoints[loopA].position[2],
+                      cellPoints[loopA].concentration,
+                      cellPoints[loopA].velocity[0],cellPoints[loopA].velocity[1],cellPoints[loopA].velocity[2],
+                      cellPoints[loopA].pressGrad[0],cellPoints[loopA].pressGrad[1],cellPoints[loopA].pressGrad[2],
+                      cellPoints[loopA].relPressure,
+                      cellPoints[loopA].ReStress[0],cellPoints[loopA].ReStress[1],cellPoints[loopA].ReStress[2],
+                      cellPoints[loopA].ReStress[3],cellPoints[loopA].ReStress[4],cellPoints[loopA].ReStress[5]);
     }else{
       fprintf(outFile,"%-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e\n",
                       cellPoints[loopA].position[0],cellPoints[loopA].position[1],cellPoints[loopA].position[2],
-		                  cellPoints[loopA].concentration,
-					  	        cellPoints[loopA].velocity[0],cellPoints[loopA].velocity[1],cellPoints[loopA].velocity[2]);      
+                      cellPoints[loopA].concentration,
+                      cellPoints[loopA].velocity[0],cellPoints[loopA].velocity[1],cellPoints[loopA].velocity[2]);
     }
   }
 
-	// Close Output file
-	fclose(outFile);  
+  // Close Output file
+  fclose(outFile);
   
   // Write Done Message
   WriteSchMessage(std::string("Done\n"));
@@ -551,16 +578,15 @@ int MRIScan::ReadBinVolFile(std::string FileName, MRIVolData &VolData)
     return -1;
   }
   // Read Dimensions
-  int fReadRes = 0;
-  fReadRes = fread(&VolData.GridX, sizeof(int), 1, fp);
-  fReadRes = fread(&VolData.GridY, sizeof(int), 1, fp);
-  fReadRes = fread(&VolData.GridZ, sizeof(int), 1, fp);
+  fread(&VolData.GridX, sizeof(int), 1, fp);
+  fread(&VolData.GridY, sizeof(int), 1, fp);
+  fread(&VolData.GridZ, sizeof(int), 1, fp);
 	
   // Read information on Space, Slice Space and Thickness
-  fReadRes = fread(&VolData.SpaceX, sizeof(float), 1, fp);
-  fReadRes = fread(&VolData.SpaceY, sizeof(float), 1, fp);
-  fReadRes = fread(&VolData.SpaceSlice, sizeof(float), 1, fp);
-  fReadRes = fread(&VolData.SpaceThick, sizeof(float), 1, fp);
+  fread(&VolData.SpaceX, sizeof(float), 1, fp);
+  fread(&VolData.SpaceY, sizeof(float), 1, fp);
+  fread(&VolData.SpaceSlice, sizeof(float), 1, fp);
+  fread(&VolData.SpaceThick, sizeof(float), 1, fp);
 
   // Set the size of the voxel information
   int	size = VolData.GridX*VolData.GridY*VolData.GridZ;
@@ -1341,6 +1367,7 @@ void MRIScan::ExportToVTK(std::string fileName){
   // Print velocity components
   for (int loopA=0;loopA<totalCellPoints;loopA++){
     fprintf(outFile,"%e %e %e\n",cellPoints[loopA].velocity[0],cellPoints[loopA].velocity[1],cellPoints[loopA].velocity[2]);
+    //fprintf(outFile,"%e %e %e\n",cellPoints[loopA].filteredVel[0],cellPoints[loopA].filteredVel[1],cellPoints[loopA].filteredVel[2]);
   }
 
   // Print Pressure Gradient
@@ -1359,6 +1386,28 @@ void MRIScan::ExportToVTK(std::string fileName){
     // Print Relative Pressure
     for (int loopA=0;loopA<totalCellPoints;loopA++){
       fprintf(outFile,"%e\n",cellPoints[loopA].relPressure);
+    }
+  }
+
+  // Print Relative Pressure
+  if (hasRelativePressure){
+    fprintf(outFile,"SCALARS GradientMonitor float 1\n");
+    fprintf(outFile,"LOOKUP_TABLE default\n");
+    // Print Relative Pressure
+    for (int loopA=0;loopA<totalCellPoints;loopA++){
+      fprintf(outFile,"%e\n",cellPoints[loopA].filteredVel[0]);
+    }
+  }
+
+  // Print Reynolds Stresses
+  if (hasReynoldsStress){
+    fprintf(outFile,"TENSORS ReynoldsStress float\n");
+    // Print Reynolds Stress Tensor
+    for (int loopA=0;loopA<totalCellPoints;loopA++){
+      fprintf(outFile,"%e %e %e\n",cellPoints[loopA].ReStress[0],cellPoints[loopA].ReStress[1],cellPoints[loopA].ReStress[2]);
+      fprintf(outFile,"%e %e %e\n",cellPoints[loopA].ReStress[1],cellPoints[loopA].ReStress[3],cellPoints[loopA].ReStress[4]);
+      fprintf(outFile,"%e %e %e\n",cellPoints[loopA].ReStress[2],cellPoints[loopA].ReStress[4],cellPoints[loopA].ReStress[5]);
+      fprintf(outFile,"\n");
     }
   }
 
@@ -1437,7 +1486,7 @@ void MRIScan::ReadRAWFileSequence(std::string fileListName){
   // Intialize how many cells read so far
   int readSoFar = data.sizeX*data.sizeY;
   // Loop through all other images
-  for(int loopA=1;loopA<fileList.size();loopA++){
+  for(unsigned int loopA=1;loopA<fileList.size();loopA++){
     currFile = fileList[loopA];
     // Read
     ReadRawImage(currFile,data);
@@ -1461,13 +1510,12 @@ void ReadRawFileHeader(int &sizeX,int &sizeY,int &numberOfBytes,FILE *fp){
   // Read Dimensions
   int wordCount = 0;
   int currentByte = 0;
-  int fReadRes = 0;
   std::string fileWord = "";
   while(wordCount<4){
     currentByte = 0;
     fileWord = "";
     while((currentByte != 10)&&(currentByte != 32)){
-      fReadRes = fread(&currentByte, 1, 1, fp);
+      fread(&currentByte, 1, 1, fp);
       if((currentByte != 10)&&(currentByte != 32)){
         fileWord = fileWord + char(currentByte);
       }
@@ -1480,9 +1528,9 @@ void ReadRawFileHeader(int &sizeX,int &sizeY,int &numberOfBytes,FILE *fp){
       // Size Y
       sizeY = atoi(fileWord.c_str());
     }else if (wordCount == 3){
-      // Number Of Bytes
-      numberOfBytes = atoi(fileWord.c_str());
-      numberOfBytes = (log(numberOfBytes+1)/log(2.0));
+      // Number Of Bytes: CHECK!!!
+      //numberOfBytes = atoi(fileWord.c_str());
+      //numberOfBytes = (log(numberOfBytes+1)/log(2.0));
     }
 
     // Update Value
@@ -1611,7 +1659,7 @@ void MRIScan::RebuildFromExpansion(MRIExpansion* expansion,bool useConstantFlux)
 // ===================
 // READ EXPANSION FILE
 // ===================
-void ReadExpansionFile(std::string fileName,int* tot,double* length,double* minlimits,double* maxlimits,MRIExpansion* exp){
+void ReadExpansionFile(std::string fileName,int* tot,double* length,double* minlimits,double* maxlimits,MRIExpansion* &exp){
 
   // ASSIGN FILE
   int lineCount = 0;
@@ -1660,7 +1708,8 @@ void ReadExpansionFile(std::string fileName,int* tot,double* length,double* minl
   }
 
   // CREATE EXPANSION
-  exp = new MRIExpansion(tempExpansion);
+  exp = new MRIExpansion((int)tempExpansion.size()-3);
+  exp->FillFromVector(tempExpansion);
 
   // CLOSE FILE
   inFile.close();
@@ -1685,14 +1734,14 @@ double MRIScan::GetDiffNorm(MRIScan* otherScan){
 // =============================
 // READ SCAN FROM EXPANSION FILE
 // =============================
-void MRIScan::ReadFromExpansionFile(std::string fileName){
+void MRIScan::ReadFromExpansionFile(std::string fileName,bool applyThreshold,double thresholdRatio){
 
   // ALLOCATE VARIABLES
   int tot[3];
   double length[3];
   double minlimits[3];
   double maxlimits[3];
-  MRIExpansion* exp;
+  MRIExpansion* exp = NULL;
 
   // READ QUANTITIES FROM FILE
   ReadExpansionFile(fileName,tot,length,minlimits,maxlimits,exp);
@@ -1718,6 +1767,11 @@ void MRIScan::ReadFromExpansionFile(std::string fileName){
   // MRI EXPANSION
   expansion = new MRIExpansion(exp);
 
+  // APPLY THRESHOLD TO EXPANSION
+  if(applyThreshold){
+    expansion->ApplyVortexThreshold(thresholdRatio);
+  }
+
   // INITIALIZE VALUES
   hasPressureGradient = false;
   hasRelativePressure = false;
@@ -1737,10 +1791,13 @@ void MRIScan::ReadFromExpansionFile(std::string fileName){
   int intCoords[3];
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     MapIndexToCoords(loopA,intCoords);
-    cellPoints[loopA].setQuantity(kQtyPositionX,intCoords[0]*length[0]);
-    cellPoints[loopA].setQuantity(kQtyPositionY,intCoords[1]*length[1]);
-    cellPoints[loopA].setQuantity(kQtyPositionZ,intCoords[2]*length[2]);
+    cellPoints[loopA].setQuantity(kQtyPositionX,domainSizeMin[0] + intCoords[0]*length[0]);
+    cellPoints[loopA].setQuantity(kQtyPositionY,domainSizeMin[1] + intCoords[1]*length[1]);
+    cellPoints[loopA].setQuantity(kQtyPositionZ,domainSizeMin[2] + intCoords[2]*length[2]);
   }
+
+  // REORDER MODEL
+  ReorderScan();
 
   // REBUILD SCAN
   RebuildFromExpansion(expansion,true);
@@ -1774,5 +1831,114 @@ void MRIScan::WriteExpansionFile(std::string fileName){
   }
   // Close Output file
   fclose(fid);
+}
+
+// =========================
+// COMPUTE QUANTITY GRADIENT
+// =========================
+void MRIScan::ComputeQuantityGradient(int qtyID){
+  hasPressureGradient = true;
+  double* gradient = new double[3];
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    EvalSpaceGradient(loopA,qtyID,gradient);
+    cellPoints[loopA].setQuantity(kQtyPressGradientX,gradient[0]);
+    cellPoints[loopA].setQuantity(kQtyPressGradientY,gradient[1]);
+    cellPoints[loopA].setQuantity(kQtyPressGradientZ,gradient[2]);
+  }
+}
+
+// ==================
+// THRESHOLD QUANTITY
+// ==================
+void MRIScan::ThresholdQuantity(int qtyID,double threshold){
+  // DECLARE
+  WriteSchMessage(std::string("Applying threshold...\n"));
+  double centerCellValue = 0.0;
+  // LOOP ON ALL CELLS
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    // Get Value in Current Cell
+    centerCellValue = cellPoints[loopA].getQuantity(qtyID);
+    // Apply Threshold
+    if (centerCellValue<threshold){
+      cellPoints[loopA].setQuantity(qtyID,0.0);
+    }
+  }
+}
+
+// ===================================
+// EVAL NOISY PRESSURE GRADIENT POINTS
+// ===================================
+void MRIScan::EvalNoisyPressureGradientPoints(){
+  // DECLARE
+  int* neighbours = new int[k3DNeighbors];
+  double currPressGradX = 0.0;
+  double currPressGradY = 0.0;
+  double currPressGradZ = 0.0;
+  double avPressGradX = 0.0;
+  double avPressGradY = 0.0;
+  double avPressGradZ = 0.0;
+  int currCell = 0;
+  double currentDistance = 0.0;
+  double currentDistance1 = 0.0;
+  double currentDistance2 = 0.0;
+  double currentDistance3 = 0.0;
+  double currentModulus = 0.0;
+  WriteSchMessage(std::string("Seeking Noisy Pressure Gradient Locations...\n"));
+  // LOOP ON ALL INNER CELLS
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    if(IsInnerCell(loopA)){
+      // GET PRESSURE GRADIENT AT CURRENT POINT
+      currPressGradX = cellPoints[loopA].pressGrad[0];
+      currPressGradY = cellPoints[loopA].pressGrad[1];
+      currPressGradZ = cellPoints[loopA].pressGrad[2];
+      // GET NEIGHBOURS
+      GetNeighbourCells(loopA,neighbours);
+      // INIT AVERAGE PRESSURE GRADIENT
+      avPressGradX = 0.0;
+      avPressGradY = 0.0;
+      avPressGradZ = 0.0;
+      // GET THE VALUES ON NEIGHBOR CELLS
+      for(int loopB=0;loopB<k3DNeighbors;loopB++){
+        currCell = neighbours[loopB];
+        // Get Quantity for Neighbor Cell
+        avPressGradX += cellPoints[currCell].pressGrad[0];
+        avPressGradY += cellPoints[currCell].pressGrad[1];
+        avPressGradZ += cellPoints[currCell].pressGrad[2];
+      }
+      // DIVIDE BY THE NUMBER OF COMPONENTS
+      avPressGradX = avPressGradX/(double)6.0;
+      avPressGradY = avPressGradY/(double)6.0;
+      avPressGradZ = avPressGradZ/(double)6.0;
+      // SET VALUE
+      currentDistance = sqrt((currPressGradX-avPressGradX)*(currPressGradX-avPressGradX)+
+                             (currPressGradY-avPressGradY)*(currPressGradY-avPressGradY)+
+                             (currPressGradZ-avPressGradZ)*(currPressGradZ-avPressGradZ));
+
+      currentDistance1 = fabs(currPressGradX-avPressGradX);
+      currentDistance2 = fabs(currPressGradY-avPressGradY);
+      currentDistance3 = fabs(currPressGradZ-avPressGradZ);
+      // GET MODULUS
+      currentModulus = sqrt((currPressGradX)*(currPressGradX)+
+                             (currPressGradY)*(currPressGradY)+
+                             (currPressGradZ)*(currPressGradZ));
+
+      // ASSIGN VALUE AS CONCENTRATION
+      //if(fabs(currentModulus)>1500.0){
+      if(fabs(currentModulus)>1.0e-7){
+        // JET JULIEN
+        cellPoints[loopA].filteredVel[0] = (currentDistance/currentModulus);
+        //cellPoints[loopA].filteredVel[0] = currentModulus;
+        //cellPoints[loopA].filteredVel[0] = (currentDistance1/currentModulus);
+        //cellPoints[loopA].filteredVel[1] = (currentDistance2/currentModulus);
+        //cellPoints[loopA].filteredVel[2] = (currentDistance3/currentModulus);
+        //cellPoints[loopA].filteredVel[0] = currentModulus;
+      }else{
+        cellPoints[loopA].filteredVel[0] = 0.0;
+        //cellPoints[loopA].filteredVel[0] = 0.0;
+        //cellPoints[loopA].filteredVel[1] = 0.0;
+        //cellPoints[loopA].filteredVel[2] = 0.0;
+      }
+    }
+  }
 }
 

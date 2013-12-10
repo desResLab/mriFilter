@@ -1,4 +1,5 @@
 #include <math.h>
+#include <algorithm>
 #include "mriScan.h"
 #include "mriConstants.h"
 #include "mriException.h"
@@ -21,31 +22,53 @@ bool MRIScan::IsInnerCell(int Cell){
 	return isInside;
 }
 
+// =======================
 // GET NEIGHBORS OF A CELL
+// =======================
 void MRIScan::GetNeighbourCells(int CurrentCell, int* &cellNeighbors){
   int* coords = new int[3];
   //Get The Coordinates of the Current Cell
   MapIndexToCoords(CurrentCell,coords);
   // Get Neighbor
-	// coords[0]
-  if ((coords[0]-1)>=0) cellNeighbors[0] = MapCoordsToIndex(coords[0]-1,coords[1],coords[2]);
-	else cellNeighbors[0] = -1;	
-	// coords[1]
-  if((coords[0]+1)<cellTotals[0]) cellNeighbors[1] = MapCoordsToIndex(coords[0]+1,coords[1],coords[2]);
-  else cellNeighbors[1] = -1;
+  // coords[0]
+  if ((coords[0]-1)>=0){
+    cellNeighbors[0] = MapCoordsToIndex(coords[0]-1,coords[1],coords[2]);
+  }else{
+    cellNeighbors[0] = -1;
+  }
+  // coords[1]
+  if((coords[0]+1)<cellTotals[0]){
+    cellNeighbors[1] = MapCoordsToIndex(coords[0]+1,coords[1],coords[2]);
+  }else{
+    cellNeighbors[1] = -1;
+  }
   // coords[2]
-  if((coords[1]-1)>=0) cellNeighbors[2] = MapCoordsToIndex(coords[0],coords[1]-1,coords[2]);
-	else cellNeighbors[2] = -1;
-	// coords[3]
-  if((coords[1]+1)<cellTotals[1]) cellNeighbors[3] = MapCoordsToIndex(coords[0],coords[1]+1,coords[2]);
-	else cellNeighbors[3] = -1;
-	// coords[4]
-  if((coords[2]-1)>=0) cellNeighbors[4] = MapCoordsToIndex(coords[0],coords[1],coords[2]-1);
-  else cellNeighbors[4] = -1;
+  if((coords[1]-1)>=0){
+    cellNeighbors[2] = MapCoordsToIndex(coords[0],coords[1]-1,coords[2]);
+  }else{
+    cellNeighbors[2] = -1;
+  }
+  // coords[3]
+  if((coords[1]+1)<cellTotals[1]){
+    cellNeighbors[3] = MapCoordsToIndex(coords[0],coords[1]+1,coords[2]);
+  }else{
+    cellNeighbors[3] = -1;
+  }
+  // coords[4]
+  if((coords[2]-1)>=0){
+    cellNeighbors[4] = MapCoordsToIndex(coords[0],coords[1],coords[2]-1);
+  }else{
+    cellNeighbors[4] = -1;
+  }
 	// coords[5]
-  if((coords[2]+1)<cellTotals[2]) cellNeighbors[5] = MapCoordsToIndex(coords[0],coords[1],coords[2]+1);
-  else cellNeighbors[5] = -1;
-  // Deallocate
+  if((coords[2]+1)<cellTotals[2]){
+    cellNeighbors[5] = MapCoordsToIndex(coords[0],coords[1],coords[2]+1);
+  }else{
+    cellNeighbors[5] = -1;
+  }
+  // SCRAMBLE VECTOR !!!
+  //std::random_shuffle(&cellNeighbors[0], &cellNeighbors[5]);
+  // DEALLOCATE
   delete [] coords;
 }
 

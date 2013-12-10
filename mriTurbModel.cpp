@@ -15,8 +15,10 @@ MRITurbModel::~MRITurbModel(){
 void MRITurbBoussinesq::EvalTurbulentViscosity(MRIScan* currScan, double* nuT){
   // Loop through all cells
   for(int loopA=0;loopA<currScan->totalCellPoints;loopA++){
-    // Careful SI Units
+    // JET Filippo
     nuT[loopA] = 0.01*0.5*0.0058;
+    //JET Julien
+    //nuT[loopA] = 0.01*86.1*1.0;
   }
 }
 // EVAL TURBULENT KINETIC ENERGY
@@ -41,7 +43,7 @@ void MRITurbBoussinesq::EvalTurbulentKineticEnergy(MRIScan* currScan, double* kT
       }
     }
     // Careful SI Units
-    kTurb[loopA] = 2.0*tensorProduct*0.01;
+    kTurb[loopA] = 2.0*tensorProduct*0.001;
   }
   // Delete first and second derivatives
   for(int loopA=0;loopA<3;loopA++){

@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <math.h>
 #include "mriExpansion.h"
 
@@ -38,14 +39,12 @@ MRIExpansion::MRIExpansion(MRIExpansion* otherExp){
 // ==========================
 // CONSTRUCT FROM STD::VECTOR
 // ==========================
-MRIExpansion::MRIExpansion(std::vector<double> Expansion){
-  // Call Default Constructor
-  MRIExpansion((int)Expansion.size()-3);
+void MRIExpansion::FillFromVector(std::vector<double> Expansion){
   // INITIALIZE VALUES
   for(int loopA=0;loopA<3;loopA++){
     constantFluxCoeff[loopA] = Expansion[loopA];
   }
-  for(int loopA=3;loopA<Expansion.size();loopA++){
+  for(unsigned int loopA=3;loopA<Expansion.size();loopA++){
     vortexCoeff[loopA-3] = Expansion[loopA];
   }
 }
@@ -75,7 +74,8 @@ void MRIExpansion::ApplyVortexThreshold(double ratio){
   // Apply Threshold
   for(int loopA=0;loopA<totalVortices;loopA++){
     currValue = fabs(vortexCoeff[loopA]);
-    if(currValue<=currThreshold){
+    //if(currValue<=currThreshold){
+    if(currValue<currThreshold){
       vortexCoeff[loopA] = 0.0;
     }
   }
@@ -99,5 +99,25 @@ void MRIExpansion::WriteToFile(std::string outFile){
   // Close Output file
   fclose(fid);
 }
+
+// ==========
+// GET 2 NORM
+// ==========
+double MRIExpansion::Get2Norm(bool onlyVortex){
+  // Init
+  double currNorm = 0.0;
+  // Consider Constant Flux Coefficient
+  if(!onlyVortex){
+    for(int loopA=0;loopA<3;loopA++){
+      currNorm += constantFluxCoeff[loopA] * constantFluxCoeff[loopA];
+    }
+  }
+  // Consider Vortices
+  for(int loopA=0;loopA<totalVortices;loopA++){
+    currNorm += vortexCoeff[loopA] * vortexCoeff[loopA];
+  }
+  return sqrt(currNorm);
+}
+
 
 

@@ -35,7 +35,7 @@ class MRIScan{
     bool hasReynoldsStress;
     double scanTime;
     // MRI Expansion
-    MRIExpansion* expansion = nullptr;
+    MRIExpansion* expansion;
     // ================
     // MEMBER FUNCTIONS
     // ================
@@ -54,14 +54,14 @@ class MRIScan{
     void ReadPltFile(std::string PltFileName, bool DoReorderCells);
     void ReadScanFromVOLFiles(std::string fileNameAn, std::string fileNameX, std::string fileNameY, std::string fileNameZ);
     void ReadScanFromSingleVOLFile(std::string fileName);
-    void ReadFromExpansionFile(std::string fileName);
+    void ReadFromExpansionFile(std::string fileName,bool applyThreshold,double thresholdValue);
 
     // READ FROM RAW DATA
     void ReadRAWFileSequence(std::string fileListName);
     int  ReadRawImage(std::string FileName, MRIImageData &data);
 	
     // WRITE FUNCTIONS
-    void FillPLTHeader(bool hasPressureGradient, bool hasRelativePressure,std::vector<std::string> &pltHeader, bool isFirstFile);
+    void FillPLTHeader(std::vector<std::string> &pltHeader, bool isFirstFile);
     void ExportToLSDYNA(std::string LSFileName);
     void ExportToCSV(std::string FileName);
     void ExportToTECPLOT(std::string FileName, bool isFirstFile);
@@ -90,10 +90,12 @@ class MRIScan{
     // RECONSTRUCTION FROM FACE FLUXES
     void RebuildFromFaceFluxes(double* faceFluxes);
 
-    // Reorder Cells
+    // Reorder Cells    
     void ReorderCells(int* Perm);
     // Get Global Permutation
     void GetGlobalPermutation(int* &GlobalPerm);
+    // REORDER GLOBAL SCAN
+    void ReorderScan();
     // MAPPING FUNCTIONS
     // Get Cell Number From Coords
     int  GetCellNumber(MRIReal* coords);
@@ -110,6 +112,8 @@ class MRIScan{
     int  MapCoordsToIndex(int i, int j, int k);
     void GetLocalStarFaces(int StarNum, int CellsX, int CellsY, int &BottomFace, int &TopFace, int &LeftFace, int &RightFace);
     bool IsInnerCell(int Cell);
+    int  findFirstNotVisited(int cellTotal, bool* visitedCell, std::vector<int> cellStack);
+    void formNotVisitedList(int cellTotal, bool* visitedCell,std::vector<bool>& notVisitedList);
   
     // MP FILTER
     void   PerformPhysicsFiltering(MRIOptions Options, bool useBCFilter, bool useConstantPatterns, MRIThresholdCriteria thresholdCriteria);
@@ -135,6 +139,12 @@ class MRIScan{
   
     // CELL SAMPLING
     void SampleVelocities(MRISamplingOptions SamplingOptions);
+
+    // GRADIENTS AND DERIVATIVES
+    void EvalSpaceDerivs(int currentCell, double** firstDerivs, double** secondDerivs);
+    void EvalSpaceGradient(int currentCell,int qtyID, double* gradient);
+    void ComputeQuantityGradient(int qtyID);
+
   
     // PRESSURE COMPUTATION
     // MAIN
@@ -145,11 +155,10 @@ class MRIScan{
     void EvalRelativePressure(int startingCell, double refPressure);
     void PerformPressureIterations();
     // Others
-    void EvalSpaceDerivs(int currentCell, double** firstDerivs, double** secondDerivs);
-    void EvalPressureIterative(int currentCell, double currentValue, bool* visitedCell,int* otherCells, std::vector<int> &cellStack);
+    void EvalPressureIterative(int currentCell, double currentValue, bool* visitedCell,int* otherCells, std::vector<int> &cellStack,int& cellCount);
     bool AreThereNotVisitedNeighbor(int cell, bool* visitedCell);
     bool AreThereVisitedNeighbor(int cell, bool* visitedCell, bool* isBoundaryCell, int &visitedNeighbor);
-    int  GetCellFromStack(std::vector<int> &cellStack, bool* visitedCell, bool* isBoundaryCell, bool &finished);
+    int  GetCellFromStack(std::vector<int> &cellStack, bool* visitedCell, bool* isBoundaryCell, bool &finished, bool& secondStage);
     int  GetNextStartingCell(int currentCell, bool* visitedCell, bool* isBoundaryCell, bool &finished, int &bookmark);
     int  EvalCentralCell();
 
@@ -159,6 +168,11 @@ class MRIScan{
     
     // APPLY SMOOTHING FILTER - LAVISION
     void ApplySmoothingFilter();
+
+    // APPLY MEDIAN FILTER
+    void ApplyMedianFilter(int qtyID,int maxIt);
+    void ThresholdQuantity(int qtyID,double threshold);
+    void EvalNoisyPressureGradientPoints();
   
     // SAMPLE FLOWS
     void CreateSampleCase(MRISamples sample, int sizeX, int sizeY, int sizeZ, double distX, double distY, double distZ, double currTime, MRIDirection dir);    

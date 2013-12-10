@@ -37,8 +37,9 @@
   const int kQtyPressGradientX =  7;
   const int kQtyPressGradientY =  8;
   const int kQtyPressGradientZ =  9;
-  const int kQtyRelPressure =  10;
-  const int kQtyVelModule =  11;
+  const int kQtyPressGradientMod = 10;
+  const int kQtyRelPressure =  11;
+  const int kQtyVelModule =  12;
   // Directions
   const int kdirX = 0;
   const int kdirY = 1;
@@ -79,6 +80,6 @@
   typedef const int MRIDirection;
   typedef const int MRISamples;
   typedef const int MRIPlane;
-  typedef boost::variate_generator<boost::mt19937, boost::normal_distribution<>> stdRndGenerator;
+  typedef boost::variate_generator<boost::mt19937, boost::normal_distribution<> > stdRndGenerator;
   
 #endif // MRICONST_H

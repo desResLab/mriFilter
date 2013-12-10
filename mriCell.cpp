@@ -59,6 +59,9 @@ double MRICell::getQuantity(int qtyID){
     case kQtyPressGradientZ:
       return pressGrad[2];
       break;
+    case kQtyPressGradientMod:
+      return sqrt(pressGrad[0]*pressGrad[0] + pressGrad[1]*pressGrad[1] + pressGrad[2]*pressGrad[2]);
+      break;
     case kQtyRelPressure:
       return relPressure;
       break;
@@ -74,7 +77,7 @@ double MRICell::getQuantity(int qtyID){
 // ============
 // SET QUANTITY
 // ============
-double MRICell::setQuantity(int qtyID, double value){
+void MRICell::setQuantity(int qtyID, double value){
   switch(qtyID){
     case kQtyPositionX:
       position[0] = value;
@@ -104,6 +107,11 @@ double MRICell::setQuantity(int qtyID, double value){
       pressGrad[1] = value;
       break;
     case kQtyPressGradientZ:
+      pressGrad[2] = value;
+      break;
+    case kQtyPressGradientMod:
+      pressGrad[0] = value;
+      pressGrad[1] = value;
       pressGrad[2] = value;
       break;
     case kQtyRelPressure:

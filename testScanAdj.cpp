@@ -42,6 +42,4 @@ void MRIScan::TestScanAdjacency(std::string fileName){
 	fclose(outFile);
 }
 
-
-
 #endif //TESTRANDOM_CPP

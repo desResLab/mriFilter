@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by Qt Creator 2.6.2, 2013-10-21T11:55:38. -->
+<!-- Written by Qt Creator 2.6.2, 2013-12-08T15:35:48. -->
 <qtcreator>
  <data>
   <variable>ProjectExplorer.Project.ActiveTarget</variable>
@@ -147,7 +147,7 @@
     </valuelist>
     <value type="int" key="CMakeProjectManager.BaseEnvironmentBase">2</value>
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguation.Title">mpFilterApp</value>
-    <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.Arguments">-ReynoldsStress Filippo_MRV_jet_raw.dat</value>
+    <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.Arguments">-evalPressure Jet_LES.plt Jet_LES_PRESS.vtk 1</value>
     <value type="bool" key="CMakeProjectManager.CMakeRunConfiguration.UseTerminal">false</value>
     <valuelist type="QVariantList" key="CMakeProjectManager.CMakeRunConfiguration.UserEnvironmentChanges"/>
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory"></value>

@@ -11,11 +11,6 @@
 #include <vector>
 // String Utilities
 #include <boost/algorithm/string.hpp>
-// Random Number Generator
-#include <boost/random/mersenne_twister.hpp>
-#include <boost/random/uniform_int_distribution.hpp>
-#include <boost/random/uniform_real_distribution.hpp>
-#include <boost/random/normal_distribution.hpp>
 
 #include "mriConstants.h"
 #include "mriCoordItem.h"
@@ -154,16 +149,16 @@ inline void InsertInDoubleList(double Value,int &TotalCoords,std::vector<double>
 // ==================================================
 // Generate Uniform Integer (global Variable Defined)
 // ==================================================
-inline int GenerateUniformIntegers(int lowIdx, int upIdx) {
+/*inline int GenerateUniformIntegers(int lowIdx, int upIdx) {
     boost::random::uniform_int_distribution<> dist(lowIdx, upIdx);
     //return dist(intGen);
     return 0;
-}
+}*/
 
 // ======================
 // GENERATE RANDOM VECTOR
 // ======================
-inline double* GenerateUniform01RandomVector(double& generator){
+/*inline double* GenerateUniform01RandomVector(double& generator){
   double* resVec = new double[3];
   boost::random::uniform_real_distribution<> dist(0.0,1.0);
   // Generate Numbers Uniformly
@@ -173,23 +168,23 @@ inline double* GenerateUniform01RandomVector(double& generator){
   // Normalize
   MRIUtils::Normalize3DVector(resVec);
 	return resVec;
-}
+}*/
 
 // ==========================
 // GENERATE STANDARD GAUSSIAN
 // ==========================
-inline double GenerateStandardGaussian(double stDev){
+/*inline double GenerateStandardGaussian(double stDev){
   // Allocate Vector
   boost::random::normal_distribution<> dist(0.0,stDev);
   // Add Random Component
   //return dist(realGen);
   return 0.0;
-}
+}*/
 
 // ===========================================
 // PERTURB ITS COORDINATES WITH GAUSSIAN NOISE
 // ===========================================
-inline void PerturbVectorGaussian(int vecSize, MRICoordItem* coordItemArray, double stDev){
+/*inline void PerturbVectorGaussian(int vecSize, MRICoordItem* coordItemArray, double stDev){
   // Allocate Vector
   boost::random::normal_distribution<> dist(0.0,stDev);
   // Add Random Component
@@ -198,7 +193,7 @@ inline void PerturbVectorGaussian(int vecSize, MRICoordItem* coordItemArray, dou
     //coordItemArray[loopA].y += dist(normGen);
     //coordItemArray[loopA].z += dist(normGen);
   }
-}
+}*/
 
 // ============
 // ROUND VALUES
@@ -364,7 +359,7 @@ inline void ReadStreamlinesFromLegacyVTK(std::string fileName, std::vector<MRISt
   WriteSchMessage(std::string("Reading Streamlines from file...\n"));
   // Declare input File
   std::ifstream infile;
-  infile.open(fileName);
+  infile.open(fileName.c_str());
 
   // Read Data From File
   std::string buffer;
@@ -412,7 +407,7 @@ inline void ReadStreamlinesFromLegacyVTK(std::string fileName, std::vector<MRISt
         // Tokenize String
         boost::split(tokenizedString, buffer, boost::is_any_of(" ,"), boost::token_compress_on);
         // Count number of points read
-        numPointsReadInLine = floor(tokenizedString.size()/3.0);
+        numPointsReadInLine = (int)floor(tokenizedString.size()/(double)3.0);
         // Increment Counter
         readPoints += numPointsReadInLine;
         // Add Points to list
@@ -480,7 +475,7 @@ inline void ReadFileList(std::string listName, std::vector<std::string> &fileLis
 // =====================
 // READ MATRIX FROM FILE
 // =====================
-inline void ReadMatrixFromFile(std::string inFileName,int& nrow,int& ncol,std::vector<std::vector<double>> &inMat){
+inline void ReadMatrixFromFile(std::string inFileName,int& nrow,int& ncol,std::vector<std::vector<double> > &inMat){
   // Open File
   std::ifstream inFile;
   std::string buffer;
@@ -523,7 +518,26 @@ inline void ReadMatrixFromFile(std::string inFileName,int& nrow,int& ncol,std::v
   inFile.close();
 }
 
-
+// ====================
+// GET MEDIAN OF VECTOR
+// ====================
+inline double GetMedian(std::vector<double> &v){
+  size_t n = v.size() / 2;
+  nth_element(v.begin(), v.begin()+n, v.end());
+  return v[n];
 }
 
+// ========
+// GET MEAN
+// ========
+inline double GetMean(std::vector<double> &v){
+  double av = 0.0;
+  for(int loopA=0;loopA<v.size();loopA++){
+    av = av + v[loopA];
+  }
+  av = (av/((double)v.size()));
+  return av;
+}
+
+}
 #endif //MRIUTILS_H

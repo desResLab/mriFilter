@@ -127,5 +127,4 @@ Begin
                         Result:=(ABS(CurrentValue)>ThresholdCriteria.ThresholdValue);
                       End;
   End;
-End;
-*/
+End;*/

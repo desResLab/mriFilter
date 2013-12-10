@@ -60,7 +60,7 @@ void FormBinLimits(MRIScan* scan, int pdfQuantity, double &currInterval, double*
     // Initialize Limits
   double  minRange = std::numeric_limits<double>::max();
   double  maxRange = -std::numeric_limits<double>::max();
-  double* cellCoord = nullptr;
+  double* cellCoord = NULL;
   double  otherQuantity = 0.0;
   double  refQuantity = 0.0;
   double  currValue = 0.0;
@@ -98,7 +98,7 @@ void FormDifferenceBinLimits(MRIScan* scanOther, MRIScan* scanRef, int pdfQuanti
   // Initialize Limits
   double minRange = std::numeric_limits<double>::max();
   double maxRange = -std::numeric_limits<double>::max();
-  double* cellCoord = nullptr;
+  double* cellCoord = NULL;
   double otherQuantity = 0.0;
   double refQuantity = 0.0;
   double currValue = 0.0;
@@ -147,7 +147,7 @@ void EvalScanPDF(MRIScan* scan, int pdfQuantity, int numberOfBins, bool useBox, 
     binArray[loopA] = 0.0;
   }
   // Loop through the points
-  double* cellCoord = nullptr;
+  double* cellCoord = NULL;
   double currValue = 0.0;
   for(int loopA=0;loopA<scan->totalCellPoints;loopA++){
     // Get Cell Coords
@@ -185,7 +185,7 @@ void EvalScanDifferencePDF(MRISequence* sequence, int otherScan, int refScan, co
   // Loop through the points
   double sourceValue = 0.0;
   double refValue = 0.0;
-  double* cellCoord = nullptr;
+  double* cellCoord = NULL;
   double otherQuantity = 0.0;
   double refQuantity = 0.0;
   double currValue = 0.0;

@@ -18,7 +18,7 @@ class MRICell
 	  ~MRICell();
     // Member Functions
     double getQuantity(int qtyID);
-    double setQuantity(int qtyID, double value);
+    void setQuantity(int qtyID, double value);
 };
 
 #endif // MIRCELL_H

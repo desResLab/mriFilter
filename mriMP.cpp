@@ -703,19 +703,23 @@ void MRIScan::AssembleResidualVector(bool useBCFilter, MRIThresholdCriteria thre
 void MRIScan::PerformPhysicsFiltering(MRIOptions Options, bool useBCFilter, bool useConstantPatterns, MRIThresholdCriteria thresholdCriteria){
   // Initialization
   int totalFaces = 0;
-  double* resVec = nullptr;
-  double* filteredVec = nullptr;
-  double resNorm = 0.0;
+  double* resVec = NULL;
+  double* filteredVec = NULL;
   std::vector<int> facesID;
   std::vector<double> facesCoeffs;
   double corrCoeff = 0.0;
   int totalSlices = 0;
   int totalStars = 0;
   int totalStarFaces = 0;
-  double relResNorm = 0.0;
   double maxDivergence = 0.0;
   double maxNormError = 0.0;
   double maxAngleError = 0.0;
+
+  // Set up Norms
+  double resNorm = 0.0;
+  double relResNorm = 0.0;
+  double twoNorm = 0.0;
+  double relTwoNorm = 0.0;
   
   // Assemble Face Flux Vectors
   AssembleResidualVector(useBCFilter,thresholdCriteria,totalFaces,resVec,filteredVec,resNorm);
@@ -737,7 +741,7 @@ void MRIScan::PerformPhysicsFiltering(MRIOptions Options, bool useBCFilter, bool
   WriteSchMessage("Initial Residual Norm: "+MRIUtils::FloatToStr(resNorm)+"\n");
 
   // Initialize Expansion
-  MRIExpansion* bcExpansion = nullptr;
+  MRIExpansion* bcExpansion = NULL;
   int totalVortexes = EvalTotalVortex();
   if(!useBCFilter){
     expansion = new MRIExpansion(totalVortexes);
@@ -750,6 +754,7 @@ void MRIScan::PerformPhysicsFiltering(MRIOptions Options, bool useBCFilter, bool
   bool converged = false;
   int itCount = 0;
   double oldResNorm = resNorm;
+  double oldTwoNorm = twoNorm;
   // TEMPORARY!!!
   bool stopIterations = false;
   // Set Tolerance
@@ -821,10 +826,31 @@ void MRIScan::PerformPhysicsFiltering(MRIOptions Options, bool useBCFilter, bool
         }
       }
     }
-    // Print Residual Norm
-    if(fabs(oldResNorm)>kMathZero) relResNorm = fabs((resNorm-oldResNorm)/(oldResNorm));
-    else relResNorm = 0.0;
-    WriteSchMessage("It: " + MRIUtils::IntToStr(itCount) + "; ABS Res: "+MRIUtils::FloatToStr(resNorm)+"; Rel: " + MRIUtils::FloatToStr(relResNorm)+"\n");
+
+    // Eval Two-Norm of the Coefficient Vector
+    if(!useBCFilter){
+      twoNorm = expansion->Get2Norm(false);
+    }else{
+      twoNorm = bcExpansion->Get2Norm(false);
+    }
+
+    // Eval Relative Residual Norm
+    if(fabs(oldResNorm)>kMathZero){
+      relResNorm = fabs((resNorm-oldResNorm)/(oldResNorm));
+    }else{
+      relResNorm = 0.0;
+    }
+
+    // Eval Relative Coefficient Two-Norm
+    if(fabs(oldTwoNorm)>kMathZero){
+      relTwoNorm = fabs((twoNorm-oldTwoNorm)/(oldTwoNorm));
+    }else{
+      relTwoNorm = 0.0;
+    }
+
+    // WRITE MESSAGE AT EVERY INTERATION
+    WriteSchMessage("It: " + MRIUtils::IntToStr(itCount) + "; ABS Res: "+MRIUtils::FloatToStr(resNorm)+"; Rel: " + MRIUtils::FloatToStr(relResNorm) +
+                    "; Coeff 2-Norm: "+MRIUtils::FloatToStr(twoNorm)+"; Rel 2-Norm: " + MRIUtils::FloatToStr(relTwoNorm)+"\n");
 
     // Check Convergence
     //converged = (itCount>1);
@@ -835,6 +861,7 @@ void MRIScan::PerformPhysicsFiltering(MRIOptions Options, bool useBCFilter, bool
 
     // Update Norm
     oldResNorm = resNorm;
+    oldTwoNorm = twoNorm;
   }
 
   // Iterations Stopped By User
@@ -897,7 +924,7 @@ void MRIScan::PerformPhysicsFiltering(MRIOptions Options, bool useBCFilter, bool
 void MRIScan::ReconstructFromExpansion(){
 
   // Check Expansion is available
-  if(expansion == nullptr){
+  if(expansion == NULL){
     throw new MRIExpansionException("Error. Vortex Expansion not available.");
   }
 

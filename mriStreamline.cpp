@@ -128,9 +128,9 @@ void MRIScan::GetPointVelocity(double xCoord, double yCoord, double zCoord,
   int yCell = 0;
   int zCell = 0;
   // Cell Indexes
-  double xCellIndex[3] = {0.0};
-  double yCellIndex[3] = {0.0};
-  double zCellIndex[3] = {0.0};  
+  int xCellIndex[3] = {0};
+  int yCellIndex[3] = {0};
+  int zCellIndex[3] = {0};
   // Find The Cells It Belongs To
   int currentCell = GetCellNumber(coords);
   // Find the Index of the Current Cell
@@ -140,31 +140,49 @@ void MRIScan::GetPointVelocity(double xCoord, double yCoord, double zCoord,
   double yDiff = coords[1] - cellPoints[currentCell].position[1];
   double zDiff = coords[2] - cellPoints[currentCell].position[2];
   // Normalize Differences to +1/-1
-  if (fabs(xDiff)>kMathZero) xDiff = (xDiff/fabs(xDiff));
-  else xDiff = 0.0;
-  if (fabs(yDiff)>kMathZero) yDiff = (yDiff/fabs(yDiff));
-  else yDiff = 0.0;
-  if (fabs(zDiff)>kMathZero) zDiff = (zDiff/fabs(zDiff));
-  else zDiff = 0.0;
+  if (fabs(xDiff)>kMathZero){
+    xDiff = (xDiff/fabs(xDiff));
+  }else{
+    xDiff = 0.0;
+  }
+  if (fabs(yDiff)>kMathZero){
+    yDiff = (yDiff/fabs(yDiff));
+  }else{
+    yDiff = 0.0;
+  }
+  if (fabs(zDiff)>kMathZero){
+    zDiff = (zDiff/fabs(zDiff));
+  }else{
+    zDiff = 0.0;
+  }
   // Find Neighbour indexes
   // X
   xCellIndex[0] = currentCellIndexes[0]+(int)(xDiff);
   xCellIndex[1] = currentCellIndexes[1];
   xCellIndex[2] = currentCellIndexes[2];
-  if ((xCellIndex[0]<0)||(xCellIndex[0]>cellTotals[0]-1)) xCell = currentCell;
-  else xCell = MapCoordsToIndex(xCellIndex[0],xCellIndex[1],xCellIndex[2]);
+  if ((xCellIndex[0]<0)||(xCellIndex[0]>cellTotals[0]-1)){
+    xCell = currentCell;
+  }else{
+    xCell = MapCoordsToIndex(xCellIndex[0],xCellIndex[1],xCellIndex[2]);
+  }
   // Y
   yCellIndex[0] = currentCellIndexes[0];
   yCellIndex[1] = currentCellIndexes[1]+ (int)(yDiff);
   yCellIndex[2] = currentCellIndexes[2];
-  if ((yCellIndex[1]<0)||(yCellIndex[1]>cellTotals[1]-1)) yCell = currentCell;
-  else yCell = MapCoordsToIndex(yCellIndex[0],yCellIndex[1],yCellIndex[2]);
+  if ((yCellIndex[1]<0)||(yCellIndex[1]>cellTotals[1]-1)){
+    yCell = currentCell;
+  }else{
+    yCell = MapCoordsToIndex(yCellIndex[0],yCellIndex[1],yCellIndex[2]);
+  }
   // Z
   zCellIndex[0] = currentCellIndexes[0];
   zCellIndex[1] = currentCellIndexes[1];
   zCellIndex[2] = currentCellIndexes[2]+(int)(zDiff);
-  if ((zCellIndex[2]<0)||(zCellIndex[2]>cellTotals[2]-1)) zCell = currentCell;
-  else zCell = MapCoordsToIndex(zCellIndex[0],zCellIndex[1],zCellIndex[2]);
+  if ((zCellIndex[2]<0)||(zCellIndex[2]>cellTotals[2]-1)){
+    zCell = currentCell;
+  }else{
+    zCell = MapCoordsToIndex(zCellIndex[0],zCellIndex[1],zCellIndex[2]);
+  }
   // Get Velocity
   PerformVelocityLinearInterpolation(coords,currentCell,xCell,yCell,zCell,pointVel);
 }
