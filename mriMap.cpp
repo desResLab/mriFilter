@@ -309,7 +309,7 @@ int MRIScan::GetAdjacentFace(int globalNodeNumber /*Already Ordered Globally x-y
 }
 
 // Get Local Adjacent Plane
-void GetLocalStarFaces(int starNum, int cellsX, int cellsY, 
+/*void GetLocalStarFaces(int starNum, int cellsX, int cellsY,
                        int &bottomFace, int &topFace, int &leftFace, int &rightFace){
   // Find Local Face Number
   bottomFace = (((int)(starNum)/(int)(cellsX+1))-1)*(2*cellsX+1) + ((starNum) % (cellsX+1)) + cellsX + 1;
@@ -324,4 +324,37 @@ void GetLocalStarFaces(int starNum, int cellsX, int cellsY,
   if(iCoord == cellsY) topFace = -1;
   if(jCoord == 0) leftFace = -1;
   if(jCoord == cellsX) rightFace = -1;
+}*/
+
+// ================================
+// GET VERTEXES ASSOCIATED TO CELLS
+// ================================
+void MRIScan::getNeighborVortexes(int cellNumber,int dim,int& idx1,int& idx2,int& idx3,int& idx4){
+  int coords[3];
+  int initialOffset = 0;
+  MapIndexToCoords(cellNumber,coords);
+  if(dim == 1){
+    // YZ Plane
+    initialOffset = coords[0]*((cellTotals[1]+1)*(cellTotals[2]+1)) + coords[2]*(cellTotals[1]+1);
+    idx1 = initialOffset + coords[1];
+    idx2 = idx1 + 1;
+    idx3 = idx2 + (cellTotals[1]);
+    idx4 = idx3 + 1;
+  }else if(dim == 2){
+    // XZ Plane
+    initialOffset = (cellTotals[0]*(cellTotals[1]+1)*(cellTotals[2]+1)) + coords[1]*((cellTotals[0]+1)*(cellTotals[2]+1)) + coords[2]*(cellTotals[0]+1);
+    idx1 = initialOffset + coords[0];
+    idx2 = idx1 + 1;
+    idx3 = idx2 + (cellTotals[0]);
+    idx4 = idx3 + 1;
+  }else{
+    // XY Plane
+    initialOffset = (cellTotals[0]*(cellTotals[1]+1)*(cellTotals[2]+1)) +
+                    ((cellTotals[0]+1)*cellTotals[1]*(cellTotals[2]+1)) +
+                    coords[2]*((cellTotals[0]+1)*(cellTotals[1]+1)) + coords[1]*(cellTotals[0]+1);
+    idx1 = initialOffset + coords[0];
+    idx2 = idx1 + 1;
+    idx3 = idx2 + (cellTotals[0]);
+    idx4 = idx3 + 1;
+  }
 }

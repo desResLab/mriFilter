@@ -4,6 +4,7 @@
 #include "mriScan.h"
 #include "mriUtils.h"
 #include "mriStatistics.h"
+#include "mriConstants.h"
 #include "schMessages.h"
 
 #include <boost/random.hpp>
@@ -186,14 +187,14 @@ void ProcessSingleScan(std::string inFileName,std::string outfileName,double itT
   MyMRISequence->ApplyMPFilter(Options,useBCFilter,useConstantPatterns,criteria);
 
   // APPLY BOUNDARY CONDITION FILTER
-  //useBCFilter = true;
-  //MyMRISequence->ApplyMPFilter(Options,useBCFilter,useConstantPatterns,criteria);
+  useBCFilter = true;
+  MyMRISequence->ApplyMPFilter(Options,useBCFilter,useConstantPatterns,criteria);
 
   // SAVE EXPANSION TO FILE
   MyMRISequence->GetScan(0)->WriteExpansionFile(std::string("ExpansionFile.dat"));
 
   // APPLY FINAL THRESHOLD
-  //MyMRISequence->ApplyThresholding(criteria);
+  MyMRISequence->ApplyThresholding(criteria);
 
   // Evaluate Statistics
   //MyMRISequence->EvalStatistics();
@@ -388,7 +389,7 @@ void TEST_ExpansionCoefficients(std::string inFileName){
   firstMRIScan = MyMRISequence->GetScan(0);
 
   // THRESHOLDING ON EXPANSION COEFFICIENTS
-  firstMRIScan->expansion->ApplyVortexThreshold(0.5);
+  firstMRIScan->expansion->ApplyVortexThreshold(kSoftThreshold,0.5);
   //firstMRIScan->expansion->WriteToFile("Expansion.dat");
 
   // REBUILD FROM EXPANSION
@@ -455,7 +456,7 @@ void TEST02_PrintThresholdingToVTK(std::string inFileName){
     // CREATE NEW EXPANSION
     MRIExpansion* currExp = new MRIExpansion(MyMRISequence->GetScan(0)->expansion);
     // APPLY THRESHOLD
-    currExp->ApplyVortexThreshold((0.95/4.0)*(loopA));
+    currExp->ApplyVortexThreshold(kSoftThreshold,(0.95/4.0)*(loopA));
     // WRITE EXPANSION TO FILE
     currExp->WriteToFile("Expansion_" + MRIUtils::IntToStr(loopA) + "\n");
     // GET A SCAN FROM ORIGINAL SEQUENCE
@@ -513,7 +514,7 @@ void TEST03_EvalReynoldsStresses(std::string inFileName){
     MRIExpansion* currExp = new MRIExpansion(MyMRISequence->GetScan(0)->expansion);
 
     // APPLY THRESHOLD
-    currExp->ApplyVortexThreshold((0.99/1.0)*(loopA));
+    currExp->ApplyVortexThreshold(kHardThresold,(0.99/1.0)*(loopA));
 
     // WRITE EXPANSION TO FILE
     currExp->WriteToFile("Expansion_" + MRIUtils::IntToStr(loopA) + "\n");
@@ -874,19 +875,65 @@ void PerformStreamlineTest2(std::string inFileName,std::string outfileName){
 // ========================================
 // BUILD FROM COEFFICIENTS AND WRITE TO PLT
 // ========================================
-void BuildFromCoeffs(std::string coeffFileName,std::string plotOut,double threshold){
+void BuildFromCoeffs(std::string coeffFileName,std::string plotOut,bool performThreshold,int thresholdType,double threshold){
 
   // CREATE NEW SEQUENCES
   MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
 
   // ADD FILE TO SEQUENCE
   MRIScan* MyMRIScan = new MRIScan(0.0);
-  MyMRIScan->ReadFromExpansionFile(coeffFileName,true,threshold);
+  MyMRIScan->ReadFromExpansionFile(coeffFileName,performThreshold,thresholdType,threshold);
   MyMRISequence->AddScan(MyMRIScan);
+
+  // APPLY THRESHOLDING
+  //MRIThresholdCriteria criteria(kCriterionLessThen,kQtyConcentration,1000.0);
+  //MyMRISequence->ApplyThresholding(criteria);
 
   // EXPORT TO PLT FILE
   //MyMRISequence->ExportToTECPLOT(plotOut);
   MyMRISequence->ExportToVTK(plotOut);
+}
+
+// ============================
+// EVAL VARIOUS VORTEX CRITERIA
+// ============================
+void EvalVortexCriteria(std::string inFileName,std::string outFileName){
+  // CREATE NEW SEQUENCES
+  MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
+
+  // ADD FILE TO SEQUENCE
+  MRIScan* MyMRIScan = new MRIScan(0.0);
+  MyMRIScan->ReadPltFile(inFileName,true);
+  MyMRISequence->AddScan(MyMRIScan);
+
+  // EVAL REYNOLDS STRESSES AND PRESSURE GRADIENTS
+  MyMRISequence->GetScan(0)->EvalVortexCriteria();
+
+  // WRITE OUTPUT FILES TO VTK
+  MyMRISequence->ExportToVTK(outFileName);
+}
+
+// ===========================================
+// WRITE SPATIAL DISTRIBUTIONS OF COEFFICIENTS
+// ===========================================
+void WriteSpatialExpansion(std::string expFileName,std::string outFileName){
+  // CREATE NEW SEQUENCES
+  MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
+
+  // CREATE NEW SCAN
+  MRIScan* MyMRIScan = new MRIScan(0.0);
+
+  // READ FROM EXPANSION COEFFICIENTS
+  MyMRIScan->ReadFromExpansionFile(expFileName,false,kSoftThreshold,0.0);
+
+  // ADD TO SEQUENCE
+  MyMRISequence->AddScan(MyMRIScan);
+
+  // SPATIALLY EVALUATE VORTEX COEFFICIENTS
+  MyMRISequence->GetScan(0)->EvalSMPVortexCriteria(MyMRISequence->GetScan(0)->expansion);
+
+  // EXPORT TO VTK
+  MyMRISequence->ExportToVTK(outFileName);
 }
 
 // ============
@@ -1030,7 +1077,7 @@ int main(int argc, char **argv)
     double threshold = atof(argv[4]);
 
     // READ FROM COEFFICIENT FILE AND EXPORT TO PLT
-    BuildFromCoeffs(coeffFileName,plotOut,threshold);
+    BuildFromCoeffs(coeffFileName,plotOut,true,kSoftThreshold,threshold);
 
   }else if (firstOption == "-evalPressure"){
 
@@ -1051,6 +1098,24 @@ int main(int argc, char **argv)
 
     // EVAL PRESSURES FROM EXPANSION COFFICIENTS
     EvalConcentrationGradient(inFileName,outFileName);
+
+  }else if (firstOption == "-vortexCrit"){
+
+      // GET FILE NAMES
+      std::string inFileName(argv[2]);
+      std::string outFileName(argv[3]);
+
+      // EVAL PRESSURES FROM EXPANSION COFFICIENTS
+      EvalVortexCriteria(inFileName,outFileName);
+
+  }else if (firstOption == "-writeSpatialExpansion"){
+
+      // GET FILE NAMES
+      std::string inFileName(argv[2]);
+      std::string outFileName(argv[3]);
+
+      // EVAL Spatial Expansion Coefficients Distribution
+      WriteSpatialExpansion(inFileName,outFileName);
 
   }else if (firstOption == "-scaleModel"){
 

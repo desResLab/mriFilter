@@ -54,7 +54,7 @@ class MRIScan{
     void ReadPltFile(std::string PltFileName, bool DoReorderCells);
     void ReadScanFromVOLFiles(std::string fileNameAn, std::string fileNameX, std::string fileNameY, std::string fileNameZ);
     void ReadScanFromSingleVOLFile(std::string fileName);
-    void ReadFromExpansionFile(std::string fileName,bool applyThreshold,double thresholdValue);
+    void ReadFromExpansionFile(std::string fileName,bool applyThreshold,int thresholdType,double thresholdValue);
 
     // READ FROM RAW DATA
     void ReadRAWFileSequence(std::string fileListName);
@@ -188,6 +188,21 @@ class MRIScan{
     void AssignRandomStandardGaussianFlow();
     void AssignRandomComponent(const int kdirX,stdRndGenerator &generator);
     void AssignZeroVelocities();
+
+    // VORTEX IDENTIFICATION
+    // With SMP Expansion Coefficients
+    double EvalSMPVortexCriteria(MRIExpansion* exp);
+    // Used Q,L2,Delta Criteria
+    double EvalVortexCriteria();
+    void   EvalCellVelocityGradientDecomposition(int currentCell, double** deformation, double** rotation, double** firstDerivs);
+    double EvalCellQCriterion(int currentCell, double** deformation, double** rotation);
+    double EvalCellL2Criterion(int currentCell, double** deformation, double** rotation);
+    double EvalCellDeltaCriterion(int currentCell, double** deformation, double** rotation, double** velGradient);
+    double EvalCellVortexCriteria(int currentCell,int criteriaType, double** deformation, double** rotation, double** velGradient);
+
+    // SPATIAL REPRESENTATION OF VORTEX COEFFICIENTS
+    double EvalVortexCriteria(MRIExpansion* exp);
+    void getNeighborVortexes(int cellNumber,int dim,int& idx1,int& idx2,int& idx3,int& idx4);
     
     // ADD GAUSSIAN NOISE
     void ApplyGaussianNoise(double stDev);

@@ -69,4 +69,14 @@ class MRIImageException: public MRIException{
       virtual const char* what() const throw() {return msg.c_str();}
 };
 
+// STATISTIC EVALUATION EXCEPTION
+class MRIVortexException: public MRIException{
+  public:
+    MRIVortexException(const char* m):MRIException(m){};
+    virtual ~MRIVortexException() throw(){};
+    // Member Functions
+      virtual const char* what() const throw() {return msg.c_str();}
+};
+
+
 #endif // MRIEXCEPTION_H

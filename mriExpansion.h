@@ -22,7 +22,7 @@ public:
     // Fill From Vector
     void FillFromVector(std::vector<double> Expansion);
     // Threshold Vortex Expansion
-    void ApplyVortexThreshold(double ratio);
+    void ApplyVortexThreshold(int thresholdType, double ratio);
     // Eval 2-Norm of Coefficient Vector
     double Get2Norm(bool onlyVortex);
     // Write to text File

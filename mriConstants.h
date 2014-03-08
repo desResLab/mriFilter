@@ -75,11 +75,22 @@
   const int kPlaneXY = 0;
   const int kPlaneYZ = 1;
   const int kPlaneZX = 2;
-  
+
+  // Vortex Criterion
+  const int kVortexQ = 0;
+  const int kVortexL2 = 1;
+  const int kVortexDelta = 2;
+
+  // Vortex Expansion Thresholding
+  const int kHardThresold = 0;
+  const int kSoftThreshold = 1;
+
   // Aternative Typedefs
   typedef const int MRIDirection;
   typedef const int MRISamples;
   typedef const int MRIPlane;
   typedef boost::variate_generator<boost::mt19937, boost::normal_distribution<> > stdRndGenerator;
+
+
   
 #endif // MRICONST_H

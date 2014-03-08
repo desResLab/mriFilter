@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 #include "mriExpansion.h"
+#include "mriConstants.h"
 
 // ===========
 // CONSTRUCTOR
@@ -58,7 +59,7 @@ MRIExpansion::~MRIExpansion(){
 // ===========================
 // Apply ratio-based Threshold
 // ===========================
-void MRIExpansion::ApplyVortexThreshold(double ratio){
+void MRIExpansion::ApplyVortexThreshold(int thresholdType, double ratio){
   // Init
   double maxCoeff = 0.0;
   double currValue = 0.0;
@@ -74,9 +75,11 @@ void MRIExpansion::ApplyVortexThreshold(double ratio){
   // Apply Threshold
   for(int loopA=0;loopA<totalVortices;loopA++){
     currValue = fabs(vortexCoeff[loopA]);
-    //if(currValue<=currThreshold){
+    // Apply Threshold
     if(currValue<currThreshold){
       vortexCoeff[loopA] = 0.0;
+    }else if(thresholdType == kSoftThreshold){
+      vortexCoeff[loopA] = (vortexCoeff[loopA]/fabs(vortexCoeff[loopA]))*(fabs(vortexCoeff[loopA]-currThreshold));
     }
   }
 }

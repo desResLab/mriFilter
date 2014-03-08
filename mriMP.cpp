@@ -611,7 +611,9 @@ void MRIScan::AssembleResidualVector(bool useBCFilter, MRIThresholdCriteria thre
     if(useBCFilter){
       currentValue = cellPoints[loopA].getQuantity(thresholdCriteria.thresholdQty);
       continueToProcess = thresholdCriteria.MeetsCriteria(currentValue);
-    }else continueToProcess = true;
+    }else{
+      continueToProcess = true;
+    }
     if(continueToProcess){
       // Store Local Values
       currentVelX = cellPoints[loopA].velocity[0];

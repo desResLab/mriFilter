@@ -539,5 +539,57 @@ inline double GetMean(std::vector<double> &v){
   return av;
 }
 
+// =============================
+// GET EIGENVALUES OF 3x3 MATRIX
+// =============================
+inline void Compute3x3MatrixEigenvals(double A[3][3], double root[3]){
+  double inv3 = (1.0/3.0);
+  double root3 = sqrt(3.0);
+  double a00 = (double)A[0][0];
+  double a01 = (double)A[0][1];
+  double a02 = (double)A[0][2];
+  double a11 = (double)A[1][1];
+  double a12 = (double)A[1][2];
+  double a22 = (double)A[2][2];
+  double c0 = a00*a11*a22 + 2.0*a01*a02*a12 - a00*a12*a12 - a11*a02*a02 - a22*a01*a01;
+  double c1 = a00*a11 - a01*a01 + a00*a22 - a02*a02 + a11*a22 - a12*a12;
+  double c2 = a00 + a11 + a22;
+  double c2Div3 = c2*inv3;
+  double aDiv3 = (c1 - c2*c2Div3)*inv3;
+  if (aDiv3 > 0.0){
+    aDiv3 = 0.0;
+  }
+  double mbDiv2 = 0.5*(c0 + c2Div3*(2.0*c2Div3*c2Div3 - c1));
+  double q = mbDiv2*mbDiv2 + aDiv3*aDiv3*aDiv3;
+  if (q > 0.0) {
+    q = 0.0;
+  }
+  double magnitude = sqrt(-aDiv3);
+  double angle = atan2(sqrt(-q),mbDiv2)*inv3;
+  double cs = cos(angle);
+  double sn = sin(angle);
+  root[0] = c2Div3 + 2.0*magnitude*cs;
+  root[1] = c2Div3 - magnitude*(cs + root3*sn);
+  root[2] = c2Div3 - magnitude*(cs - root3*sn);
+  // SORT
+  double temp = 0.0;
+  if(root[0]<root[1]){
+    temp = root[0];
+    root[0] = root[1];
+    root[1] = temp;
+  }
+  if(root[0]<root[2]){
+    temp = root[0];
+    root[0] = root[2];
+    root[2] = temp;
+  }
+  if(root[1]<root[2]){
+    temp = root[1];
+    root[1] = root[2];
+    root[2] = temp;
+  }
+}
+
+
 }
 #endif //MRIUTILS_H

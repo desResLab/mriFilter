@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.6)
 aux_source_directory(. SRC_LIST)
 include_directories(".")
 # INCLUDE BOOST LIB
-find_package(Boost 1.30 COMPONENTS program_options REQUIRED)
+find_package(Boost REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 # CHECK COMPILER
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
@@ -20,8 +20,8 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   message( using Visual Studio C++ )
 endif()
 #
-#add_definitions("-g -Wall -m64 -O0 -std=c++0x")
-add_definitions("-g -Wall -m64 -O0")
+add_definitions("-g -Wall -m64 -O0 -std=c++0x")
+
 add_executable(${PROJECT_NAME} ${SRC_LIST})
 #
 target_link_libraries(mpFilterApp ${Boost_LIBRARIES})

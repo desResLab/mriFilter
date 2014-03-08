@@ -1339,6 +1339,9 @@ void MRIScan::ScalePositions(double factor){
 // Write to VTK File
 // =================
 void MRIScan::ExportToVTK(std::string fileName){
+  // Print Aux Flag
+  bool printAux = true;
+
   // Open Output File
   FILE* outFile;
   outFile = fopen(fileName.c_str(),"w");
@@ -1410,6 +1413,16 @@ void MRIScan::ExportToVTK(std::string fileName){
       fprintf(outFile,"\n");
     }
   }
+
+  // Print Vortex Criteria
+  if (printAux){
+    fprintf(outFile,"VECTORS VortexCrit float\n");
+    // Print pressure Gradient
+    for (int loopA=0;loopA<totalCellPoints;loopA++){
+      fprintf(outFile,"%e %e %e\n",cellPoints[loopA].filteredVel[0],cellPoints[loopA].filteredVel[1],cellPoints[loopA].filteredVel[2]);
+    }
+  }
+
 
   // Close File
   fclose(outFile);
@@ -1734,7 +1747,7 @@ double MRIScan::GetDiffNorm(MRIScan* otherScan){
 // =============================
 // READ SCAN FROM EXPANSION FILE
 // =============================
-void MRIScan::ReadFromExpansionFile(std::string fileName,bool applyThreshold,double thresholdRatio){
+void MRIScan::ReadFromExpansionFile(std::string fileName,bool applyThreshold, int thresholdType,double thresholdRatio){
 
   // ALLOCATE VARIABLES
   int tot[3];
@@ -1769,7 +1782,7 @@ void MRIScan::ReadFromExpansionFile(std::string fileName,bool applyThreshold,dou
 
   // APPLY THRESHOLD TO EXPANSION
   if(applyThreshold){
-    expansion->ApplyVortexThreshold(thresholdRatio);
+    expansion->ApplyVortexThreshold(thresholdType,thresholdRatio);
   }
 
   // INITIALIZE VALUES
@@ -1800,7 +1813,9 @@ void MRIScan::ReadFromExpansionFile(std::string fileName,bool applyThreshold,dou
   ReorderScan();
 
   // REBUILD SCAN
-  RebuildFromExpansion(expansion,true);
+  //RebuildFromExpansion(expansion,true);
+  // No Constant Flux
+  RebuildFromExpansion(expansion,false);
 }
 
 // ====================
@@ -1942,3 +1957,25 @@ void MRIScan::EvalNoisyPressureGradientPoints(){
   }
 }
 
+// ====================================================================
+// DETERMINE THREE-DIMENSIONAL COMPONENTS OF THE EXPANSION COEFFICIENTS
+// ====================================================================
+double MRIScan::EvalSMPVortexCriteria(MRIExpansion* exp){
+  // LOOP ON CELLS
+  int idx1 = 0;
+  int idx2 = 0;
+  int idx3 = 0;
+  int idx4 = 0;
+  double avVortexIndex = 0.0;
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    // Loop on the dimensions
+    for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
+      // Determine the idexes for the adjacent vortices
+      getNeighborVortexes(loopA,loopB,idx1,idx2,idx3,idx4);
+      // Average the values
+      avVortexIndex = 0.25*(exp->vortexCoeff[idx1] + exp->vortexCoeff[idx2] + exp->vortexCoeff[idx3] + exp->vortexCoeff[idx4]);
+      // Assign To cell
+      cellPoints[loopA].filteredVel[loopB] = avVortexIndex;
+    }
+  }
+}
