@@ -60,9 +60,9 @@ MRIScan::MRIScan(MRIScan* copyScan){
     cellPoints[loopA].velocity[1] = 0.0;
     cellPoints[loopA].velocity[2] = 0.0;
     // Filtered Velocity
-    cellPoints[loopA].filteredVel[0] = 0.0;
-    cellPoints[loopA].filteredVel[1] = 0.0;
-    cellPoints[loopA].filteredVel[2] = 0.0;
+    cellPoints[loopA].auxVector[0] = 0.0;
+    cellPoints[loopA].auxVector[1] = 0.0;
+    cellPoints[loopA].auxVector[2] = 0.0;
     // Pressure Gradient
     cellPoints[loopA].pressGrad[0] = 0.0;
     cellPoints[loopA].pressGrad[1] = 0.0;
@@ -1290,9 +1290,9 @@ void MRIScan::Crop(double* limitBox){
     cellPoints[loopA].velocity[1] = tempCellPoints[loopA].velocity[1];
     cellPoints[loopA].velocity[2] = tempCellPoints[loopA].velocity[2];
     // Filtered Velocities
-    cellPoints[loopA].filteredVel[0] = 0.0;
-    cellPoints[loopA].filteredVel[1] = 0.0;
-    cellPoints[loopA].filteredVel[2] = 0.0;
+    cellPoints[loopA].auxVector[0] = 0.0;
+    cellPoints[loopA].auxVector[1] = 0.0;
+    cellPoints[loopA].auxVector[2] = 0.0;
     // Pressure Gradients
     cellPoints[loopA].pressGrad[0] = tempCellPoints[loopA].pressGrad[0];
     cellPoints[loopA].pressGrad[1] = tempCellPoints[loopA].pressGrad[1];
@@ -1398,7 +1398,7 @@ void MRIScan::ExportToVTK(std::string fileName){
     fprintf(outFile,"LOOKUP_TABLE default\n");
     // Print Relative Pressure
     for (int loopA=0;loopA<totalCellPoints;loopA++){
-      fprintf(outFile,"%e\n",cellPoints[loopA].filteredVel[0]);
+      fprintf(outFile,"%e\n",cellPoints[loopA].auxVector[0]);
     }
   }
 
@@ -1419,7 +1419,7 @@ void MRIScan::ExportToVTK(std::string fileName){
     fprintf(outFile,"VECTORS VortexCrit float\n");
     // Print pressure Gradient
     for (int loopA=0;loopA<totalCellPoints;loopA++){
-      fprintf(outFile,"%e %e %e\n",cellPoints[loopA].filteredVel[0],cellPoints[loopA].filteredVel[1],cellPoints[loopA].filteredVel[2]);
+      fprintf(outFile,"%e %e %e\n",cellPoints[loopA].auxVector[0],cellPoints[loopA].auxVector[1],cellPoints[loopA].auxVector[2]);
     }
   }
 
@@ -1771,12 +1771,12 @@ void MRIScan::ReadFromExpansionFile(std::string fileName,bool applyThreshold, in
   // DIMENSIONS
   // MIN
   domainSizeMin[0] = minlimits[0];
-  domainSizeMin[1] = minlimits[2];
-  domainSizeMin[2] = minlimits[4];
+  domainSizeMin[1] = minlimits[1];
+  domainSizeMin[2] = minlimits[2];
   // MAX
-  domainSizeMax[0] = maxlimits[1];
-  domainSizeMax[1] = maxlimits[3];
-  domainSizeMax[2] = maxlimits[5];
+  domainSizeMax[0] = maxlimits[0];
+  domainSizeMax[1] = maxlimits[1];
+  domainSizeMax[2] = maxlimits[2];
   // MRI EXPANSION
   expansion = new MRIExpansion(exp);
 
@@ -1941,14 +1941,14 @@ void MRIScan::EvalNoisyPressureGradientPoints(){
       //if(fabs(currentModulus)>1500.0){
       if(fabs(currentModulus)>1.0e-7){
         // JET JULIEN
-        cellPoints[loopA].filteredVel[0] = (currentDistance/currentModulus);
+        cellPoints[loopA].auxVector[0] = (currentDistance/currentModulus);
         //cellPoints[loopA].filteredVel[0] = currentModulus;
         //cellPoints[loopA].filteredVel[0] = (currentDistance1/currentModulus);
         //cellPoints[loopA].filteredVel[1] = (currentDistance2/currentModulus);
         //cellPoints[loopA].filteredVel[2] = (currentDistance3/currentModulus);
         //cellPoints[loopA].filteredVel[0] = currentModulus;
       }else{
-        cellPoints[loopA].filteredVel[0] = 0.0;
+        cellPoints[loopA].auxVector[0] = 0.0;
         //cellPoints[loopA].filteredVel[0] = 0.0;
         //cellPoints[loopA].filteredVel[1] = 0.0;
         //cellPoints[loopA].filteredVel[2] = 0.0;
@@ -1975,7 +1975,7 @@ double MRIScan::EvalSMPVortexCriteria(MRIExpansion* exp){
       // Average the values
       avVortexIndex = 0.25*(exp->vortexCoeff[idx1] + exp->vortexCoeff[idx2] + exp->vortexCoeff[idx3] + exp->vortexCoeff[idx4]);
       // Assign To cell
-      cellPoints[loopA].filteredVel[loopB] = avVortexIndex;
+      cellPoints[loopA].auxVector[loopB] = avVortexIndex;
     }
   }
 }

@@ -11,7 +11,7 @@ MRICell::MRICell()
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
     velocity[loopA] = 0.0;
     position[loopA] = 0.0;
-    filteredVel[loopA] = 0.0;
+    auxVector[loopA] = 0.0;
     pressGrad[loopA] = 0.0;    
   }
   for(int loopA=0;loopA<6;loopA++){

@@ -199,6 +199,8 @@ class MRIScan{
     double EvalCellL2Criterion(int currentCell, double** deformation, double** rotation);
     double EvalCellDeltaCriterion(int currentCell, double** deformation, double** rotation, double** velGradient);
     double EvalCellVortexCriteria(int currentCell,int criteriaType, double** deformation, double** rotation, double** velGradient);
+    double EvalVorticity();
+    double EvalEnstrophy();
 
     // SPATIAL REPRESENTATION OF VORTEX COEFFICIENTS
     double EvalVortexCriteria(MRIExpansion* exp);

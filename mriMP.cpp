@@ -209,11 +209,11 @@ void MRIScan::UpdateVelocities(){
   // Update Velocities
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     // Assign Filtered Vectors
-    cellPoints[loopA].velocity[0] = cellPoints[loopA].filteredVel[0];
-    cellPoints[loopA].velocity[1] = cellPoints[loopA].filteredVel[1];
-    cellPoints[loopA].velocity[2] = cellPoints[loopA].filteredVel[2];
+    cellPoints[loopA].velocity[0] = cellPoints[loopA].auxVector[0];
+    cellPoints[loopA].velocity[1] = cellPoints[loopA].auxVector[1];
+    cellPoints[loopA].velocity[2] = cellPoints[loopA].auxVector[2];
     // Get New Norm
-    currentNorm = MRIUtils::Do3DEucNorm(cellPoints[loopA].filteredVel);
+    currentNorm = MRIUtils::Do3DEucNorm(cellPoints[loopA].auxVector);
     if(currentNorm>maxVelModule) maxVelModule = currentNorm;
   }
 }
@@ -366,15 +366,15 @@ void MRIScan::RecoverGlobalErrorEstimates(double& AvNormError,double& AvAngleErr
 	// Loop
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     // Eval Velocity Difference
-    diffVel[0] = cellPoints[loopA].velocity[0]-cellPoints[loopA].filteredVel[0];
-    diffVel[1] = cellPoints[loopA].velocity[1]-cellPoints[loopA].filteredVel[1];
-    diffVel[2] = cellPoints[loopA].velocity[2]-cellPoints[loopA].filteredVel[2];
+    diffVel[0] = cellPoints[loopA].velocity[0]-cellPoints[loopA].auxVector[0];
+    diffVel[1] = cellPoints[loopA].velocity[1]-cellPoints[loopA].auxVector[1];
+    diffVel[2] = cellPoints[loopA].velocity[2]-cellPoints[loopA].auxVector[2];
     diffNorm = MRIUtils::Do3DEucNorm(diffVel);
     AvNormError = AvNormError + diffNorm;
     // Eval Velocity Angle
     for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
       normVel[loopB] = cellPoints[loopA].velocity[loopB];
-      normFilterVel[loopB] = cellPoints[loopA].filteredVel[loopB];
+      normFilterVel[loopB] = cellPoints[loopA].auxVector[loopB];
     }
     // Normalize
     MRIUtils::Normalize3DVector(normVel);
@@ -436,9 +436,9 @@ void MRIScan::RecoverCellVelocitiesRT0(bool useBCFilter, double* filteredVec){
 			avVelocityMinus = (filteredVec[currentFaceMinus]/faceArea);
 			// Set Correction
 			if(useBCFilter){
-				cellPoints[loopA].filteredVel[loopB] = cellPoints[loopA].velocity[loopB]-0.5*(avVelocityPlus + avVelocityMinus);
+                cellPoints[loopA].auxVector[loopB] = cellPoints[loopA].velocity[loopB]-0.5*(avVelocityPlus + avVelocityMinus);
 			}else{
-				cellPoints[loopA].filteredVel[loopB] = 0.5*(avVelocityPlus + avVelocityMinus);
+                cellPoints[loopA].auxVector[loopB] = 0.5*(avVelocityPlus + avVelocityMinus);
 			}
 	  }
 	}

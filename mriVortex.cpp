@@ -125,9 +125,9 @@ double MRIScan::EvalVortexCriteria(){
     EvalSpaceDerivs(loopA,firstDerivs,secondDerivs);
     EvalCellVelocityGradientDecomposition(loopA,deformation,rotation,firstDerivs);
     // Store Criteria
-    cellPoints[loopA].filteredVel[0] = EvalCellVortexCriteria(loopA,kVortexQ,deformation,rotation,firstDerivs);
-    cellPoints[loopA].filteredVel[1] = EvalCellVortexCriteria(loopA,kVortexL2,deformation,rotation,firstDerivs);
-    cellPoints[loopA].filteredVel[2] = EvalCellVortexCriteria(loopA,kVortexDelta,deformation,rotation,firstDerivs);
+    cellPoints[loopA].auxVector[0] = EvalCellVortexCriteria(loopA,kVortexQ,deformation,rotation,firstDerivs);
+    cellPoints[loopA].auxVector[1] = EvalCellVortexCriteria(loopA,kVortexL2,deformation,rotation,firstDerivs);
+    cellPoints[loopA].auxVector[2] = EvalCellVortexCriteria(loopA,kVortexDelta,deformation,rotation,firstDerivs);
   }
   // Deallocate
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
@@ -141,5 +141,68 @@ double MRIScan::EvalVortexCriteria(){
   delete [] deformation;
   delete [] rotation;
 }
+
+// COMPUTATION OF VORTICITY
+void ComputeVorticity(double** firstDerivs,double* auxVector){
+  auxVector[0] = firstDerivs[1][2] - firstDerivs[2][1];
+  auxVector[1] = firstDerivs[2][0] - firstDerivs[0][2];
+  auxVector[2] = firstDerivs[0][1] - firstDerivs[1][0];
+}
+
+// ==============
+// EVAL VORTICITY
+// ==============
+double MRIScan::EvalVorticity(){
+  // Allocate derivatives
+  double** firstDerivs = new double*[kNumberOfDimensions];
+  double** secondDerivs = new double*[kNumberOfDimensions];
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    firstDerivs[loopA] = new double[kNumberOfDimensions];
+    secondDerivs[loopA] = new double[kNumberOfDimensions];
+  }
+  // Loop on cells
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    EvalSpaceDerivs(loopA,firstDerivs,secondDerivs);
+    // Store Criteria
+    ComputeVorticity(firstDerivs,cellPoints[loopA].auxVector);
+  }
+  // Deallocate
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    delete [] firstDerivs[loopA];
+    delete [] secondDerivs[loopA];
+  }
+  delete [] firstDerivs;
+  delete [] secondDerivs;
+}
+
+// ==============
+// EVAL ENSTROPHY
+// ==============
+double MRIScan::EvalEnstrophy(){
+  // Allocate derivatives
+  double vec[3];
+  double** firstDerivs = new double*[kNumberOfDimensions];
+  double** secondDerivs = new double*[kNumberOfDimensions];
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    firstDerivs[loopA] = new double[kNumberOfDimensions];
+    secondDerivs[loopA] = new double[kNumberOfDimensions];
+  }
+  // Loop on cells
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    EvalSpaceDerivs(loopA,firstDerivs,secondDerivs);
+    // Store Criteria
+    ComputeVorticity(firstDerivs,vec);
+    // Square Modulus
+    cellPoints[loopA].auxVector[0] = vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2];
+  }
+  // Deallocate
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    delete [] firstDerivs[loopA];
+    delete [] secondDerivs[loopA];
+  }
+  delete [] firstDerivs;
+  delete [] secondDerivs;
+}
+
 
 

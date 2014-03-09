@@ -9,7 +9,7 @@ class MRICell
     MRIReal concentration;
     MRIReal velocity[3];
     MRIReal position[3];
-    MRIReal filteredVel[3];
+    MRIReal auxVector[3];
     MRIReal ReStress[6];
     MRIReal pressGrad[3];
     MRIReal relPressure;
