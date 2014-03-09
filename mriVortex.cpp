@@ -102,12 +102,13 @@ double MRIScan::EvalCellVortexCriteria(int currentCell,int criteriaType, double*
       critRes = 0.0;
       break;
   }
+  return critRes;
 }
 
 // =============================
 // EVALUATION OF VORTEX CRITERIA
 // =============================
-double MRIScan::EvalVortexCriteria(){
+void MRIScan::EvalVortexCriteria(){
   // Velocity Gradient and Hessian
   // First and Second Derivatives
   double** deformation = new double*[kNumberOfDimensions];
@@ -152,7 +153,7 @@ void ComputeVorticity(double** firstDerivs,double* auxVector){
 // ==============
 // EVAL VORTICITY
 // ==============
-double MRIScan::EvalVorticity(){
+void MRIScan::EvalVorticity(){
   // Allocate derivatives
   double** firstDerivs = new double*[kNumberOfDimensions];
   double** secondDerivs = new double*[kNumberOfDimensions];
@@ -178,7 +179,7 @@ double MRIScan::EvalVorticity(){
 // ==============
 // EVAL ENSTROPHY
 // ==============
-double MRIScan::EvalEnstrophy(){
+void MRIScan::EvalEnstrophy(){
   // Allocate derivatives
   double vec[3];
   double** firstDerivs = new double*[kNumberOfDimensions];

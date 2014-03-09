@@ -1960,7 +1960,7 @@ void MRIScan::EvalNoisyPressureGradientPoints(){
 // ====================================================================
 // DETERMINE THREE-DIMENSIONAL COMPONENTS OF THE EXPANSION COEFFICIENTS
 // ====================================================================
-double MRIScan::EvalSMPVortexCriteria(MRIExpansion* exp){
+void MRIScan::EvalSMPVortexCriteria(MRIExpansion* exp){
   // LOOP ON CELLS
   int idx1 = 0;
   int idx2 = 0;

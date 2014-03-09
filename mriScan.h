@@ -191,16 +191,16 @@ class MRIScan{
 
     // VORTEX IDENTIFICATION
     // With SMP Expansion Coefficients
-    double EvalSMPVortexCriteria(MRIExpansion* exp);
+    void   EvalSMPVortexCriteria(MRIExpansion* exp);
     // Used Q,L2,Delta Criteria
-    double EvalVortexCriteria();
+    void   EvalVortexCriteria();
     void   EvalCellVelocityGradientDecomposition(int currentCell, double** deformation, double** rotation, double** firstDerivs);
     double EvalCellQCriterion(int currentCell, double** deformation, double** rotation);
     double EvalCellL2Criterion(int currentCell, double** deformation, double** rotation);
     double EvalCellDeltaCriterion(int currentCell, double** deformation, double** rotation, double** velGradient);
     double EvalCellVortexCriteria(int currentCell,int criteriaType, double** deformation, double** rotation, double** velGradient);
-    double EvalVorticity();
-    double EvalEnstrophy();
+    void   EvalVorticity();
+    void   EvalEnstrophy();
 
     // SPATIAL REPRESENTATION OF VORTEX COEFFICIENTS
     double EvalVortexCriteria(MRIExpansion* exp);

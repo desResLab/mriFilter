@@ -181,7 +181,7 @@ void ProcessSingleScan(std::string inFileName,std::string outfileName,double itT
   }else{
     thresholdType = kQtyVelModule;
   }
-  MRIThresholdCriteria criteria(kCriterionGreaterThen,thresholdType,thresholdValue);
+  MRIThresholdCriteria criteria(kCriterionABSLessThen,thresholdType,thresholdValue);
 
   // APPLY FULL FILTER
   MyMRISequence->ApplyMPFilter(Options,useBCFilter,useConstantPatterns,criteria);
@@ -906,8 +906,11 @@ void EvalVortexCriteria(std::string inFileName,std::string outFileName){
   MyMRIScan->ReadPltFile(inFileName,true);
   MyMRISequence->AddScan(MyMRIScan);
 
-  // EVAL REYNOLDS STRESSES AND PRESSURE GRADIENTS
-  MyMRISequence->GetScan(0)->EvalVortexCriteria();
+  // EVAL VORTEX CRITERIA
+  // MyMRISequence->GetScan(0)->EvalVortexCriteria();
+  // MyMRISequence->GetScan(0)->EvalVorticity();
+  MyMRISequence->GetScan(0)->EvalEnstrophy();
+
 
   // WRITE OUTPUT FILES TO VTK
   MyMRISequence->ExportToVTK(outFileName);
