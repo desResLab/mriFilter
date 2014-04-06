@@ -1,8 +1,10 @@
-#include "mriScan.h"
+#include "mriUnstructuredScan.h"
 #include "mriTurbModel.h"
 #include "schMessages.h"
 
+// ========================
 // EVAL TURBULENT VISCOSITY
+// ========================
 void MRIScan::EvalReynoldsStressComponent(){
   // Allocate
   double* turbNu = new double[totalCellPoints];

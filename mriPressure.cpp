@@ -1,13 +1,18 @@
 #include <math.h>
+
+#include "mriScan.h"
+#include "mriUnstructuredScan.h"
 #include "mriConstants.h"
 #include "mriSequence.h"
-#include "mriScan.h"
+
 #include "mriCellMaterial.h"
 #include "schMessages.h"
 #include "mriUtils.h"
 #include "mriException.h"
 
-// COMPUTE PRESSURE GRADIENTS
+// ===========================================
+// COMPUTE PRESSURE GRADIENTS FOR GENERIC CELL
+// ===========================================
 void MRIScan::EvalCellPressureGradients(int currentCell, MRICellMaterial material,
                                         double* timeDeriv, double** firstDerivs, double** secondDerivs,
                                         double** ReynoldsStressGrad,
@@ -195,7 +200,7 @@ void MRISequence::EvalTimeDerivs(int currentScan, int currentCell,double* &timeD
 // ==========================================
 // EVAL FIRST AND SECOND DERIVATIVES IN SPACE
 // ==========================================
-void MRIScan::EvalSpaceDerivs(int currentCell, double** firstDerivs, double** secondDerivs){
+void MRIUnstructuredScan::EvalSpaceDerivs(int currentCell, double** firstDerivs, double** secondDerivs){
   // FirstDerivs
   // DVX/DX DVY/DX DVZ/DX
   // DVX/DY DVY/DY DVZ/DY
@@ -308,7 +313,7 @@ void MRIScan::EvalSpaceDerivs(int currentCell, double** firstDerivs, double** se
 // ==========================================
 // EVAL FIRST AND SECOND DERIVATIVES IN SPACE
 // ==========================================
-void MRIScan::EvalSpaceGradient(int currentCell,int qtyID, double* gradient){
+void MRIUnstructuredScan::EvalSpaceGradient(int currentCell,int qtyID, double* gradient){
   // Map Index To Coords
   int* currentCellCoords = new int[kNumberOfDimensions];
   MapIndexToCoords(currentCell,currentCellCoords);
@@ -449,8 +454,10 @@ int getReynoldsStressIndex(int loopA,int loopB){
   return result;
 }
 
+// ==============================
 // EVAL REYNOLDS STRESS GRADIENTS
-void MRIScan::EvalReynoldsStressGradient(int currentCell, double** ReynoldsStressGradient){
+// ==============================
+void MRIUnstructuredScan::EvalReynoldsStressGradient(int currentCell, double** ReynoldsStressGradient){
   // FirstDerivs
   // DRXX/DX DRYX/DX DRZX/DX
   // DRXY/DY DRYY/DY DRZY/DY
@@ -638,7 +645,8 @@ void MRISequence::ComputePressureGradients(){
 }
 
 // ITERATIVE EVALUATION OF PRESSURE
-void MRIScan::EvalPressureIterative(int currentCell, double currentValue, bool* visitedCell,int* otherCells, std::vector<int> &cellStack,int& cellCount){
+void MRIScan::EvalPressureIterative(int currentCell, double currentValue, bool* visitedCell, std::vector<int> &cellStack,int& cellCount){
+  std::vector<int> otherCells;
   visitedCell[currentCell] = true;
   // Eval Neighbours
   bool useCount = false;
@@ -647,7 +655,7 @@ void MRIScan::EvalPressureIterative(int currentCell, double currentValue, bool* 
   double diff[3] = {0.0};
   double avGradient[3] = {0.0};
   // Loop through Neighbours
-  for(int loopA=0;loopA<k3DNeighbors;loopA++){
+  for(int loopA=0;loopA<otherCells.size();loopA++){
     cell = otherCells[loopA];
     if((cell>-1)&&(cell<totalCellPoints)&&(!visitedCell[cell])&&(IsInnerCell(cell))){
       visitedCell[cell] = true;
@@ -679,26 +687,24 @@ void MRIScan::EvalPressureIterative(int currentCell, double currentValue, bool* 
 
 // CHECK IF NEIGHBOR ARE NOT VISITED
 bool MRIScan::AreThereNotVisitedNeighbor(int cell, bool* visitedCell){
-  int* otherCells = new int[k3DNeighbors];
+  std::vector<int> otherCells;
   GetNeighbourCells(cell,otherCells);
   bool areThereVisited = false;
-  for(int loopA=0;loopA<k3DNeighbors;loopA++){
+  for(int loopA=0;loopA<otherCells.size();loopA++){
     if((otherCells[loopA]>-1)&&(IsInnerCell(otherCells[loopA]))){
       areThereVisited = ((areThereVisited)||(!visitedCell[otherCells[loopA]]));
     }
   }
-  // Deallocate
-  delete [] otherCells;
   // Return
   return areThereVisited;
 }
 
 // CHECK IF NEIGHBOR ARE VISITED
 bool MRIScan::AreThereVisitedNeighbor(int cell, bool* visitedCell, bool* isBoundaryCell, int &visitedNeighbor){
-  int* otherCells = new int[k3DNeighbors];
+  std::vector<int> otherCells;
   GetNeighbourCells(cell,otherCells);
   bool areThereVisited = false;
-  for(int loopA=0;loopA<k3DNeighbors;loopA++){
+  for(int loopA=0;loopA<otherCells.size();loopA++){
     if((otherCells[loopA]>-1)&&(IsInnerCell(otherCells[loopA]))){
       areThereVisited = ((areThereVisited)||((visitedCell[otherCells[loopA]])&&(!isBoundaryCell[loopA])));
       if ((visitedCell[otherCells[loopA]])&&(!isBoundaryCell[loopA])){
@@ -706,8 +712,6 @@ bool MRIScan::AreThereVisitedNeighbor(int cell, bool* visitedCell, bool* isBound
       }
     }
   }
-  // Deallocate
-  delete [] otherCells;
   // Return
   return areThereVisited;
 }
@@ -758,7 +762,7 @@ int MRIScan::GetCellFromStack(std::vector<int> &cellStack, bool* visitedCell, bo
 }
 
 // Check if there are still unvisited Cells
-int MRIScan::findFirstNotVisited(int cellTotal, bool* visitedCell, std::vector<int> cellStack){
+int findFirstNotVisited(int cellTotal, bool* visitedCell, std::vector<int> cellStack){
   int newCell = -1;
   int count = 0;
   // Check if the stack size is full
@@ -838,7 +842,6 @@ void MRIScan::EvalRelativePressure(int startingCell, double refPressure){
   int progress = 0;
   int remainingCell = -1;
   int percentCounted = 0;
-  int otherCells[k3DNeighbors] = {0};  
   printf("Started.\n");
   while(!finished){
     // Update cell count
@@ -850,7 +853,7 @@ void MRIScan::EvalRelativePressure(int startingCell, double refPressure){
       printf("Flood Fill Status: %d%%\n",progress);
     }    
     // Eval Pressures Recursively
-    EvalPressureIterative(startingCell,refPressure,visitedCell,otherCells,cellStack,cellNumber);
+    EvalPressureIterative(startingCell,refPressure,visitedCell,cellStack,cellNumber);
     
     // Get Next Starting Cell
     nextCell = GetCellFromStack(cellStack,visitedCell,isBoundaryCell,finished,secondStage);
@@ -884,7 +887,7 @@ void MRIScan::PerformPressureIterations(){
   bool converged = false;
   int itCount = 0;
   int avCount = 0;
-  int* neighbours = new int[k3DNeighbors];
+  std::vector<int> neighbours;
   double maxPressureDiff = 0.0;
   double avPressure = 0.0;
   double newPressure = 0.0;
@@ -945,8 +948,6 @@ void MRIScan::PerformPressureIterations(){
     WriteSchMessage(std::string("Max Pressure Diff: "+MRIUtils::FloatToStr(maxPressureDiff)+"\n"));
     converged = (itCount > 10);
   }
-  // Deallocate
-  delete [] neighbours;
 }
 
 // ===================
@@ -962,7 +963,7 @@ void MRIScan::ApplyMedianFilter(int qtyID,int maxIt){
   double currError = 0.0;
   double centerCellValue = 0.0;
   int currCell = 0;
-  int* neighbours = new int[k3DNeighbors];
+  std::vector<int> neighbours;
   // PERFORM ITERATIONS
   for(int loop0=0;loop0<maxIt;loop0++){
     // LOOP ON ALL CELLS
@@ -977,7 +978,7 @@ void MRIScan::ApplyMedianFilter(int qtyID,int maxIt){
         // GET NEIGHBOURS
         GetNeighbourCells(loopA,neighbours);
         // GET THE VALUES ON NEIGHBOR CELLS
-        for(int loopB=0;loopB<k3DNeighbors;loopB++){
+        for(int loopB=0;loopB<neighbours.size();loopB++){
           currCell = neighbours[loopB];
           // Get Quantity for Neighbor Cell
           currValue = cellPoints[currCell].getQuantity(qtyID);

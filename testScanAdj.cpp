@@ -1,9 +1,9 @@
 #ifndef TESTRANDOM_CPP
 #define TESTRANDOM_CPP
 
-#include "mriScan.h"
+#include "mriUnstructuredScan.h"
 
-void MRIScan::TestScanAdjacency(std::string fileName){
+void MRIUnstructuredScan::TestScanAdjacency(std::string fileName){
   FILE* outFile;
 	outFile = fopen(fileName.c_str(),"w");
   // Write mesh Dimensions

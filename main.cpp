@@ -1112,7 +1112,7 @@ int main(int argc, char **argv)
       EvalVortexCriteria(inFileName,outFileName);
 
   }else if (firstOption == "-writeSpatialExpansion"){
-
+E
       // GET FILE NAMES
       std::string inFileName(argv[2]);
       std::string outFileName(argv[3]);

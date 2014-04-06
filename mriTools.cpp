@@ -7,54 +7,73 @@
 
 // Make Difference of Scans
 // Put the Result Of the Operation in firstScan
-void MRISequence::MakeScanDifference(MRIScan &firstScan, const MRIScan &secondScan){
+void MRISequence::MakeScanDifference(int firstScanID, int secondScanID){
+  // Get Scans
+  if((firstScanID<0)||(firstScanID>sequence.size())){
+    throw MRISequenceException("Cannot Make Difference. Invalid ID for First Scan.");
+  }
+  if((secondScanID<0)||(secondScanID>sequence.size())){
+    throw MRISequenceException("Cannot Make Difference. Invalid ID for Second Scan.");
+  }
+  MRIScan* firstScan = sequence[firstScanID];
+  MRIScan* secondScan = sequence[secondScanID];
   // set the Tolerance Value
   double DistTol = 1.0e-4;
   // Check Compatibility
-  bool scansAreCompatible = (firstScan.cellTotals[0] == secondScan.cellTotals[0])&&
-                            (firstScan.cellTotals[1] == secondScan.cellTotals[1])&&
-                            (firstScan.cellTotals[2] == secondScan.cellTotals[2]);
-  if(!scansAreCompatible) throw MRISequenceException("Scans are not compatible");
+  bool scansAreCompatible = firstScan->isCompatibleWith(secondScan);
+  if(!scansAreCompatible){
+    throw MRISequenceException("Scans are not compatible.");
+  }
   // Write Progress Message
   WriteSchMessage("Computing Scan Difference...");  
   // SubTract Velocity Data
   double diffX,diffY,diffZ;
-  for(int loopA=0;loopA<firstScan.totalCellPoints;loopA++){
+  for(int loopA=0;loopA<firstScan->totalCellPoints;loopA++){
     // Check They have the same Coordinates
-    diffX = fabs((firstScan.cellPoints[loopA].position[0]-secondScan.cellPoints[loopA].position[0])/(firstScan.cellPoints[loopA].position[0]));
-    diffY = fabs((firstScan.cellPoints[loopA].position[1]-secondScan.cellPoints[loopA].position[1])/(firstScan.cellPoints[loopA].position[1]));
-    diffZ = fabs((firstScan.cellPoints[loopA].position[2]-secondScan.cellPoints[loopA].position[2])/(firstScan.cellPoints[loopA].position[2]));
+    diffX = fabs((firstScan->cellPoints[loopA].position[0]-secondScan->cellPoints[loopA].position[0])/(firstScan->cellPoints[loopA].position[0]));
+    diffY = fabs((firstScan->cellPoints[loopA].position[1]-secondScan->cellPoints[loopA].position[1])/(firstScan->cellPoints[loopA].position[1]));
+    diffZ = fabs((firstScan->cellPoints[loopA].position[2]-secondScan->cellPoints[loopA].position[2])/(firstScan->cellPoints[loopA].position[2]));
     // Throw exception if the coordinate is different
     if((diffX>DistTol)||(diffY>DistTol)||(diffZ>DistTol)) throw new MRISequenceException("Error In MakeGlobalDataDifference: Different Coords");
     for(int loopB=0;loopB<3;loopB++){
-      firstScan.cellPoints[loopA].velocity[loopB] = firstScan.cellPoints[loopA].velocity[loopB]-secondScan.cellPoints[loopA].velocity[loopB];
+      firstScan->cellPoints[loopA].velocity[loopB] = firstScan->cellPoints[loopA].velocity[loopB]-secondScan->cellPoints[loopA].velocity[loopB];
     }
   }
 }
 
 // Make Average
 // Put the Result Of the Operation in firstScan
-void MRISequence::MakeScanAverage(int numberOfMeasures, MRIScan &firstScan, const MRIScan &secondScan){
+void MRISequence::MakeScanAverage(int numberOfMeasures, int firstScanID, int secondScanID){
+  // Get Scans
+  if((firstScanID<0)||(firstScanID>sequence.size())){
+    throw MRISequenceException("Cannot Make Difference. Invalid ID for First Scan.");
+  }
+  if((secondScanID<0)||(secondScanID>sequence.size())){
+    throw MRISequenceException("Cannot Make Difference. Invalid ID for Second Scan.");
+  }
+  MRIScan* firstScan = sequence[firstScanID];
+  MRIScan* secondScan = sequence[secondScanID];
+  // Get Distance Tolerance
   double DistTol = 1.0e-4;
   // Check Compatibility
-  bool scansAreCompatible = (firstScan.cellTotals[0] == secondScan.cellTotals[0])&&
-                            (firstScan.cellTotals[1] == secondScan.cellTotals[1])&&
-                            (firstScan.cellTotals[2] == secondScan.cellTotals[2]); 
-  if(!scansAreCompatible) throw MRISequenceException("Scans are not compatible"); 
+  bool scansAreCompatible = firstScan->isCompatibleWith(secondScan);
+  if(!scansAreCompatible){
+    throw MRISequenceException("Scans are not compatible.");
+  }
   // Write Progress Message
   WriteSchMessage("Computing Scan Average...");
   // SubTract Velocity Data
   double diffX,diffY,diffZ;
-  for(int loopA=0;loopA<firstScan.totalCellPoints;loopA++){
+  for(int loopA=0;loopA<firstScan->totalCellPoints;loopA++){
     // Check They have the same Coordinates
-    diffX = fabs((firstScan.cellPoints[loopA].position[0]-secondScan.cellPoints[loopA].position[0])/(firstScan.cellPoints[loopA].position[0]));
-    diffY = fabs((firstScan.cellPoints[loopA].position[1]-secondScan.cellPoints[loopA].position[1])/(firstScan.cellPoints[loopA].position[1]));
-    diffZ = fabs((firstScan.cellPoints[loopA].position[2]-secondScan.cellPoints[loopA].position[2])/(firstScan.cellPoints[loopA].position[2]));
+    diffX = fabs((firstScan->cellPoints[loopA].position[0]-secondScan->cellPoints[loopA].position[0])/(firstScan->cellPoints[loopA].position[0]));
+    diffY = fabs((firstScan->cellPoints[loopA].position[1]-secondScan->cellPoints[loopA].position[1])/(firstScan->cellPoints[loopA].position[1]));
+    diffZ = fabs((firstScan->cellPoints[loopA].position[2]-secondScan->cellPoints[loopA].position[2])/(firstScan->cellPoints[loopA].position[2]));
     if((diffX>DistTol)||(diffY>DistTol)||(diffZ>DistTol))throw new MRISequenceException("Error In MakeGlobalDataAverage: Different Coords");
     for(int loopB=0;loopB<3;loopB++){
-      firstScan.cellPoints[loopA].velocity[loopB] =  
-      firstScan.cellPoints[loopA].velocity[loopB]*((double)(numberOfMeasures-1)/(double)numberOfMeasures)+
-      secondScan.cellPoints[loopA].velocity[loopB]*(1.0/(double)numberOfMeasures);
+      firstScan->cellPoints[loopA].velocity[loopB] =
+      firstScan->cellPoints[loopA].velocity[loopB]*((double)(numberOfMeasures-1)/(double)numberOfMeasures)+
+      secondScan->cellPoints[loopA].velocity[loopB]*(1.0/(double)numberOfMeasures);
     }
   }
 }

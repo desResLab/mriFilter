@@ -46,8 +46,8 @@ class MRISequence
     // File List Printing
     void PrintSequenceFiles(std::string outFIleName);
     // Operations on single Scans
-    void MakeScanDifference(MRIScan &firstScan, const MRIScan &secondScan);
-    void MakeScanAverage(int numberOfMeasures, MRIScan &firstScan, const MRIScan &secondScan);
+    void MakeScanDifference(int firstScanID, int secondScanID);
+    void MakeScanAverage(int numberOfMeasures, int firstScanID, int secondScanID);
     // Eval Time Derivatives
     void EvalTimeDerivs(int currentScan, int currentCell,double* &timeDeriv);
   
