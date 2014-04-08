@@ -34,10 +34,10 @@ class MRISequence
     void ExportToVTK(std::string outfileName);
     
     // DIV FREE Filtering
-    void ApplyMPFilter(MRIOptions Options, bool useBCFilter, bool useConstantPatterns, MRIThresholdCriteria thresholdCriteria);
+    void ApplySMPFilter(MRIOptions* options);
     
     // APPLY THRESHOLDING 
-    void ApplyThresholding(MRIThresholdCriteria thresholdCriteria);
+    void ApplyThresholding(MRIThresholdCriteria* thresholdCriteria);
     
     // PRESSURE COMPUTATION
     void ComputePressureGradients();

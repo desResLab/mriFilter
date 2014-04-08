@@ -1,6 +1,7 @@
 #include <math.h>
 
 #include "mriScan.h"
+#include "mriStructuredScan.h"
 #include "mriStreamlineOptions.h"
 #include "mriStreamline.h"
 #include "mriUtils.h"
@@ -77,7 +78,7 @@ bool MRIStreamline::EvalSLIntersection(MRIDirection dir, double fixedCoord, doub
 }
 
 // Perform Three-linear Interpolation
-void MRIScan::PerformVelocityLinearInterpolation(double* coords, int currentCell, 
+void MRIStructuredScan::PerformVelocityLinearInterpolation(double* coords, int currentCell,
                                                  int xCell, int yCell, int zCell,
                                                  double* &velocity){
                                           
@@ -115,7 +116,7 @@ void MRIScan::PerformVelocityLinearInterpolation(double* coords, int currentCell
 }
 
 // Get Point Velocity
-void MRIScan::GetPointVelocity(double xCoord, double yCoord, double zCoord,
+void MRIStructuredScan::GetPointVelocity(double xCoord, double yCoord, double zCoord,
                                double* &pointVel){
 
   // Get Coords
@@ -188,7 +189,7 @@ void MRIScan::GetPointVelocity(double xCoord, double yCoord, double zCoord,
 }
 
 // Eval Single Streamline
-void MRIScan::EvalSingleStreamLine(double* start, MRIStreamlineOptions &options, MRIStreamline* &sL){
+void MRIStructuredScan::EvalSingleStreamLine(double* start, MRIStreamlineOptions &options, MRIStreamline* &sL){
   const double lengthTol = 1.0e-3;
   double newPoint[3] = {0.0};
   double* eulerVel = new double[3];
@@ -292,7 +293,7 @@ void RecoverPlaneMaxMinCoords(int plane, MRIStreamlineOptions options, double* m
 }
 
 // COMPUTE STREAMLINES
-void MRIScan::ComputeStreamlines(std::string outName, MRIStreamlineOptions &options, std::vector<MRIStreamline*> &streamlines){
+void MRIStructuredScan::ComputeStreamlines(std::string outName, MRIStreamlineOptions &options, std::vector<MRIStreamline*> &streamlines){
   // Open File for Point Coords
   FILE* outFile;
   outFile = fopen(outName.c_str(),"w");
@@ -359,7 +360,7 @@ void MRIScan::ComputeStreamlines(std::string outName, MRIStreamlineOptions &opti
 }
 
 // Eval Arrival Point Statistics
-void MRIScan::EvalSLArrivalPointDistribution(int totalSL, std::vector<MRIStreamline*> &streamlines,
+void MRIStructuredScan::EvalSLArrivalPointDistribution(int totalSL, std::vector<MRIStreamline*> &streamlines,
                                              MRIDirection dir, double minCoord, double maxCoord, 
                                              int totalSlices, std::vector<double> &sliceCenter, std::vector<double> &sliceNormArrivals){
   // Init
@@ -533,9 +534,9 @@ void EvalSLTransverseDiffusionWithTime(int totalSL, std::vector<MRIStreamline> s
 }
 
 // Eval Transverse Diffusion Statistics
-void MRIScan::EvalSLTransverseDiffusionWithSpace(int totalSL, std::vector<MRIStreamline*> &streamlines,
-                                                 MRIDirection dir, double minCoord, double maxCoord,
-                                                 int totalSteps, std::vector<double> &space, std::vector<double> &crossDeviations){
+void MRIStructuredScan::EvalSLTransverseDiffusionWithSpace(int totalSL, std::vector<MRIStreamline*> &streamlines,
+                                                           MRIDirection dir, double minCoord, double maxCoord,
+                                                           int totalSteps, std::vector<double> &space, std::vector<double> &crossDeviations){
   double currentAv = 0.0;
   double currentSqrAv = 0.0;
   double currentCoord = 0.0;
@@ -637,7 +638,7 @@ void MRIScan::EvalSLTransverseDiffusionWithSpace(int totalSL, std::vector<MRIStr
 }
 
 // EVAL STREAMLINES STATISTICS
-void MRIScan::EvalStreamLineStatistics(std::string outName, MRIDirection dir, MRIStreamlineOptions &options, std::vector<MRIStreamline*> &streamlines){
+void MRIStructuredScan::EvalStreamLineStatistics(std::string outName, MRIDirection dir, MRIStreamlineOptions &options, std::vector<MRIStreamline*> &streamlines){
   double maxCoord = 0.0;
   double minCoord = 0.0;
   std::vector<double> sliceCenter;

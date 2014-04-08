@@ -5,10 +5,9 @@
 #include <iostream>
 #include <fstream>
 #include <boost/algorithm/string.hpp>
-//#include <boost/filesystem.hpp>
 
 #include "mriCell.h"
-#include "mriUnstructuredScan.h"
+#include "mriStructuredScan.h"
 #include "mriUtils.h"
 #include "mriImagedata.h"
 #include "mriConstants.h"
@@ -16,65 +15,20 @@
 #include "mriException.h"
 #include "schMessages.h"
 
-// CONSTRUCTOR
-MRIUnstructuredScan::MRIUnstructuredScan(double currentTime){
-  // Assign Scan Time
-  scanTime = currentTime;
-  // Resent Pressure Gradient and Relative Pressure
-  hasPressureGradient = false;
-  hasRelativePressure = false;
-  hasReynoldsStress = false;
-}
-
+// ================
 // COPY CONSTRUCTOR
-MRIUnstructuredScan::MRIUnstructuredScan(MRIUnstructuredScan* copyScan){
-  // Assign Scan Time
-  scanTime = copyScan->scanTime;
-  // Resent Pressure Gradient and Relative Pressure
-  hasPressureGradient = false;
-  hasRelativePressure = false;
-  hasReynoldsStress = false;
-  // Copy cells totals
+// ================
+MRIStructuredScan::MRIStructuredScan(MRIStructuredScan &copyScan):MRIScan(copyScan){
   for(int loopA=0;loopA<3;loopA++){
-    cellTotals[loopA] = copyScan->cellTotals[loopA];
-    cellLength[loopA] = copyScan->cellLength[loopA];
-    domainSizeMin[loopA] = copyScan->domainSizeMin[loopA];
-    domainSizeMax[loopA] = copyScan->domainSizeMax[loopA];
-  }
-  // Max Velocity Module
-  maxVelModule = 0.0;
-  // Total number of Cells
-  totalCellPoints = copyScan->totalCellPoints;
-  // Allocate cell points
-  cellPoints.resize(totalCellPoints);
-  // Initialize
-  for(int loopA=0;loopA<totalCellPoints;loopA++){
-    // Copy position
-    cellPoints[loopA].position[0] = copyScan->cellPoints[loopA].position[0];
-    cellPoints[loopA].position[1] = copyScan->cellPoints[loopA].position[1];
-    cellPoints[loopA].position[2] = copyScan->cellPoints[loopA].position[2];
-    // Concentration
-    cellPoints[loopA].concentration = 0.0;
-    // Velocity
-    cellPoints[loopA].velocity[0] = 0.0;
-    cellPoints[loopA].velocity[1] = 0.0;
-    cellPoints[loopA].velocity[2] = 0.0;
-    // Filtered Velocity
-    cellPoints[loopA].auxVector[0] = 0.0;
-    cellPoints[loopA].auxVector[1] = 0.0;
-    cellPoints[loopA].auxVector[2] = 0.0;
-    // Pressure Gradient
-    cellPoints[loopA].pressGrad[0] = 0.0;
-    cellPoints[loopA].pressGrad[1] = 0.0;
-    cellPoints[loopA].pressGrad[2] = 0.0;
-    // Relative Pressure
-    cellPoints[loopA].relPressure = 0.0;
+    cellTotals[loopA] = copyScan.cellTotals[loopA];
+    cellLength[loopA] = copyScan.cellLength[loopA];
   }
 }
 
-
+// ===============
 // GET TOTAL FACES
-int MRIUnstructuredScan::GetTotalFaces(){
+// ===============
+int MRIStructuredScan::GetTotalFaces(){
   return cellTotals[0]*cellTotals[1]*(cellTotals[2] + 1)+
          cellTotals[1]*cellTotals[2]*(cellTotals[0] + 1)+
          cellTotals[2]*cellTotals[0]*(cellTotals[1] + 1);
@@ -94,7 +48,7 @@ void PrintFileListLog(int totalFiles,std::string* fileNames)
   fclose(outFile);
 };
 
-void MRIUnstructuredScan::FillPLTHeader(std::vector<std::string> &pltHeader, bool isFirstFile){
+void MRIStructuredScan::FillPLTHeader(std::vector<std::string> &pltHeader, bool isFirstFile){
   // Clear Vector
   pltHeader.clear();
   if (isFirstFile){
@@ -147,7 +101,7 @@ std::ifstream::pos_type GetFileSize(const char* filename)
 };
 
 // Get Statistic String
-std::string MRIUnstructuredScan::WriteStatistics()
+std::string MRIStructuredScan::WriteStatistics()
 {
   std::string myresult = "FILE STATISTICS -------------------------\n";
   myresult += "--------------------------------\n";
@@ -189,7 +143,7 @@ void WriteIOLog(std::string LogFileName, std::string MsgsString)
 // =============
 // REORDER CELLS
 // =============
-void MRIUnstructuredScan::ReorderScan(){
+void MRIStructuredScan::ReorderScan(){
   // Determine The Direct and Inverse Permutations
   WriteSchMessage(std::string("Computing Permutation..."));
   int* DirectPerm = new int[totalCellPoints];
@@ -206,7 +160,7 @@ void MRIUnstructuredScan::ReorderScan(){
 // =======================
 // READ SCAN FROM PLT FILE
 // =======================
-void MRIUnstructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells){
+void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells){
   // Init Line Count
   int lineCount = 0;
   totalCellPoints = 0;
@@ -416,7 +370,7 @@ void MRIUnstructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCel
 // ================
 // EXPORT TO LSDYNA
 // ================
-void MRIUnstructuredScan::ExportToLSDYNA(std::string LSFileName){
+void MRIStructuredScan::ExportToLSDYNA(std::string LSFileName){
   // Export to LS-DYNA
   printf("Exporting File to LSDyna...");
   FILE* LSFile;
@@ -480,7 +434,7 @@ void MRIUnstructuredScan::ExportToLSDYNA(std::string LSFileName){
 // -------------
 // Export to CSV
 // -------------
-void MRIUnstructuredScan::ExportToCSV(std::string FileName)
+void MRIStructuredScan::ExportToCSV(std::string FileName)
 {
   printf("Exporting to CSV...");
   std::ofstream OutFile;
@@ -499,7 +453,7 @@ void MRIUnstructuredScan::ExportToCSV(std::string FileName)
 // =================
 // Export To TECPLOT
 // =================
-void MRIUnstructuredScan::ExportToTECPLOT(std::string FileName, bool isFirstFile)
+void MRIStructuredScan::ExportToTECPLOT(std::string FileName, bool isFirstFile)
 {
   // Write Progress Message 
 	WriteSchMessage(std::string("Exporting to TECPLOT..."));
@@ -568,7 +522,7 @@ void MRIUnstructuredScan::ExportToTECPLOT(std::string FileName, bool isFirstFile
 };
 
 // Read Volume File
-int MRIUnstructuredScan::ReadBinVolFile(std::string FileName, MRIVolData &VolData)
+int MRIStructuredScan::ReadBinVolFile(std::string FileName, MRIVolData &VolData)
 {
   // Open File
   FILE *fp = NULL;
@@ -640,7 +594,7 @@ void WriteBinVolFile(std::string FileName, MRIVolData VolData)
 // ========================
 // VALIDATE VOL BINARY DATA
 // ========================
-bool MRIUnstructuredScan::ValidateVOLBinData(MRIVolData &VolDataAn, MRIVolData &VolDataX, MRIVolData &VolDataY, MRIVolData &VolDataZ){
+bool MRIStructuredScan::ValidateVOLBinData(MRIVolData &VolDataAn, MRIVolData &VolDataX, MRIVolData &VolDataY, MRIVolData &VolDataZ){
   // Init Result
   bool result = true;
   // Check Grid Compatibility
@@ -672,7 +626,7 @@ bool MRIUnstructuredScan::ValidateVOLBinData(MRIVolData &VolDataAn, MRIVolData &
 // ----------------------------------------------
 // Build The Global Data Structure From VOL Files
 // ----------------------------------------------
-void MRIUnstructuredScan::FormGlobadDataFromVOL(MRIVolData &VolDataAn, MRIVolData &VolDataX, MRIVolData &VolDataY, MRIVolData &VolDataZ)
+void MRIStructuredScan::FormGlobadDataFromVOL(MRIVolData &VolDataAn, MRIVolData &VolDataX, MRIVolData &VolDataY, MRIVolData &VolDataZ)
 {
   int* coords = new int[kNumberOfDimensions];
   // Cells Totals
@@ -749,7 +703,7 @@ void MRIUnstructuredScan::FormGlobadDataFromVOL(MRIVolData &VolDataAn, MRIVolDat
 // ----------------------
 // Create Vol Data Record
 // ----------------------
-void MRIUnstructuredScan::CreateVolDataRecord(int volDataType, MRIVolData &VolData){
+void MRIStructuredScan::CreateVolDataRecord(int volDataType, MRIVolData &VolData){
   // Cells Totals
   VolData.GridX = cellTotals[0];
   VolData.GridY = cellTotals[1];
@@ -841,7 +795,7 @@ std::string AssignVOLFileName(int fileType, std::string fileName){
 // -------------
 // Export to VOL
 // -------------
-void MRIUnstructuredScan::ExportToVOL(std::string FileName){
+void MRIStructuredScan::ExportToVOL(std::string FileName){
   // Write Message
   WriteSchMessage("Exporting to VOL Files...");
   // Create Vol Data Records
@@ -896,7 +850,7 @@ void MRIUnstructuredScan::ExportToVOL(std::string FileName){
 // ------------------------
 // Get Local Adjacent Plane
 // ------------------------
-void MRIUnstructuredScan::GetLocalStarFaces(int StarNum, int CellsX, int CellsY, int &BottomFace, int &TopFace, int &LeftFace, int &RightFace)
+void MRIStructuredScan::GetLocalStarFaces(int StarNum, int CellsX, int CellsY, int &BottomFace, int &TopFace, int &LeftFace, int &RightFace)
 {
   // Find Local Face Number
   BottomFace = (((int)(StarNum) / (int)(CellsX+1))-1)*(2*CellsX+1) + ((int)(StarNum) % (int)(CellsX+1)) + CellsX;
@@ -914,7 +868,7 @@ void MRIUnstructuredScan::GetLocalStarFaces(int StarNum, int CellsX, int CellsY,
 };
 
 // Flush Model To File
-void MRIUnstructuredScan::FlushToFile(std::string FileName){
+void MRIStructuredScan::FlushToFile(std::string FileName){
   // Open Output File
 	FILE* outFile;
 	outFile = fopen(FileName.c_str(),"w");
@@ -931,7 +885,7 @@ void MRIUnstructuredScan::FlushToFile(std::string FileName){
 }
 
 // READ SCAN FROM VOL FILE
-void MRIUnstructuredScan::ReadScanFromVOLFiles(std::string fileNameAn, std::string fileNameX, std::string fileNameY, std::string fileNameZ){
+void MRIStructuredScan::ReadScanFromVOLFiles(std::string fileNameAn, std::string fileNameX, std::string fileNameY, std::string fileNameZ){
   // Init
   MRIVolData volDataAn;
   MRIVolData volDataX;
@@ -962,12 +916,12 @@ void MRIUnstructuredScan::ReadScanFromVOLFiles(std::string fileNameAn, std::stri
 }
 
 // Eval The Central Cell for the Domain
-int MRIUnstructuredScan::EvalCentralCell(){
+int MRIStructuredScan::EvalCentralCell(){
   return MapCoordsToIndex(cellTotals[0]/2,cellTotals[1]/2,cellTotals[2]/2);
 }
 
 // ASSEMBLE ENCODING MATRIX
-void MRIUnstructuredScan::AssembleEncodingMatrix(int &totalRows, int &totalColumns, double** &Mat){
+void MRIStructuredScan::AssembleEncodingMatrix(int &totalRows, int &totalColumns, double** &Mat){
   // VAR
   int faceXPlus =  0;
   int faceXMinus = 0;
@@ -1087,7 +1041,7 @@ void MRIUnstructuredScan::AssembleEncodingMatrix(int &totalRows, int &totalColum
 }
 
 // Assemble Decoding Matrix
-void MRIUnstructuredScan::AssembleDecodingMatrix(int &totalRows, int &totalColumns, double** &Mat){
+void MRIStructuredScan::AssembleDecodingMatrix(int &totalRows, int &totalColumns, double** &Mat){
   // VAR
   int faceXPlus  = 0;
   int faceXMinus = 0;
@@ -1144,7 +1098,7 @@ void MRIUnstructuredScan::AssembleDecodingMatrix(int &totalRows, int &totalColum
 }
 
 // Assign Random Component
-void MRIUnstructuredScan::AssignRandomComponent(const int direction,stdRndGenerator &generator){
+void MRIStructuredScan::AssignRandomComponent(const int direction,stdRndGenerator &generator){
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     switch (direction){
       case kdirX:
@@ -1161,7 +1115,7 @@ void MRIUnstructuredScan::AssignRandomComponent(const int direction,stdRndGenera
 }
 
 // Export Velocities To File As Row in the order X,Y,Z
-void MRIUnstructuredScan::ExportVelocitiesToFile(std::string fileName, bool append){
+void MRIStructuredScan::ExportVelocitiesToFile(std::string fileName, bool append){
   
   // Open Output File
   FILE* outFile;
@@ -1185,7 +1139,7 @@ void MRIUnstructuredScan::ExportVelocitiesToFile(std::string fileName, bool appe
 }
 
 // CROP SCAN
-void MRIUnstructuredScan::Crop(double* limitBox){
+void MRIStructuredScan::Crop(double* limitBox){
   // Count The Number Of Cells Remaining
   int reminingCells = 0;
   for(int loopA=0;loopA<totalCellPoints;loopA++){
@@ -1303,7 +1257,7 @@ void MRIUnstructuredScan::Crop(double* limitBox){
 }
 
 // SCALE VELOCITIES
-void MRIUnstructuredScan::ScaleVelocities(double factor){
+void MRIStructuredScan::ScaleVelocities(double factor){
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     cellPoints[loopA].velocity[0] *= factor;
     cellPoints[loopA].velocity[1] *= factor;
@@ -1313,7 +1267,7 @@ void MRIUnstructuredScan::ScaleVelocities(double factor){
 }
 
 // SCALE POSITIONS
-void MRIUnstructuredScan::ScalePositions(double factor){
+void MRIStructuredScan::ScalePositions(double factor){
   // SCALE CELL LENGTH
   cellLength[0] *= factor;
   cellLength[1] *= factor;
@@ -1338,7 +1292,7 @@ void MRIUnstructuredScan::ScalePositions(double factor){
 // =================
 // Write to VTK File
 // =================
-void MRIUnstructuredScan::ExportToVTK(std::string fileName){
+void MRIStructuredScan::ExportToVTK(std::string fileName){
   // Print Aux Flag
   bool printAux = true;
 
@@ -1429,7 +1383,7 @@ void MRIUnstructuredScan::ExportToVTK(std::string fileName){
 }
 
 // Eval total Number of Vortices
-int MRIUnstructuredScan::EvalTotalVortex(){
+int MRIStructuredScan::EvalTotalVortex(){
   // Init
   int total = 0;
   int totalSlices = 0;
@@ -1453,7 +1407,7 @@ int MRIUnstructuredScan::EvalTotalVortex(){
 // ======================
 // Read List of Row Files
 // ======================
-void MRIUnstructuredScan::ReadRAWFileSequence(std::string fileListName){
+void MRIStructuredScan::ReadRAWFileSequence(std::string fileListName){
 
   // Init
   MRIImageData data;
@@ -1555,7 +1509,7 @@ void ReadRawFileHeader(int &sizeX,int &sizeY,int &numberOfBytes,FILE *fp){
 // ===================
 // Read Raw Image Data
 // ===================
-int MRIUnstructuredScan::ReadRawImage(std::string FileName, MRIImageData &data){
+int MRIStructuredScan::ReadRawImage(std::string FileName, MRIImageData &data){
   // Open File
   FILE *fp = NULL;
   fp = fopen(FileName.c_str(),"rb");
@@ -1583,90 +1537,6 @@ int MRIUnstructuredScan::ReadRawImage(std::string FileName, MRIImageData &data){
 
   // Return
   return 0;
-}
-
-// ======================================
-// RECONSTRUCT FROM EXPANSION COEFFICIENT
-// ======================================
-void MRIUnstructuredScan::RebuildFromExpansion(MRIExpansion* expansion,bool useConstantFlux){
-  // Check Size Compatibility
-
-  // RECONSTRUCTION
-  int totalStarFaces = 0;
-  int currFaceID = 0;
-  double currFaceCoeff = 0.0;
-  std::vector<int> facesID;
-  std::vector<double> facesCoeffs;
-  // Get total number of vortexes
-  int totalVortex = EvalTotalVortex();
-  double* faceFluxVec = new double[totalVortex+3];
-
-  // INITIALIZE
-  for(int loopA=0;loopA<totalVortex+3;loopA++){
-    faceFluxVec[loopA] = 0.0;
-  }
-
-  // GLOBAL ATOMS
-  if(useConstantFlux){
-    for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
-      // Find Star Shape
-      AssembleConstantPattern(loopB/*Current Dimension*/,totalStarFaces,facesID,facesCoeffs);
-      // Add to faces
-      for(int loopC=0;loopC<totalStarFaces;loopC++){
-        currFaceID = facesID[loopC];
-        currFaceCoeff = facesCoeffs[loopC];
-        faceFluxVec[currFaceID] += currFaceCoeff*expansion->constantFluxCoeff[loopB];
-      }
-    }
-  }
-
-  // VORTEX ATOMS
-  int componentCount = -1;
-  int totalSlices = 0;
-  int totalStars = 0;
-  for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
-    // Correlate Vorticity Patterns
-    switch(loopB){
-      case 0:
-        // YZ Planes
-        totalSlices = cellTotals[0];
-        totalStars = (cellTotals[1]+1)*(cellTotals[2]+1);
-        break;
-      case 1:
-        // XZ Planes
-        totalSlices = cellTotals[1];
-        totalStars = (cellTotals[0]+1)*(cellTotals[2]+1);
-        break;
-      case 2:
-        // XY Planes
-        totalSlices = cellTotals[2];
-        totalStars = (cellTotals[0]+1)*(cellTotals[1]+1);
-        break;
-    }
-    for(int loopC=0;loopC<totalSlices;loopC++){
-      for(int loopD=0;loopD<totalStars;loopD++){
-        // Increment the current component
-        componentCount++;
-        // Find Star Shape
-        AssembleStarShape(loopB/*Current Dimension*/,loopC/*Slice*/,loopD/*Star*/,totalStarFaces,facesID,facesCoeffs);
-        // Find Correlation
-        for(int loopE=0;loopE<totalStarFaces;loopE++){
-          currFaceID = facesID[loopE];
-          currFaceCoeff = facesCoeffs[loopE];
-          faceFluxVec[currFaceID] += currFaceCoeff*expansion->vortexCoeff[componentCount];
-        }
-      }
-    }
-  }
-
-  // Recover Velocities from Face Fluxes
-  RecoverCellVelocitiesRT0(false,faceFluxVec);
-
-  // Update Velocities
-  UpdateVelocities();
-
-  // DELETE ARRAY
-  delete [] faceFluxVec;
 }
 
 // ===================
@@ -1728,26 +1598,10 @@ void ReadExpansionFile(std::string fileName,int* tot,double* length,double* minl
   inFile.close();
 }
 
-
-// ===================
-// GET DIFFERENCE NORM
-// ===================
-double MRIUnstructuredScan::GetDiffNorm(MRIUnstructuredScan* otherScan){
-  double diffNorm = 0;
-  double currDiff[3] = {0.0};
-  for(int loopA=0;loopA<totalCellPoints;loopA++){
-    currDiff[0] = cellPoints[loopA].velocity[0] - otherScan->cellPoints[loopA].velocity[0];
-    currDiff[1] = cellPoints[loopA].velocity[1] - otherScan->cellPoints[loopA].velocity[1];
-    currDiff[2] = cellPoints[loopA].velocity[2] - otherScan->cellPoints[loopA].velocity[2];
-    diffNorm += sqrt(currDiff[0]*currDiff[0] + currDiff[1]*currDiff[1] + currDiff[2]*currDiff[2]);
-  }
-  return diffNorm;
-}
-
 // =============================
 // READ SCAN FROM EXPANSION FILE
 // =============================
-void MRIUnstructuredScan::ReadFromExpansionFile(std::string fileName,bool applyThreshold, int thresholdType,double thresholdRatio){
+void MRIStructuredScan::ReadFromExpansionFile(std::string fileName,bool applyThreshold, int thresholdType,double thresholdRatio){
 
   // ALLOCATE VARIABLES
   int tot[3];
@@ -1821,7 +1675,7 @@ void MRIUnstructuredScan::ReadFromExpansionFile(std::string fileName,bool applyT
 // ====================
 // WRITE EXPANSION FILE
 // ====================
-void MRIUnstructuredScan::WriteExpansionFile(std::string fileName){
+void MRIStructuredScan::WriteExpansionFile(std::string fileName){
   // Open Output File
   FILE* fid;
   fid = fopen(fileName.c_str(),"w");
@@ -1848,24 +1702,10 @@ void MRIUnstructuredScan::WriteExpansionFile(std::string fileName){
   fclose(fid);
 }
 
-// =========================
-// COMPUTE QUANTITY GRADIENT
-// =========================
-void MRIUnstructuredScan::ComputeQuantityGradient(int qtyID){
-  hasPressureGradient = true;
-  double* gradient = new double[3];
-  for(int loopA=0;loopA<totalCellPoints;loopA++){
-    EvalSpaceGradient(loopA,qtyID,gradient);
-    cellPoints[loopA].setQuantity(kQtyPressGradientX,gradient[0]);
-    cellPoints[loopA].setQuantity(kQtyPressGradientY,gradient[1]);
-    cellPoints[loopA].setQuantity(kQtyPressGradientZ,gradient[2]);
-  }
-}
-
 // ==================
 // THRESHOLD QUANTITY
 // ==================
-void MRIUnstructuredScan::ThresholdQuantity(int qtyID,double threshold){
+void MRIStructuredScan::ThresholdQuantity(int qtyID,double threshold){
   // DECLARE
   WriteSchMessage(std::string("Applying threshold...\n"));
   double centerCellValue = 0.0;
@@ -1880,87 +1720,10 @@ void MRIUnstructuredScan::ThresholdQuantity(int qtyID,double threshold){
   }
 }
 
-// ===================================
-// EVAL NOISY PRESSURE GRADIENT POINTS
-// ===================================
-void MRIUnstructuredScan::EvalNoisyPressureGradientPoints(){
-  // DECLARE
-  std::vector<int> neighbours;
-  double currPressGradX = 0.0;
-  double currPressGradY = 0.0;
-  double currPressGradZ = 0.0;
-  double avPressGradX = 0.0;
-  double avPressGradY = 0.0;
-  double avPressGradZ = 0.0;
-  int currCell = 0;
-  double currentDistance = 0.0;
-  double currentDistance1 = 0.0;
-  double currentDistance2 = 0.0;
-  double currentDistance3 = 0.0;
-  double currentModulus = 0.0;
-  WriteSchMessage(std::string("Seeking Noisy Pressure Gradient Locations...\n"));
-  // LOOP ON ALL INNER CELLS
-  for(int loopA=0;loopA<totalCellPoints;loopA++){
-    if(IsInnerCell(loopA)){
-      // GET PRESSURE GRADIENT AT CURRENT POINT
-      currPressGradX = cellPoints[loopA].pressGrad[0];
-      currPressGradY = cellPoints[loopA].pressGrad[1];
-      currPressGradZ = cellPoints[loopA].pressGrad[2];
-      // GET NEIGHBOURS
-      GetNeighbourCells(loopA,neighbours);
-      // INIT AVERAGE PRESSURE GRADIENT
-      avPressGradX = 0.0;
-      avPressGradY = 0.0;
-      avPressGradZ = 0.0;
-      // GET THE VALUES ON NEIGHBOR CELLS
-      for(int loopB=0;loopB<k3DNeighbors;loopB++){
-        currCell = neighbours[loopB];
-        // Get Quantity for Neighbor Cell
-        avPressGradX += cellPoints[currCell].pressGrad[0];
-        avPressGradY += cellPoints[currCell].pressGrad[1];
-        avPressGradZ += cellPoints[currCell].pressGrad[2];
-      }
-      // DIVIDE BY THE NUMBER OF COMPONENTS
-      avPressGradX = avPressGradX/(double)6.0;
-      avPressGradY = avPressGradY/(double)6.0;
-      avPressGradZ = avPressGradZ/(double)6.0;
-      // SET VALUE
-      currentDistance = sqrt((currPressGradX-avPressGradX)*(currPressGradX-avPressGradX)+
-                             (currPressGradY-avPressGradY)*(currPressGradY-avPressGradY)+
-                             (currPressGradZ-avPressGradZ)*(currPressGradZ-avPressGradZ));
-
-      currentDistance1 = fabs(currPressGradX-avPressGradX);
-      currentDistance2 = fabs(currPressGradY-avPressGradY);
-      currentDistance3 = fabs(currPressGradZ-avPressGradZ);
-      // GET MODULUS
-      currentModulus = sqrt((currPressGradX)*(currPressGradX)+
-                             (currPressGradY)*(currPressGradY)+
-                             (currPressGradZ)*(currPressGradZ));
-
-      // ASSIGN VALUE AS CONCENTRATION
-      //if(fabs(currentModulus)>1500.0){
-      if(fabs(currentModulus)>1.0e-7){
-        // JET JULIEN
-        cellPoints[loopA].auxVector[0] = (currentDistance/currentModulus);
-        //cellPoints[loopA].filteredVel[0] = currentModulus;
-        //cellPoints[loopA].filteredVel[0] = (currentDistance1/currentModulus);
-        //cellPoints[loopA].filteredVel[1] = (currentDistance2/currentModulus);
-        //cellPoints[loopA].filteredVel[2] = (currentDistance3/currentModulus);
-        //cellPoints[loopA].filteredVel[0] = currentModulus;
-      }else{
-        cellPoints[loopA].auxVector[0] = 0.0;
-        //cellPoints[loopA].filteredVel[0] = 0.0;
-        //cellPoints[loopA].filteredVel[1] = 0.0;
-        //cellPoints[loopA].filteredVel[2] = 0.0;
-      }
-    }
-  }
-}
-
 // ====================================================================
 // DETERMINE THREE-DIMENSIONAL COMPONENTS OF THE EXPANSION COEFFICIENTS
 // ====================================================================
-void MRIUnstructuredScan::EvalSMPVortexCriteria(MRIExpansion* exp){
+void MRIStructuredScan::EvalSMPVortexCriteria(MRIExpansion* exp){
   // LOOP ON CELLS
   int idx1 = 0;
   int idx2 = 0;
@@ -1979,3 +1742,90 @@ void MRIUnstructuredScan::EvalSMPVortexCriteria(MRIExpansion* exp){
     }
   }
 }
+
+// ===============================================
+// GET TOTAL NUMBER OF FACES FOR STRUCTURED LAYOUT
+// ===============================================
+int MRIStructuredScan::getTotalFaces(){
+  return cellTotals[0]*cellTotals[1]*(cellTotals[2]+1)+
+         cellTotals[1]*cellTotals[2]*(cellTotals[0]+1)+
+         cellTotals[2]*cellTotals[0]*(cellTotals[1]+1);
+}
+
+// =======================
+// GET NEIGHBORS OF A CELL
+// =======================
+void MRIStructuredScan::GetNeighbourCells(int CurrentCell,std::vector<int> &cellNeighbors){
+  int* coords = new int[3];
+  cellNeighbors.clear();
+  //Get The Coordinates of the Current Cell
+  MapIndexToCoords(CurrentCell,coords);
+  // Get Neighbor
+  // coords[0]
+  if ((coords[0]-1)>=0){
+    cellNeighbors.push_back(MapCoordsToIndex(coords[0]-1,coords[1],coords[2]));
+  }else{
+    cellNeighbors.push_back(-1);
+  }
+  // coords[1]
+  if((coords[0]+1)<cellTotals[0]){
+    cellNeighbors.push_back(MapCoordsToIndex(coords[0]+1,coords[1],coords[2]));
+  }else{
+    cellNeighbors.push_back(-1);
+  }
+  // coords[2]
+  if((coords[1]-1)>=0){
+    cellNeighbors.push_back(MapCoordsToIndex(coords[0],coords[1]-1,coords[2]));
+  }else{
+    cellNeighbors.push_back(-1);
+  }
+  // coords[3]
+  if((coords[1]+1)<cellTotals[1]){
+    cellNeighbors.push_back(MapCoordsToIndex(coords[0],coords[1]+1,coords[2]));
+  }else{
+    cellNeighbors.push_back(-1);
+  }
+  // coords[4]
+  if((coords[2]-1)>=0){
+    cellNeighbors.push_back(MapCoordsToIndex(coords[0],coords[1],coords[2]-1));
+  }else{
+    cellNeighbors.push_back(-1);
+  }
+    // coords[5]
+  if((coords[2]+1)<cellTotals[2]){
+    cellNeighbors.push_back(MapCoordsToIndex(coords[0],coords[1],coords[2]+1));
+  }else{
+    cellNeighbors.push_back(-1);
+  }
+  // SCRAMBLE VECTOR !!!
+  //std::random_shuffle(&cellNeighbors[0], &cellNeighbors[5]);
+  // DEALLOCATE
+  delete [] coords;
+}
+
+// Get Face Starting From Cell and Unit Vector
+int MRIStructuredScan::GetFacewithCellVector(int CurrentCell, double* UnitVector){
+  double tolerance = 5.0e-3;
+  int AdjType = 0;
+  int resultFace = -1;
+  // Check Direction Vector
+  if ((fabs(UnitVector[0]-1.0)<tolerance)&&(fabs(UnitVector[1])<tolerance)&&(fabs(UnitVector[2])<tolerance)){
+        AdjType = kfacePlusX;
+    }else if((fabs(UnitVector[0]+1.0)<tolerance)&&(fabs(UnitVector[1])<tolerance)&&(fabs(UnitVector[2])<tolerance)){
+        AdjType = kfaceMinusX;
+    }else if((fabs(UnitVector[0])<tolerance)&&(fabs(UnitVector[1]-1.0)<tolerance)&&(fabs(UnitVector[2])<tolerance)){
+        AdjType = kfacePlusY;
+    }else if((fabs(UnitVector[0])<tolerance)&&(fabs(UnitVector[1]+1.0)<tolerance)&&(fabs(UnitVector[2])<tolerance)){
+        AdjType = kfaceMinusY;
+    }else if((fabs(UnitVector[0])<tolerance)&&(fabs(UnitVector[1])<tolerance)&&(fabs(UnitVector[2]-1.0)<tolerance)){
+        AdjType = kfacePlusZ;
+    }else if((fabs(UnitVector[0])<tolerance)&&(fabs(UnitVector[1])<tolerance)&&(fabs(UnitVector[2]+1.0)<tolerance)){
+        AdjType = kfaceMinusZ;
+    }else{
+        throw new MRIMeshCompatibilityException("Internal Error: Problems in GetFacewithCellVector");
+    }
+  // Get Adj Face
+  resultFace = GetAdjacentFace(CurrentCell,AdjType);
+  return resultFace;
+}
+

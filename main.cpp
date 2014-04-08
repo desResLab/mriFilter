@@ -1,7 +1,8 @@
 #include <iostream>
 
-#include "mriSequence.h"
 #include "mriScan.h"
+#include "mriStructuredScan.h"
+#include "mriSequence.h"
 #include "mriUtils.h"
 #include "mriStatistics.h"
 #include "mriConstants.h"
@@ -15,7 +16,7 @@
 void ConvertDICOMToVTK(std::string inFileName,std::string outfileName){
 
   // Add File to Sequence
-  MRIScan* MyMRIScan = new MRIScan(0.0);
+  MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
 
   // Read from Raw Binary File
   MyMRIScan->ReadRAWFileSequence(inFileName);
@@ -31,7 +32,7 @@ void ConvertDICOMToVTK(std::string inFileName,std::string outfileName){
 void ConvertTECPLOToVTK(std::string inFileName,std::string outfileName){
 
   // Add File to Sequence
-  MRIScan* MyMRIScan = new MRIScan(0.0);
+  MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
 
   // Read from Raw Binary File
   MyMRIScan->ReadPltFile(inFileName,true);
@@ -56,24 +57,24 @@ void EvalSequencePressure(std::string inFileName, std::string outfileName){
 
   // Apply MP Filter to all Scan Separately
   // SET OPTIONS AND THRESHOLD
-  MRIOptions Options(1.0e-4,2000);
-  bool useBCFilter = false;
-  bool useConstantPatterns = true;
-  MRIThresholdCriteria criteria(kCriterionLessThen,kQtyConcentration,500.0);
+  MRIOptions* options = new MRIOptions(1.0e-4,2000);
+  options->useBCFilter = false;
+  options->useConstantPatterns = true;
+  options->thresholdCriteria = new MRIThresholdCriteria(kCriterionLessThen,kQtyConcentration,500.0);
 
   // PRELIMINARY THRESHOLDING
-  MyMRISequence->ApplyThresholding(criteria);
+  MyMRISequence->ApplyThresholding(options->thresholdCriteria);
 
   // APPLY FULL FILTER
-  MyMRISequence->ApplyMPFilter(Options,useBCFilter,useConstantPatterns,criteria);
+  MyMRISequence->ApplySMPFilter(options);
 
   // Apply Boundary Condition Filter to all scans
-  useBCFilter = true;
+  options->useBCFilter = true;
   // APPLY FILTER
-  MyMRISequence->ApplyMPFilter(Options,useBCFilter,useConstantPatterns,criteria);
+  MyMRISequence->ApplySMPFilter(options);
 
   // Apply Final Threshold
-  MyMRISequence->ApplyThresholding(criteria);
+  MyMRISequence->ApplyThresholding(options->thresholdCriteria);
 
   // Compute Pressure Gradient
   MyMRISequence->ComputePressureGradients();
@@ -101,7 +102,7 @@ void EvalPressureFromSignatureFlow(std::string inFileName,std::string outfileNam
   // Fill Seguence
   currentTime = 0.0;
   for(int loopA=0;loopA<totalSlides;loopA++){
-    MRIScan* MyMRIScan = new MRIScan(currentTime);
+    MRIStructuredScan* MyMRIScan = new MRIStructuredScan(currentTime);
     MyMRIScan->CreateSampleCase(kStagnationFlow,20,80,80,0.1,0.1,0.1,currentTime,kdirX);
     //MyMRIScan->CreateSampleCase(kTransientFlow,40,60,80,0.01,0.01,0.01,currentTime,kdirX);
     MyMRISequence->AddScan(MyMRIScan);
@@ -161,7 +162,7 @@ void ProcessSingleScan(std::string inFileName,std::string outfileName,double itT
   MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
 
   // Add File to Sequence
-  MRIScan* MyMRIScan = new MRIScan(0.0);
+  MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
   MyMRIScan->ReadPltFile(inFileName, true);
   MyMRISequence->AddScan(MyMRIScan);
 
@@ -172,29 +173,29 @@ void ProcessSingleScan(std::string inFileName,std::string outfileName,double itT
   WriteSchMessage(std::string("--------------------------------------------\n"));
 
   // SET OPTIONS AND THRESHOLD
-  MRIOptions Options(itTol,maxIt);
-  bool useBCFilter = false;
-  bool useConstantPatterns = true;
+  MRIOptions* options = new MRIOptions(itTol,maxIt);
+  options->useBCFilter = false;
+  options->useConstantPatterns = true;
   int thresholdType = 0;
   if (thresholdTypeString == "conc"){
     thresholdType = kQtyConcentration;
   }else{
     thresholdType = kQtyVelModule;
   }
-  MRIThresholdCriteria criteria(kCriterionABSLessThen,thresholdType,thresholdValue);
+  options->thresholdCriteria = new MRIThresholdCriteria(kCriterionABSLessThen,thresholdType,thresholdValue);
 
   // APPLY FULL FILTER
-  MyMRISequence->ApplyMPFilter(Options,useBCFilter,useConstantPatterns,criteria);
+  MyMRISequence->ApplySMPFilter(options);
 
   // APPLY BOUNDARY CONDITION FILTER
-  useBCFilter = true;
-  MyMRISequence->ApplyMPFilter(Options,useBCFilter,useConstantPatterns,criteria);
+  options->useBCFilter = true;
+  MyMRISequence->ApplySMPFilter(options);
 
   // SAVE EXPANSION TO FILE
   MyMRISequence->GetScan(0)->WriteExpansionFile(std::string("ExpansionFile.dat"));
 
   // APPLY FINAL THRESHOLD
-  MyMRISequence->ApplyThresholding(criteria);
+  MyMRISequence->ApplyThresholding(options->thresholdCriteria);
 
   // Evaluate Statistics
   //MyMRISequence->EvalStatistics();
@@ -224,12 +225,12 @@ void ComputeScanStatistics(std::string firstFileName,std::string secondFileName,
     MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
 
     // Add First File to Sequence
-    MRIScan* MyMRIScan = new MRIScan(0.0);
+    MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
     MyMRIScan->ReadPltFile(firstFileName, true);
     MyMRISequence->AddScan(MyMRIScan);
 
     // Add Second File to Sequence
-    MyMRIScan = new MRIScan(1.0);
+    MyMRIScan = new MRIStructuredScan(1.0);
     MyMRIScan->ReadPltFile(secondFileName, true);
     MyMRISequence->AddScan(MyMRIScan);
 
@@ -286,7 +287,7 @@ void ComputeScanMatrices(){
   double** StarMatrix = NULL;
 
   // Print Matrices for Matlab Analysis Of Variance
-  MRIScan* MyMRIScan = new MRIScan(0.0);
+  MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
   // ISOTROPIC
   MyMRIScan->CreateSampleCase(kConstantFlow,5,5,5,1.0,1.0,1.0,0.0,kdirX);
   // ANISOTROPIC
@@ -322,7 +323,7 @@ void ComputeScanMatrices(){
 // ================
 void ShowFaceFluxPatterns(std::string faceFluxFileName, std::string outFileName){
   // NEW SCAN
-  MRIScan* MyMRIScan = new MRIScan(0.0);
+  MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
 
   // ISOTROPIC
   MyMRIScan->CreateSampleCase(kConstantFlow,5,5,5,1.0,1.0,1.0,0.0,kdirX);
@@ -363,12 +364,12 @@ void TEST_ExpansionCoefficients(std::string inFileName){
   MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
 
   // Add File to Sequence
-  MRIScan* MyMRIScan = new MRIScan(0.0);
+  MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
   MyMRIScan->ReadPltFile(inFileName, true);
   MyMRISequence->AddScan(MyMRIScan);
 
   // SET OPTIONS AND THRESHOLD
-  MRIOptions Options(1.5e-2,2000);
+  MRIOptions* options = new MRIOptions(1.5e-2,2000);
   bool useBCFilter = false;
   bool useConstantPatterns = true;
   int thresholdType = 0;
@@ -382,9 +383,9 @@ void TEST_ExpansionCoefficients(std::string inFileName){
   MRIThresholdCriteria criteria(kCriterionLessThen,thresholdType,thresholdValue);
 
   // APPLY FULL FILTER
-  MyMRISequence->ApplyMPFilter(Options,useBCFilter,useConstantPatterns,criteria);
+  MyMRISequence->ApplySMPFilter(options);
 
-  // GET FITRST SCAN
+  // GET FIRST SCAN
   MRIScan* firstMRIScan = new MRIScan(0.0);
   firstMRIScan = MyMRISequence->GetScan(0);
 
@@ -394,7 +395,7 @@ void TEST_ExpansionCoefficients(std::string inFileName){
 
   // REBUILD FROM EXPANSION
   MRISequence* ReconstructedSequence = new MRISequence(MyMRISequence);
-  MRIScan* currScan = NULL;
+  MRIScan* currScan = nullptr;
   for(int loopA=0;loopA<ReconstructedSequence->GetTotalScans();loopA++){
     currScan = ReconstructedSequence->GetScan(loopA);
     currScan->RebuildFromExpansion(firstMRIScan->expansion,false);
@@ -402,8 +403,8 @@ void TEST_ExpansionCoefficients(std::string inFileName){
 
   // COMPARE THE TWO SCANS
   double currDiffNorm = 0.0;
-  MRIScan* currScan1 = NULL;
-  MRIScan* currScan2 = NULL;
+  MRIScan* currScan1 = nullptr;
+  MRIScan* currScan2 = nullptr;
   for(int loopA=0;loopA<MyMRISequence->GetTotalScans();loopA++){
     currScan1 = MyMRISequence->GetScan(loopA);
     currScan2 = ReconstructedSequence->GetScan(loopA);
@@ -429,12 +430,12 @@ void TEST02_PrintThresholdingToVTK(std::string inFileName){
   MRISequence* MyRECSequence = new MRISequence(false/*Cyclic Sequence*/);
 
   // Add File to Sequence
-  MRIScan* MyMRIScan = new MRIScan(0.0);
+  MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
   MyMRIScan->ReadPltFile(inFileName, true);
   MyMRISequence->AddScan(MyMRIScan);
 
   // SET OPTIONS AND THRESHOLD
-  MRIOptions Options(1.0e-4,2000);
+  MRIOptions* options = new MRIOptions(1.0e-4,2000);
   bool useBCFilter = false;
   bool useConstantPatterns = true;
   int thresholdType = 0;
@@ -448,7 +449,7 @@ void TEST02_PrintThresholdingToVTK(std::string inFileName){
   MRIThresholdCriteria criteria(kCriterionLessThen,thresholdType,thresholdValue);
 
   // APPLY FULL FILTER
-  MyMRISequence->ApplyMPFilter(Options,useBCFilter,useConstantPatterns,criteria);
+  MyMRISequence->ApplySMPFilter(options);
 
   // APPLY SUCCESSIVE THRESHOLD
   for(int loopA=0;loopA<5;loopA++){
@@ -460,7 +461,7 @@ void TEST02_PrintThresholdingToVTK(std::string inFileName){
     // WRITE EXPANSION TO FILE
     currExp->WriteToFile("Expansion_" + MRIUtils::IntToStr(loopA) + "\n");
     // GET A SCAN FROM ORIGINAL SEQUENCE
-    MRIScan* myScan = new MRIScan(MyMRISequence->GetScan(0));
+    MRIScan* myScan = new MRIScan(*MyMRISequence->GetScan(0));
     myScan->RebuildFromExpansion(currExp,false);
     // ADD SCAN TO RECONSTRUCTION
     MyRECSequence->AddScan(myScan);
@@ -481,14 +482,14 @@ void TEST03_EvalReynoldsStresses(std::string inFileName){
   MRISequence* MyRECSequence = new MRISequence(false/*Cyclic Sequence*/);
 
   // ADD FILE TO SEQUENCE
-  MRIScan* MyMRIScan = new MRIScan(0.0);
+  MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
   MyMRIScan->ReadPltFile(inFileName, true);
   MyMRISequence->AddScan(MyMRIScan);
 
   // SET OPTIONS AND THRESHOLD
-  MRIOptions Options(5.0e-1,2000);
-  bool useBCFilter = false;
-  bool useConstantPatterns = true;
+  MRIOptions* options = new MRIOptions(5.0e-1,2000);
+  options->useBCFilter = false;
+  options->useConstantPatterns = true;
   int thresholdType = 0;
   std::string thresholdTypeString("Conc");
   double thresholdValue = 0.0;
@@ -497,10 +498,10 @@ void TEST03_EvalReynoldsStresses(std::string inFileName){
   }else{
     thresholdType = kQtyVelModule;
   }
-  MRIThresholdCriteria criteria(kCriterionLessThen,thresholdType,thresholdValue);
+  options->thresholdCriteria = new MRIThresholdCriteria(kCriterionLessThen,thresholdType,thresholdValue);
 
   // APPLY FULL FILTER
-  MyMRISequence->ApplyMPFilter(Options,useBCFilter,useConstantPatterns,criteria);
+  MyMRISequence->ApplySMPFilter(options);
 
   WriteSchMessage("Filter Applied!\n");
 
@@ -520,7 +521,7 @@ void TEST03_EvalReynoldsStresses(std::string inFileName){
     currExp->WriteToFile("Expansion_" + MRIUtils::IntToStr(loopA) + "\n");
 
     // GET A SCAN FROM ORIGINAL SEQUENCE
-    MRIScan* myScan = new MRIScan(MyMRISequence->GetScan(0));
+    MRIScan* myScan = new MRIScan(*MyMRISequence->GetScan(0));
     myScan->RebuildFromExpansion(currExp,false);
 
     // EVAL REYNOLDS STRESSES
@@ -550,7 +551,7 @@ void EvalPressureFromExpansion(std::string inFileName,std::string outFileName,bo
   MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
 
   // ADD FILE TO SEQUENCE
-  MRIScan* MyMRIScan = new MRIScan(0.0);
+  MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
   //MyMRIScan->ReadFromExpansionFile(inFileName,applyThreshold,thresholdRatio);
   MyMRIScan->ReadPltFile(inFileName,true);
   MyMRISequence->AddScan(MyMRIScan);
@@ -602,7 +603,7 @@ void EvalConcentrationGradient(std::string inFileName,std::string outFileName){
   bool doPressureSmoothing = false;
 
   // ADD FILE TO SEQUENCE
-  MRIScan* MyMRIScan = new MRIScan(0.0);
+  MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
   MyMRIScan->ReadPltFile(inFileName,true);
   MyMRIScan->ScalePositions(0.0058);
   MyMRISequence->AddScan(MyMRIScan);
@@ -627,7 +628,7 @@ void PerformRandomTest(){
   // Set parameters
   int numberMC = 500;
   // SET OPTIONS AND THRESHOLD
-  MRIOptions Options(1.0e-10,2000);
+  MRIOptions* options = new MRIOptions(1.0e-10,2000);
   bool useBCFilter = false;
   bool useConstantPatterns = true;
   MRIThresholdCriteria criteria(kCriterionLessThen,kQtyConcentration,1.0);
@@ -636,13 +637,13 @@ void PerformRandomTest(){
   boost::variate_generator<boost::mt19937, boost::normal_distribution<> > generator(boost::mt19937(time(0)),boost::normal_distribution<>());
 
   // Declare Scan
-  MRIScan* MyMRIScan;
+  MRIStructuredScan* MyMRIScan;
 
   // Monte Carlo Loops
   for(int loopA=0;loopA<numberMC;loopA++){
 
     // Generate Random Velocity Field - Standard Gaussian Distribution
-    MyMRIScan = new MRIScan(0.0);
+    MyMRIScan = new MRIStructuredScan(0.0);
     MyMRIScan->CreateSampleCase(kZeroVelocity,5,5,5,1.0,1.0,1.0,0.0,kdirX);
 
     // Assign Random Component
@@ -654,7 +655,7 @@ void PerformRandomTest(){
     MyMRIScan->ExportVelocitiesToFile("InputVelocities.dat",true);
 
     // Filter Velocities - NO GLOBAL ATOMS
-    MyMRIScan->PerformPhysicsFiltering(Options, false, false, criteria);
+    MyMRIScan->applySMPFilter(options);
     MyMRIScan->UpdateVelocities();
 
     // Write Resultant Velocities
@@ -662,7 +663,7 @@ void PerformRandomTest(){
 
     // Deallocate
     delete MyMRIScan;
-    MyMRIScan = NULL;
+    MyMRIScan = nullptr;
   }
 }
 
@@ -707,32 +708,32 @@ void CropAndComputeVol(std::string inFileName,std::string outfileName){
   MyMRISequence->ScalePositions(0.001);
 
   // SET OPTIONS AND THRESHOLD
-  MRIOptions Options(1.0e-4,2000);
-  bool useBCFilter = false;
-  bool useConstantPatterns = true;
-  MRIThresholdCriteria criteria(kCriterionLessThen,kQtyConcentration,500.0);
+  MRIOptions* options = new MRIOptions(1.0e-4,2000);
+  options->useBCFilter = false;
+  options->useConstantPatterns = true;
+  options->thresholdCriteria = new MRIThresholdCriteria(kCriterionLessThen,kQtyConcentration,500.0);
 
   // ------------------------
   // PRELIMINARY THRESHOLDING
   // ------------------------
-  MyMRISequence->ApplyThresholding(criteria);
+  MyMRISequence->ApplyThresholding(options->thresholdCriteria);
 
   // -----------------
   // APPLY FULL FILTER
   // -----------------
-  MyMRISequence->ApplyMPFilter(Options,useBCFilter,useConstantPatterns,criteria);
+  MyMRISequence->ApplySMPFilter(options);
 
   // --------------------------------------------
   // Apply Boundary Condition Filter to all scans
   // --------------------------------------------
-  useBCFilter = true;
+  options->useBCFilter = true;
   // APPLY FILTER
-  MyMRISequence->ApplyMPFilter(Options,useBCFilter,useConstantPatterns,criteria);
+  MyMRISequence->ApplySMPFilter(options);
 
   // ---------------------
   // Apply Final Threshold
   // ---------------------
-  MyMRISequence->ApplyThresholding(criteria);
+  MyMRISequence->ApplyThresholding(options->thresholdCriteria);
 
   // -------------------------
   // Compute Pressure Gradient
@@ -802,7 +803,7 @@ void PerformStreamlineTest1(int intValue,std::string inFileName,std::string outf
   }
 
   // Get First Scan
-  MRIScan* myScan = new MRIScan(0.0);
+  MRIStructuredScan* myScan = new MRIStructuredScan(0.0);
 
   // Read From File
   //myScan->ReadPltFile(inFileName,true);
@@ -843,7 +844,7 @@ void PerformStreamlineTest2(std::string inFileName,std::string outfileName){
   slOptions.setLimits(-18.0,15.0,-12.0,21.0,-78.0,75.0);
 
   // Get First Scan
-  MRIScan* myScan = new MRIScan(0.0);
+  MRIStructuredScan* myScan = new MRIStructuredScan(0.0);
 
   // Read From File
   myScan->ReadPltFile(inFileName,true);
@@ -881,7 +882,7 @@ void BuildFromCoeffs(std::string coeffFileName,std::string plotOut,bool performT
   MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
 
   // ADD FILE TO SEQUENCE
-  MRIScan* MyMRIScan = new MRIScan(0.0);
+  MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
   MyMRIScan->ReadFromExpansionFile(coeffFileName,performThreshold,thresholdType,threshold);
   MyMRISequence->AddScan(MyMRIScan);
 
@@ -902,7 +903,7 @@ void EvalVortexCriteria(std::string inFileName,std::string outFileName){
   MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
 
   // ADD FILE TO SEQUENCE
-  MRIScan* MyMRIScan = new MRIScan(0.0);
+  MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
   MyMRIScan->ReadPltFile(inFileName,true);
   MyMRISequence->AddScan(MyMRIScan);
 
@@ -924,7 +925,7 @@ void WriteSpatialExpansion(std::string expFileName,std::string outFileName){
   MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
 
   // CREATE NEW SCAN
-  MRIScan* MyMRIScan = new MRIScan(0.0);
+  MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
 
   // READ FROM EXPANSION COEFFICIENTS
   MyMRIScan->ReadFromExpansionFile(expFileName,false,kSoftThreshold,0.0);
@@ -1112,7 +1113,6 @@ int main(int argc, char **argv)
       EvalVortexCriteria(inFileName,outFileName);
 
   }else if (firstOption == "-writeSpatialExpansion"){
-E
       // GET FILE NAMES
       std::string inFileName(argv[2]);
       std::string outFileName(argv[3]);
@@ -1130,7 +1130,7 @@ E
     MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
 
     // Add File to Sequence
-    MRIScan* MyMRIScan = new MRIScan(0.0);
+    MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
     MyMRIScan->ReadPltFile(inFileName, true);
     //MyMRIScan->ScalePositions(0.0058);
     //MyMRIScan->ScaleVelocities(0.5);

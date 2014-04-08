@@ -21,7 +21,7 @@
 // ========================
 // UNSTRUCTURED GRID LAYOUT
 // ========================
-class MRIUnstructuredScan: public MRIScan{
+class MRIStructuredScan: public MRIScan{
   public:
     // Cells Totals
     int cellTotals[3];
@@ -31,11 +31,11 @@ class MRIUnstructuredScan: public MRIScan{
     // ================
     // Constructor
     // 1 - Empty
-    MRIUnstructuredScan(double currentTime);
+    MRIStructuredScan(double currentTime):MRIScan(currentTime){}
     // 2 - Create a Zero Scan from another Scan
-    MRIUnstructuredScan(MRIUnstructuredScan* copyScan);
+    MRIStructuredScan(MRIStructuredScan &copyScan);
     // Destructor
-    ~MRIUnstructuredScan(){}
+    virtual ~MRIStructuredScan(){}
     // INFO FUNCTIONS
     std::string WriteStatistics();
     int GetTotalFaces();
@@ -44,7 +44,7 @@ class MRIUnstructuredScan: public MRIScan{
     // READ FUNCTIONS
     // ==============
     void ReadPltFile(std::string PltFileName, bool DoReorderCells);
-    void ReadScanFromVOLFiles(std::string fileNameAn, std::string fileNameX, std::string fileNameY, std::string fileNameZ);
+    virtual void ReadScanFromVOLFiles(std::string fileNameAn, std::string fileNameX, std::string fileNameY, std::string fileNameZ);
     void ReadScanFromSingleVOLFile(std::string fileName);
     void ReadFromExpansionFile(std::string fileName,bool applyThreshold,int thresholdType,double thresholdValue);
 
@@ -60,13 +60,13 @@ class MRIUnstructuredScan: public MRIScan{
     void FillPLTHeader(std::vector<std::string> &pltHeader, bool isFirstFile);
     void ExportToLSDYNA(std::string LSFileName);
     void ExportToCSV(std::string FileName);
-    void ExportToTECPLOT(std::string FileName, bool isFirstFile);
+    virtual void ExportToTECPLOT(std::string FileName, bool isFirstFile);
     void ExportNodesToFile(std::string FileName);
-    void ExportToVOL(std::string FileName);
+    virtual void ExportToVOL(std::string FileName);
     void FlushToFile(std::string FileName);
     void ExportVelocitiesToFile(std::string fileName, bool append);
-    void ExportToVTK(std::string fileName);
-    void WriteExpansionFile(std::string fileName);
+    virtual void ExportToVTK(std::string fileName);
+    virtual void WriteExpansionFile(std::string fileName);
 
     // ========
     // VOL DATA
@@ -79,15 +79,14 @@ class MRIUnstructuredScan: public MRIScan{
     // =============================
     // TRANSFORMATIONS AND THRESHOLD
     // =============================
-    void ApplyThresholding(MRIThresholdCriteria thresholdCriteria);
-    void Crop(double* limitBox);
-    void ScaleVelocities(double factor);
-    void ScalePositions(double factor);
+    virtual void Crop(double* limitBox);
+    virtual void ScaleVelocities(double factor);
+    virtual void ScalePositions(double factor);
 
     // ==========================================
     // RECONSTRUCTION FROM EXPANSION COEFFICIENTS
     // ==========================================
-    void RebuildFromExpansion(MRIExpansion* expansion,bool useConstantFlux);
+    virtual void RebuildFromExpansion(MRIExpansion* expansion,bool useConstantFlux);
 
     // ===============================
     // RECONSTRUCTION FROM FACE FLUXES
@@ -104,35 +103,33 @@ class MRIUnstructuredScan: public MRIScan{
     // Get Cell Number From Coords
     int  GetCellNumber(MRIReal* coords);
     void GetNeighbourCells(int CurrentCell, std::vector<int> &coords);
+    bool isCompatibleWith(MRIStructuredScan* secondScan);
     // Get Face from Cell Vector
     int  GetFacewithCellVector(int CurrentCell, double *UnitVector);
     // Get Adjacency Face
     int  GetAdjacentFace(int GlobalNodeNumber, int AdjType);
     // Get Unit Vector From Current Cell To Face Centre
-    void GetUnitVector(int CurrentCell, double* GlobalFaceCoords, double* &myVect);
     void GetGlobalCoords(int DimNumber, int SliceNumber, double FaceCoord1, double FaceCoord2, double* &globalCoords);
     int  FaceLocaltoGlobal(int LocalFace,int DimNumber,int SliceNumber);
     void MapIndexToCoords(int index, int* intCoords);
     int  MapCoordsToIndex(int i, int j, int k);
     void GetLocalStarFaces(int StarNum, int CellsX, int CellsY, int &BottomFace, int &TopFace, int &LeftFace, int &RightFace);
-    virtual bool IsInnerCell(int Cell);
     int  findFirstNotVisited(int cellTotal, bool* visitedCell, std::vector<int> cellStack);
     void formNotVisitedList(int cellTotal, bool* visitedCell,std::vector<bool>& notVisitedList);
   
     // =========
     // MP FILTER
     // =========
-    void   PerformPhysicsFiltering(MRIOptions Options, bool useBCFilter, bool useConstantPatterns, MRIThresholdCriteria thresholdCriteria);
     int    GetTotalBasisNumber();
-    void   AssembleResidualVector(bool useBCFilter, MRIThresholdCriteria thresholdCriteria, int &totalFaces, double* &ResVec, double* &filteredVec, double &resNorm);
-    void   AssembleConstantPattern(int currentDim, int &totalConstantFaces, std::vector<int> &facesID, std::vector<double> &facesCoeffs);
-    void   AssembleStarShape(int dimNumber, int sliceNumber, int starNumber, int &totalFaces,std::vector<int> &facesID,std::vector<double> &facesCoeffs);
+    virtual void   AssembleResidualVector(bool useBCFilter, MRIThresholdCriteria thresholdCriteria, int &totalFaces, double* &ResVec, double* &filteredVec, double &resNorm);
+    virtual void   AssembleConstantPattern(int currentDim, int &totalConstantFaces, std::vector<int> &facesID, std::vector<double> &facesCoeffs);
+    virtual void   AssembleStarShape(int vortexNumber, int &totalFaces,std::vector<int> &facesID,std::vector<double> &facesCoeffs);
+    virtual double EvalMaxDivergence(double* filteredVec);
     void   ExpandStarShape(int totalStarFaces, int* facesID, double* facesCoeffs, double* &fullStarVector);
-    void   UpdateVelocities();
-    double EvalMaxDivergence(double* filteredVec);
     void   RecoverGlobalErrorEstimates(double& AvNormError,double& AvAngleError);
     void   RecoverCellVelocitiesRT0(bool useBCFilter, double* filteredVec);
     void   ReconstructFromExpansion();
+    void   getDimensionSliceStarFromVortex(int vortexNumber,int &dimNumber,int &sliceNumber,int &starNumber);
     
     // FILTER MATRICES
     void AssembleEncodingMatrix(int &totalFaces, int &totalBasis, double** &Mat);
@@ -141,14 +138,15 @@ class MRIUnstructuredScan: public MRIScan{
       
     // INFO Functions
     double EvalAverageVelocityMod();
-    int    EvalTotalVortex();
+    virtual int EvalTotalVortex();
+    virtual int getTotalFaces();
   
     // CELL SAMPLING
     void SampleVelocities(MRISamplingOptions SamplingOptions);
 
     // GRADIENTS AND DERIVATIVES
     virtual void EvalSpaceDerivs(int currentCell, double** firstDerivs, double** secondDerivs);
-    void EvalSpaceGradient(int currentCell,int qtyID, double* gradient);
+    virtual void EvalSpaceGradient(int currentCell,int qtyID, double* gradient);
     void ComputeQuantityGradient(int qtyID);
   
     // PRESSURE COMPUTATION
@@ -160,7 +158,7 @@ class MRIUnstructuredScan: public MRIScan{
     bool AreThereVisitedNeighbor(int cell, bool* visitedCell, bool* isBoundaryCell, int &visitedNeighbor);
     int  GetCellFromStack(std::vector<int> &cellStack, bool* visitedCell, bool* isBoundaryCell, bool &finished, bool& secondStage);
     int  GetNextStartingCell(int currentCell, bool* visitedCell, bool* isBoundaryCell, bool &finished, int &bookmark);
-    int  EvalCentralCell();
+    virtual int EvalCentralCell();
 
     // REYNOLDS STRESS COMPUTATION    
     void EvalReynoldsStressGradient(int currentCell, double** ReynoldsStressGradient);
@@ -190,7 +188,7 @@ class MRIUnstructuredScan: public MRIScan{
 
     // VORTEX IDENTIFICATION
     // With SMP Expansion Coefficients
-    void   EvalSMPVortexCriteria(MRIExpansion* exp);
+    virtual void EvalSMPVortexCriteria(MRIExpansion* exp);
     // Used Q,L2,Delta Criteria
     void   EvalVortexCriteria();
     void   EvalCellVelocityGradientDecomposition(int currentCell, double** deformation, double** rotation, double** firstDerivs);
@@ -221,7 +219,7 @@ class MRIUnstructuredScan: public MRIScan{
    void EvalSLArrivalPointDistribution(int totalSL, std::vector<MRIStreamline*> &streamlines, MRIDirection dir, double minCoord, double maxCoord, int totalSlices, std::vector<double> &sliceCenter, std::vector<double> &sliceNormArrivals);
 
    // COMPARISON BETWEEN SCANS
-   double GetDiffNorm(MRIUnstructuredScan* otherScan);
+   double GetDiffNorm(MRIStructuredScan* otherScan);
 };
 
 #endif // MRIUNSTRUCTUREDSCAN_H

@@ -1,4 +1,4 @@
-#include "mriUnstructuredScan.h"
+#include "mriStructuredScan.h"
 #include "mriTurbModel.h"
 #include "schMessages.h"
 

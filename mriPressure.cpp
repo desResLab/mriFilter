@@ -1,7 +1,7 @@
 #include <math.h>
 
 #include "mriScan.h"
-#include "mriUnstructuredScan.h"
+#include "mriStructuredScan.h"
 #include "mriConstants.h"
 #include "mriSequence.h"
 
@@ -200,7 +200,7 @@ void MRISequence::EvalTimeDerivs(int currentScan, int currentCell,double* &timeD
 // ==========================================
 // EVAL FIRST AND SECOND DERIVATIVES IN SPACE
 // ==========================================
-void MRIUnstructuredScan::EvalSpaceDerivs(int currentCell, double** firstDerivs, double** secondDerivs){
+void MRIStructuredScan::EvalSpaceDerivs(int currentCell, double** firstDerivs, double** secondDerivs){
   // FirstDerivs
   // DVX/DX DVY/DX DVZ/DX
   // DVX/DY DVY/DY DVZ/DY
@@ -313,7 +313,7 @@ void MRIUnstructuredScan::EvalSpaceDerivs(int currentCell, double** firstDerivs,
 // ==========================================
 // EVAL FIRST AND SECOND DERIVATIVES IN SPACE
 // ==========================================
-void MRIUnstructuredScan::EvalSpaceGradient(int currentCell,int qtyID, double* gradient){
+void MRIStructuredScan::EvalSpaceGradient(int currentCell,int qtyID, double* gradient){
   // Map Index To Coords
   int* currentCellCoords = new int[kNumberOfDimensions];
   MapIndexToCoords(currentCell,currentCellCoords);
@@ -457,7 +457,7 @@ int getReynoldsStressIndex(int loopA,int loopB){
 // ==============================
 // EVAL REYNOLDS STRESS GRADIENTS
 // ==============================
-void MRIUnstructuredScan::EvalReynoldsStressGradient(int currentCell, double** ReynoldsStressGradient){
+void MRIStructuredScan::EvalReynoldsStressGradient(int currentCell, double** ReynoldsStressGradient){
   // FirstDerivs
   // DRXX/DX DRYX/DX DRZX/DX
   // DRXY/DY DRYY/DY DRZY/DY
@@ -655,7 +655,7 @@ void MRIScan::EvalPressureIterative(int currentCell, double currentValue, bool* 
   double diff[3] = {0.0};
   double avGradient[3] = {0.0};
   // Loop through Neighbours
-  for(int loopA=0;loopA<otherCells.size();loopA++){
+  for(size_t loopA=0;loopA<otherCells.size();loopA++){
     cell = otherCells[loopA];
     if((cell>-1)&&(cell<totalCellPoints)&&(!visitedCell[cell])&&(IsInnerCell(cell))){
       visitedCell[cell] = true;
@@ -690,7 +690,7 @@ bool MRIScan::AreThereNotVisitedNeighbor(int cell, bool* visitedCell){
   std::vector<int> otherCells;
   GetNeighbourCells(cell,otherCells);
   bool areThereVisited = false;
-  for(int loopA=0;loopA<otherCells.size();loopA++){
+  for(size_t loopA=0;loopA<otherCells.size();loopA++){
     if((otherCells[loopA]>-1)&&(IsInnerCell(otherCells[loopA]))){
       areThereVisited = ((areThereVisited)||(!visitedCell[otherCells[loopA]]));
     }
@@ -704,7 +704,7 @@ bool MRIScan::AreThereVisitedNeighbor(int cell, bool* visitedCell, bool* isBound
   std::vector<int> otherCells;
   GetNeighbourCells(cell,otherCells);
   bool areThereVisited = false;
-  for(int loopA=0;loopA<otherCells.size();loopA++){
+  for(size_t loopA=0;loopA<otherCells.size();loopA++){
     if((otherCells[loopA]>-1)&&(IsInnerCell(otherCells[loopA]))){
       areThereVisited = ((areThereVisited)||((visitedCell[otherCells[loopA]])&&(!isBoundaryCell[loopA])));
       if ((visitedCell[otherCells[loopA]])&&(!isBoundaryCell[loopA])){
@@ -978,7 +978,7 @@ void MRIScan::ApplyMedianFilter(int qtyID,int maxIt){
         // GET NEIGHBOURS
         GetNeighbourCells(loopA,neighbours);
         // GET THE VALUES ON NEIGHBOR CELLS
-        for(int loopB=0;loopB<neighbours.size();loopB++){
+        for(size_t loopB=0;loopB<neighbours.size();loopB++){
           currCell = neighbours[loopB];
           // Get Quantity for Neighbor Cell
           currValue = cellPoints[currCell].getQuantity(qtyID);

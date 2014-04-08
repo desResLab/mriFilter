@@ -1,11 +1,11 @@
 #include <math.h>
-#include "mriUnstructuredScan.h"
+#include "mriStructuredScan.h"
 #include "mriConstants.h"
 #include "schMessages.h"
 #include "mriUtils.h"
 
 // STAGNATION FLOW SOLUTION
-void MRIUnstructuredScan::AssignStagnationFlowSignature(MRIDirection dir){
+void MRIStructuredScan::AssignStagnationFlowSignature(MRIDirection dir){
   double bConst = 1.0;
   double xCoord,yCoord,zCoord;
   for(int loopA=0;loopA<totalCellPoints;loopA++){
@@ -67,7 +67,7 @@ void EvalTangentDirection(MRIDirection dir, double* radialVector, double* tangVe
 }
 
 // ASSIGN CYLINDRICAL VORTEX FLOW 
-void MRIUnstructuredScan::AssignCylindricalFlowSignature(MRIDirection dir){
+void MRIStructuredScan::AssignCylindricalFlowSignature(MRIDirection dir){
   // Set Parameters
   const double minRadius = 10.0;
   const double maxRadius = 15.0;
@@ -120,7 +120,7 @@ void MRIUnstructuredScan::AssignCylindricalFlowSignature(MRIDirection dir){
 }
 
 // ASSIGN SPHERICAL HILL VORTEX FLOW 
-void MRIUnstructuredScan::AssignSphericalFlowSignature(MRIDirection dir){
+void MRIStructuredScan::AssignSphericalFlowSignature(MRIDirection dir){
   // Set Parameters
   const double CONST_U0 = 0.1;
   const double CONST_A = 12.0;
@@ -217,7 +217,7 @@ void MRIUnstructuredScan::AssignSphericalFlowSignature(MRIDirection dir){
 }
 
 // ASSIGN SPHERICAL VORTEX FLOW 
-void MRIUnstructuredScan::AssignToroidalVortexFlowSignature(){
+void MRIStructuredScan::AssignToroidalVortexFlowSignature(){
   // Set Parameters
   const double CONST_A = 20.0;
   const double CONST_L = 1.3*1.3;
@@ -288,7 +288,7 @@ void MRIUnstructuredScan::AssignToroidalVortexFlowSignature(){
 }
 
 // ASSIGN CONSTANT FLOW
-void MRIUnstructuredScan::AssignConstantSignature(MRIDirection dir){
+void MRIStructuredScan::AssignConstantSignature(MRIDirection dir){
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     switch(dir){
       case kdirX:
@@ -311,7 +311,7 @@ void MRIUnstructuredScan::AssignConstantSignature(MRIDirection dir){
 }
 
 // SET VELOCITIES TO ZERO
-void MRIUnstructuredScan::AssignZeroVelocities(){
+void MRIStructuredScan::AssignZeroVelocities(){
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     cellPoints[loopA].velocity[0] = 0.0;
     cellPoints[loopA].velocity[1] = 0.0;
@@ -320,7 +320,7 @@ void MRIUnstructuredScan::AssignZeroVelocities(){
 }
 
 // Assign Constant Flow With Step
-void MRIUnstructuredScan::AssignConstantFlowWithStep(){
+void MRIStructuredScan::AssignConstantFlowWithStep(){
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     if ((cellPoints[loopA].position[0]>(0.5*(domainSizeMin[0] + domainSizeMax[0])))&&
        (cellPoints[loopA].position[1]>(0.5*(domainSizeMin[1] + domainSizeMax[1])))){
@@ -340,7 +340,7 @@ void MRIUnstructuredScan::AssignConstantFlowWithStep(){
 }
 
 // Assign Standard Gaussian Random Velocities on the Three Separated Components
-void MRIUnstructuredScan::AssignRandomStandardGaussianFlow(){
+void MRIStructuredScan::AssignRandomStandardGaussianFlow(){
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     // Assign Constant Velocity
     cellPoints[loopA].concentration = 10.0;
@@ -352,7 +352,7 @@ void MRIUnstructuredScan::AssignRandomStandardGaussianFlow(){
 
 
 // ASSIGN POISEILLE FLOW
-void MRIUnstructuredScan::AssignPoiseilleSignature(MRIDirection dir){
+void MRIStructuredScan::AssignPoiseilleSignature(MRIDirection dir){
   double currentVelocity = 0.0;
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     double currentDistance = 0.0;
@@ -393,7 +393,7 @@ void MRIUnstructuredScan::AssignPoiseilleSignature(MRIDirection dir){
 }
 
 // ASSIGN CONCENTRATIONS AND VELOCITIES
-void MRIUnstructuredScan::AssignVelocitySignature(MRIDirection dir, MRISamples sample, double currTime){
+void MRIStructuredScan::AssignVelocitySignature(MRIDirection dir, MRISamples sample, double currTime){
   switch(sample){
     case kZeroVelocity:
       AssignZeroVelocities();
@@ -426,7 +426,7 @@ void MRIUnstructuredScan::AssignVelocitySignature(MRIDirection dir, MRISamples s
 }
 
 // CREATE SAMPLE FLOWS
-void MRIUnstructuredScan::CreateSampleCase(MRISamples sampleType,
+void MRIStructuredScan::CreateSampleCase(MRISamples sampleType,
                                int sizeX, int sizeY, int sizeZ,
                                double distX, double distY, double distZ,
                                double currTime, MRIDirection dir){
@@ -478,7 +478,7 @@ void MRIUnstructuredScan::CreateSampleCase(MRISamples sampleType,
 }
 
 // ASSIGN TIME DEPENDENT FLOW
-void MRIUnstructuredScan::AssignTimeDependentPoiseilleSignature(double omega, double radius, double viscosity, double currtime, double maxVel){
+void MRIStructuredScan::AssignTimeDependentPoiseilleSignature(double omega, double radius, double viscosity, double currtime, double maxVel){
   // Eval omegaMod
   double omegaMod = ((omega*radius*radius)/viscosity);
   double relCoordX = 0.0;

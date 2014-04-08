@@ -1,15 +1,19 @@
 #ifndef MRIOPTIONS_H
 #define MRIOPTIONS_H
 
-class MRIOptions
-{
+#include "mriThresholdCriteria.h"
+
+class MRIOptions{
   public:
-	  // Data Members
+    // DATA MEMBERS
   	double tolerance;
     int maxIterations;		
-	  // Constructor and Distructors
-	  MRIOptions(double tol, int maxIt);
-	  ~MRIOptions(){};
+    bool useBCFilter;
+    bool useConstantPatterns;
+    MRIThresholdCriteria* thresholdCriteria;
+    // CONSTRUCTOR AND DESTRUCTOR
+    MRIOptions(double tol, int maxIt);
+    ~MRIOptions(){}
 };
 	
 #endif // MRIOPTIONS_H

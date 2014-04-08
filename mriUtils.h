@@ -532,7 +532,7 @@ inline double GetMedian(std::vector<double> &v){
 // ========
 inline double GetMean(std::vector<double> &v){
   double av = 0.0;
-  for(int loopA=0;loopA<v.size();loopA++){
+  for(size_t loopA=0;loopA<v.size();loopA++){
     av = av + v[loopA];
   }
   av = (av/((double)v.size()));

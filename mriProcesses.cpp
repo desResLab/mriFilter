@@ -77,7 +77,7 @@ void MRIScan::ApplySmoothingFilter(){
   double velZMinus = 0.0;
   // Local Divergence 
   double localDivergence = 0.0;
-  int* otherCells = new int[k3DNeighbors];
+  std::vector<int> otherCells;
   // LOOP UNTIL CONVERGED
   while(!converged){
     // Increment Iteration Count
@@ -112,8 +112,6 @@ void MRIScan::ApplySmoothingFilter(){
     // Check Convergence
     converged = (maxDivergence<1.0e-4);
   }
-  // Deallocate
-  delete [] otherCells;
 }
 
 // APPLY GAUSSIAN NOISE

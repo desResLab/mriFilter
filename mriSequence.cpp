@@ -21,7 +21,7 @@ MRISequence::MRISequence(MRISequence* copySequence){
   isCyclic = copySequence->isCyclic;
   // Fill with Zero Scans
   for(int loopB=0;loopB<totalScans;loopB++){
-    MRIScan* newScan = new MRIScan(copySequence->GetScan(loopB));
+    MRIScan* newScan = new MRIScan(*copySequence->GetScan(loopB));
     sequence.push_back(newScan);
   }
 }
@@ -189,19 +189,19 @@ void MRISequence::ExportToVTK(std::string outfileName){
 }
 
 // PHYSICS FILTERING FOR ALL SCANS
-void MRISequence::ApplyMPFilter(MRIOptions Options, bool useBCFilter, bool useConstantPatterns, MRIThresholdCriteria thresholdCriteria){
+void MRISequence::ApplySMPFilter(MRIOptions* options){
   // Export All Data
   WriteSchMessage("\n");
   for(int loopA=0;loopA<totalScans;loopA++){
     // Perform Filter
-    sequence[loopA]->PerformPhysicsFiltering(Options,useBCFilter,useConstantPatterns,thresholdCriteria);
+    sequence[loopA]->applySMPFilter(options);
     // Update Velocities
     sequence[loopA]->UpdateVelocities();
   }
 }
 
 // APPLY THRESHOLDING TO ALL SCANS
-void MRISequence::ApplyThresholding(MRIThresholdCriteria thresholdCriteria){
+void MRISequence::ApplyThresholding(MRIThresholdCriteria* thresholdCriteria){
   // Export All Data
   WriteSchMessage("\n");
   for(int loopA=0;loopA<totalScans;loopA++){
