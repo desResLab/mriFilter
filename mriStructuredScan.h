@@ -25,13 +25,12 @@ class MRIStructuredScan: public MRIScan{
   public:
     // Cells Totals
     int cellTotals[3];
-    //double cellLength[3];
     std::vector<std::vector<double>> cellLengths;
     // Aux Vector to Assemble Vortex Faces
-    std::vector<int> vortexBottomFaces;
-    std::vector<int> vortexTopFaces;
-    std::vector<int> vortexLeftFaces;
-    std::vector<int> vortexRightFaces;
+    std::vector<std::vector<int>> cellConnections;
+    std::vector<std::vector<int>> cellFaces;
+    std::vector<std::vector<int>> faceConnections;
+    std::vector<std::vector<int>> egdeConnections;
     // ================
     // MEMBER FUNCTIONS
     // ================

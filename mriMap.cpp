@@ -65,7 +65,7 @@ void MRIStructuredScan::GetGlobalCoords(int DimNumber, int SliceNumber, double F
   }
 }
 
-// ===========================
+/*// ===========================
 // LOCAL TO GLOBAL FACE NUMBER
 // ===========================
 int MRIStructuredScan::FaceLocaltoGlobal(int LocalFace, int DimNumber, int SliceNumber){
@@ -126,7 +126,7 @@ int MRIStructuredScan::FaceLocaltoGlobal(int LocalFace, int DimNumber, int Slice
   delete [] GlobalFaceCoords;
   // Return Global Face Number
   return globalFace;
-}
+}*/
 
 // Map To Cells Coords
 void MRIStructuredScan::MapIndexToCoords(int index, int* intCoords){
@@ -147,9 +147,9 @@ int MRIStructuredScan::MapCoordsToIndex(int i, int j, int k){
 // Map Cell Number
 int MRIStructuredScan::GetCellNumber(MRIReal* coords){
   // Check Indexes
-  int i = MRIUtils::round((coords[0]-domainSizeMin[0])/cellLength[0]);
-  int j = MRIUtils::round((coords[1]-domainSizeMin[1])/cellLength[1]);
-  int k = MRIUtils::round((coords[2]-domainSizeMin[2])/cellLength[2]);
+  int i = MRIUtils::FindHowMany(coords[0]-domainSizeMin[0],cellLengths[0]);
+  int j = MRIUtils::FindHowMany(coords[1]-domainSizeMin[1],cellLengths[1]);
+  int k = MRIUtils::FindHowMany(coords[2]-domainSizeMin[2],cellLengths[2]);
   // If OutSide Project To Max Index
   if(i>(cellTotals[0]-1)){
     i = (cellTotals[0]-1);
