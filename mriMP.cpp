@@ -241,7 +241,9 @@ double MRIStructuredScan::EvalMaxDivergence(double* filteredVec){
   return maxDivergence;
 }
 
+// =============
 // REORDER CELLS
+// =============
 void MRIStructuredScan::ReorderCells(int* Perm){
   // Allocate a copy of the Scan: Check if necessary!!!
   std::vector<MRICell> tempCellPoints;
@@ -278,7 +280,8 @@ void MRIStructuredScan::ReorderCells(int* Perm){
   double PosNorm;
   double VelNorm;
   int invalidCount = 0;
-  int* intCoords = new int[3];
+  int intCoords[3] = {0};
+  double Pos[3] = {0.0};
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     // Conc
     cellPoints[loopA].concentration = tempCellPoints[loopA].concentration;
@@ -293,10 +296,12 @@ void MRIStructuredScan::ReorderCells(int* Perm){
     if((PosNorm<kMathZero)&&(VelNorm<kMathZero)&&(invalidCount>1)){
       // Get Coords
       MapIndexToCoords(loopA,intCoords);
+      // Get Position
+      MapCoordsToPosition(intCoords,Pos);
       // Assign
-      cellPoints[loopA].position[0] = intCoords[0]*cellLength[0] + domainSizeMin[0];
-      cellPoints[loopA].position[1] = intCoords[1]*cellLength[1] + domainSizeMin[1];
-      cellPoints[loopA].position[2] = intCoords[2]*cellLength[2] + domainSizeMin[2];
+      cellPoints[loopA].position[0] = Pos[0];
+      cellPoints[loopA].position[1] = Pos[1];
+      cellPoints[loopA].position[2] = Pos[2];
     }else{
       cellPoints[loopA].position[0] = tempCellPoints[loopA].position[0];
       cellPoints[loopA].position[1] = tempCellPoints[loopA].position[1];
@@ -307,7 +312,9 @@ void MRIStructuredScan::ReorderCells(int* Perm){
   delete [] intCoords;
 }
 
+// ===================================
 // RECOVER VELOCITIES FROM FACE FLUXES
+// ===================================
 void MRIStructuredScan::RecoverCellVelocitiesRT0(bool useBCFilter, double* filteredVec){
   // Variables
   int faceLocPlus = 0;
@@ -317,41 +324,44 @@ void MRIStructuredScan::RecoverCellVelocitiesRT0(bool useBCFilter, double* filte
   int currentFaceMinus = 0;
   double avVelocityPlus = 0.0;
   double avVelocityMinus = 0.0;
+  double Areas[3] = {0.0};
   // Loop To Assemble Residual Vector
   for(int loopA=0;loopA<totalCellPoints;loopA++){
-		// Loop On Faces
-		for(int loopB=0;loopB<3;loopB++){
-			switch(loopB){
-				case 0:
-					faceLocPlus = kfacePlusX;
-					faceArea = cellLength[1]*cellLength[2];
-					faceLocMinus = kfaceMinusX;
-					break;
-				case 1:
-					faceLocPlus = kfacePlusY;
-					faceArea = cellLength[0]*cellLength[2];
-					faceLocMinus = kfaceMinusY;
-					break;
-				case 2:
-					faceLocPlus = kfacePlusZ;
-					faceArea = cellLength[0]*cellLength[1];
-					faceLocMinus = kfaceMinusZ;
-					break;
-			}
-			// Get Current Face
-			currentFacePlus = GetAdjacentFace(loopA,faceLocPlus);
-			currentFaceMinus = GetAdjacentFace(loopA,faceLocMinus);
-			// Eval Average Velocity
-			avVelocityPlus = (filteredVec[currentFacePlus]/faceArea);
-			avVelocityMinus = (filteredVec[currentFaceMinus]/faceArea);
-			// Set Correction
-			if(useBCFilter){
-                cellPoints[loopA].auxVector[loopB] = cellPoints[loopA].velocity[loopB]-0.5*(avVelocityPlus + avVelocityMinus);
-			}else{
-                cellPoints[loopA].auxVector[loopB] = 0.5*(avVelocityPlus + avVelocityMinus);
-			}
-	  }
-	}
+    // Get Area
+    evalCellAreas(loopA,Areas);
+    // Loop On Faces
+    for(int loopB=0;loopB<3;loopB++){
+      switch(loopB){
+          case 0:
+            faceLocPlus = kfacePlusX;
+            faceArea = Areas[0];
+            faceLocMinus = kfaceMinusX;
+            break;
+          case 1:
+            faceLocPlus = kfacePlusY;
+            faceArea = Areas[1];
+            faceLocMinus = kfaceMinusY;
+            break;
+          case 2:
+            faceLocPlus = kfacePlusZ;
+            faceArea = Areas[2];
+            faceLocMinus = kfaceMinusZ;
+            break;
+      }
+      // Get Current Face
+      currentFacePlus = GetAdjacentFace(loopA,faceLocPlus);
+      currentFaceMinus = GetAdjacentFace(loopA,faceLocMinus);
+      // Eval Average Velocity
+      avVelocityPlus = (filteredVec[currentFacePlus]/faceArea);
+      avVelocityMinus = (filteredVec[currentFaceMinus]/faceArea);
+      // Set Correction
+      if(useBCFilter){
+        cellPoints[loopA].auxVector[loopB] = cellPoints[loopA].velocity[loopB]-0.5*(avVelocityPlus + avVelocityMinus);
+      }else{
+        cellPoints[loopA].auxVector[loopB] = 0.5*(avVelocityPlus + avVelocityMinus);
+      }
+    }
+  }
 }
 
 // =======================================================
@@ -411,11 +421,13 @@ void MRIStructuredScan::AssembleStarShape(int vortexNumber, int &totalFaces, std
   int localTopFace = 0;
   int localLeftFace = 0;
   int localRightFace = 0;
+
   // Faces
   int bottomFace = 0;
   int topFace = 0;
   int leftFace = 0;
   int rightFace = 0;
+
   // Clear Array and Reset Counters
   totalFaces = 0;
   facesID.clear();
@@ -445,13 +457,21 @@ void MRIStructuredScan::AssembleStarShape(int vortexNumber, int &totalFaces, std
       cells2 = cellTotals[1];
       break;
   }
+
+  // Assign Four Faces Belonging to Vortex
+  bottomFace = vortexBottomFaces[vortexNumber];
+  topFace =    vortexTopFaces[vortexNumber];
+  leftFace =   vortexLeftFaces[vortexNumber];
+  rightFace =  vortexRightFaces[vortexNumber];
+
   // Get Local Adjacent Plane
-  GetLocalStarFaces(starNumber,cells1,cells2,localBottomFace,localTopFace,localLeftFace,localRightFace);
+  //GetLocalStarFaces(starNumber,cells1,cells2,localBottomFace,localTopFace,localLeftFace,localRightFace);
   // Convert To Global Faces
-  bottomFace = FaceLocaltoGlobal(localBottomFace,dimNumber,sliceNumber);
-  topFace =    FaceLocaltoGlobal(localTopFace,dimNumber,sliceNumber);
-  leftFace =   FaceLocaltoGlobal(localLeftFace,dimNumber,sliceNumber);
-  rightFace =  FaceLocaltoGlobal(localRightFace,dimNumber,sliceNumber);
+  //bottomFace = FaceLocaltoGlobal(localBottomFace,dimNumber,sliceNumber);
+  //topFace =    FaceLocaltoGlobal(localTopFace,dimNumber,sliceNumber);
+  //leftFace =   FaceLocaltoGlobal(localLeftFace,dimNumber,sliceNumber);
+  //rightFace =  FaceLocaltoGlobal(localRightFace,dimNumber,sliceNumber);
+
   // Insert In Lists
   if(bottomFace>-1){
     MRIUtils::InsertInIntList(bottomFace,totalFaces,facesID);
@@ -469,6 +489,7 @@ void MRIStructuredScan::AssembleStarShape(int vortexNumber, int &totalFaces, std
     MRIUtils::InsertInIntList(rightFace,totalFaces,facesID);
     facesCoeffs.push_back(-1.0);
   }
+
   // Normalize
   double norm = 0.0;
   for(int loopA=0;loopA<totalFaces;loopA++){
@@ -552,6 +573,7 @@ void MRIStructuredScan::AssembleResidualVector(bool useBCFilter, MRIThresholdCri
   double faceComponent = 0.0;
   int    currentFace = 0;
   bool   checkPassed = false;
+  double Areas[3] = {0.0};
   // Get Total Number Of Faces
   totalFaces = cellTotals[0]*cellTotals[1]*(cellTotals[2]+1)+
                cellTotals[1]*cellTotals[2]*(cellTotals[0]+1)+
@@ -584,37 +606,39 @@ void MRIStructuredScan::AssembleResidualVector(bool useBCFilter, MRIThresholdCri
       currentVelX = cellPoints[loopA].velocity[0];
       currentVelY = cellPoints[loopA].velocity[1];
       currentVelZ = cellPoints[loopA].velocity[2];
+      // Get Areas
+      evalCellAreas(loopA,Areas);
       // Loop On Faces
       for(int loopB=0;loopB<k3DNeighbors;loopB++){
         switch(loopB){
           case 0:
             faceLocation = kfacePlusX;
-            faceArea = cellLength[1]*cellLength[2];
+            faceArea = Areas[0];
             faceComponent = currentVelX;
             break;
           case 1:
             faceLocation = kfaceMinusX;
-            faceArea = cellLength[1]*cellLength[2];
+            faceArea = Areas[0];
             faceComponent = currentVelX;
             break;
           case 2:
             faceLocation = kfacePlusY;
-            faceArea = cellLength[0]*cellLength[2];
+            faceArea = Areas[1];
             faceComponent = currentVelY;
             break;
           case 3:
             faceLocation = kfaceMinusY;
-            faceArea = cellLength[0]*cellLength[2];
+            faceArea = Areas[1];
             faceComponent = currentVelY;
             break;
           case 4:
             faceLocation = kfacePlusZ;
-            faceArea = cellLength[0]*cellLength[1];
+            faceArea = Areas[2];
             faceComponent = currentVelZ;
             break;
           case 5:
             faceLocation = kfaceMinusZ;
-            faceArea = cellLength[0]*cellLength[1];
+            faceArea = Areas[2];
             faceComponent = currentVelZ;
             break;
         }        

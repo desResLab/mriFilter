@@ -7,7 +7,9 @@
 #include "mriException.h"
 #include "mriUtils.h"
 
-// Check If Cell Is Inside or On the Boundary
+// =====================================
+// CHECK IF IS BOUNDARY OR INTERNAL CELL
+// =====================================
 bool MRIScan::IsInnerCell(int Cell){
   // Init Result
   bool isInside = true; 
@@ -32,37 +34,48 @@ void MRIScan::GetUnitVector(int CurrentCell, double* GlobalFaceCoords, double* &
   MRIUtils::Normalize3DVector(myVect);
 }
 
-// Get Global Coords From Local Ones
+// ===================================
+// GET GLOBAL COORDS FROM LOCAL COORDS
+// ===================================
 void MRIStructuredScan::GetGlobalCoords(int DimNumber, int SliceNumber, double FaceCoord1, double FaceCoord2, double* &globalCoords){
+  // Sum up the slices
+  double sliceValue = 0.0;
+  for(int loopA=1;loopA<SliceNumber;loopA++){
+    sliceValue += 0.5*(cellLengths[DimNumber][loopA-1] + cellLengths[DimNumber][loopA]);
+  }
   switch(DimNumber){
-		case 0:
-		  // X Direction
-      globalCoords[0] = domainSizeMin[0] + cellLength[0]*(SliceNumber);
+    case 0:
+      // X Direction
+      globalCoords[0] = domainSizeMin[0] + sliceValue;
       globalCoords[1] = domainSizeMin[1] + FaceCoord1;
       globalCoords[2] = domainSizeMin[2] + FaceCoord2;
-		  break;
+      break;
     case 1:
       // Y Direction
       globalCoords[0] = domainSizeMin[0] + FaceCoord1;
-      globalCoords[1] = domainSizeMin[1] + cellLength[1]*(SliceNumber);
+      globalCoords[1] = domainSizeMin[1] + sliceValue;
       globalCoords[2] = domainSizeMin[2] + FaceCoord2;
-			break;
+      break;
     case 2:
       // Z Direction
       globalCoords[0] = domainSizeMin[0] + FaceCoord1;
       globalCoords[1] = domainSizeMin[1] + FaceCoord2;
-      globalCoords[2] = domainSizeMin[2] + cellLength[2]*(SliceNumber);
-			break;
-	}
+      globalCoords[2] = domainSizeMin[2] + sliceValue;
+      break;
+  }
 }
 
-// Transform From Local to Global Face Number
+// ===========================
+// LOCAL TO GLOBAL FACE NUMBER
+// ===========================
 int MRIStructuredScan::FaceLocaltoGlobal(int LocalFace, int DimNumber, int SliceNumber){
-	int cells1 = 0;
-    double cellLength1 = 0.0;
-    double cellLength2 = 0.0;
-  // If Face is Zero then Return Zero
-  if(LocalFace == -1) return -1;
+  int cells1 = 0;
+  double cellLength1 = 0.0;
+  double cellLength2 = 0.0;
+  // If Face is zero then return
+  if(LocalFace == -1){
+    return -1;
+  }
   // Number Of Cells in Local 1
   switch(DimNumber){
     case 0:
@@ -83,20 +96,20 @@ int MRIStructuredScan::FaceLocaltoGlobal(int LocalFace, int DimNumber, int Slice
       cellLength1 = cellLength[0];
       cellLength2 = cellLength[1];
       break;
-	}
+  }
   // Find The Coords
-	// CHECK IF IS OK!!!
+  // CHECK IF IS OK!!!
   int iCoord = ((int)(LocalFace) / (int)(2*cells1+1));
   int jCoord = (     (LocalFace) %      (2*cells1+1));
-	double faceCoord1,faceCoord2;
+  double faceCoord1,faceCoord2;
   if(jCoord>(cells1-1)){
     jCoord = jCoord - cells1;
     faceCoord1 = (jCoord)*cellLength1-0.5*cellLength1;
     faceCoord2 = (iCoord)*cellLength2;
-	}else{
+  }else{
     faceCoord1 = (jCoord)*cellLength1;
     faceCoord2 = (iCoord)*cellLength2-0.5*cellLength2;
-	}
+  }
   double* GlobalFaceCoords = new double[kNumberOfDimensions];
   // Pass to Global Coords
   GetGlobalCoords(DimNumber,SliceNumber,faceCoord1,faceCoord2,GlobalFaceCoords);
@@ -111,8 +124,8 @@ int MRIStructuredScan::FaceLocaltoGlobal(int LocalFace, int DimNumber, int Slice
   // Deallocate
   delete [] UnitVector;
   delete [] GlobalFaceCoords;
-	// Return Global Face Number
-	return globalFace;
+  // Return Global Face Number
+  return globalFace;
 }
 
 // Map To Cells Coords
@@ -281,4 +294,33 @@ void MRIStructuredScan::getNeighborVortexes(int cellNumber,int dim,int& idx1,int
     idx3 = idx2 + (cellTotals[0]);
     idx4 = idx3 + 1;
   }
+}
+
+// ==============================
+// MAP INTEGER COORDS TO POSITION
+// ==============================
+void MRIStructuredScan::MapCoordsToPosition(int* coords, bool addMeshMinima, double* pos){
+  // Loop on the three dimensions
+  for(int loopA=0;loopA<3;loopA++){
+    pos[loopA] = 0.0;
+    for(int loopB=1;loopB<coords[loopA];loopB++){
+      pos[loopA] += 0.5*(cellLengths[loopA][loopB-1] + cellLengths[loopA][loopB]);
+    }
+  }
+}
+
+// ===================================
+// CHECK IF STRUCTURED MESH IS UNIFORM
+// ===================================
+bool MRIStructuredScan::isUniform(){
+  bool res = true;
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    // Assign Reference Length
+    double refLength = cellLengths[0][0];
+    // Loop through all the lengths to see of they are equal
+    for(int loopB=0;loopB<cellLengths[loopA].size();loopB++){
+      res = (res && (fabs(refLength-cellLengths[loopA][loopB])<kMathZero));
+    }
+  }
+  return res;
 }

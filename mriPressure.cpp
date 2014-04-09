@@ -205,10 +205,12 @@ void MRIStructuredScan::EvalSpaceDerivs(int currentCell, double** firstDerivs, d
   // DVX/DX DVY/DX DVZ/DX
   // DVX/DY DVY/DY DVZ/DY
   // DVX/DZ DVY/DZ DVZ/DZ
+
   // Map Index To Coords
   int* currentCellCoords = new int[kNumberOfDimensions];
   MapIndexToCoords(currentCell,currentCellCoords);
   int firstCell,secondCell;
+
   // Assemble Terms
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
     switch(loopA){
@@ -252,8 +254,22 @@ void MRIStructuredScan::EvalSpaceDerivs(int currentCell, double** firstDerivs, d
         }
         break;
     }
-    // Eval Cell Distance for Coordinate LoopA
-    double delta = cellLength[loopA];
+
+    // Get Deltas
+    double deltaMinus = 0.0;
+    double deltaPlus = 0.0;
+    if(firstCell>-1){
+      deltaMinus = 0.5*(cellLengths[loopA][currentCellCoords[loopA]] + cellLengths[loopA][currentCellCoords[loopA]-1]);
+    }else{
+      deltaMinus = 0.0;
+    }
+    if(secondCell>-1){
+      deltaPlus = 0.5*(cellLengths[loopA][currentCellCoords[loopA]] + cellLengths[loopA][currentCellCoords[loopA]+1]);
+    }else{
+      deltaPlus = 0.0;
+    }
+
+    // Find Components
     double firstVComponent = 0.0;
     double secondVComponent = 0.0;
     double currentVComponent = 0.0;
@@ -276,13 +292,13 @@ void MRIStructuredScan::EvalSpaceDerivs(int currentCell, double** firstDerivs, d
       // FIRST DERIVS
       if(firstCell<0){
         // Simple Euler Formula
-        firstDerivs[loopA][loopB] = (secondVComponent-currentVComponent)/(delta);
+        firstDerivs[loopA][loopB] = (secondVComponent-currentVComponent)/(deltaPlus);
       }else if (secondCell<0){
         // Simple Euler Formula
-        firstDerivs[loopA][loopB] = (currentVComponent-firstVComponent)/(delta);
+        firstDerivs[loopA][loopB] = (currentVComponent-firstVComponent)/(deltaMinus);
       }else if((firstCell>-1)&&(secondCell>-1)){
-        // Central Difference Formula
-        firstDerivs[loopA][loopB] = (secondVComponent-firstVComponent)/(2.0*delta);
+        // Central Difference Formula: CAREFULL: ONLY FIRST ORDER IF GRID SPACING VARIES SIGNIFICANTLY
+        firstDerivs[loopA][loopB] = (secondVComponent-firstVComponent)/(deltaPlus + deltaMinus);
       }else{
         // Show Error Message
         throw MRIPressureComputationException("Error: Both First and Second Cells are Zero in EvalFirstSpaceDerivs");
@@ -298,8 +314,8 @@ void MRIStructuredScan::EvalSpaceDerivs(int currentCell, double** firstDerivs, d
         // TODO: Find a better formula for the boundary!!!
         secondDerivs[loopA][loopB] = 0.0;
       }else if((firstCell>-1)&&(secondCell>-1)){
-        // Central Difference Formula
-        secondDerivs[loopA][loopB] = (secondVComponent-2.0*currentVComponent+firstVComponent)/(delta*delta);
+        // Central Difference Formula: CAREFULL: IS THIS ACCURATE !!!
+        secondDerivs[loopA][loopB] = (secondVComponent-2.0*currentVComponent+firstVComponent)/(deltaPlus*deltaMinus);
       }else{
         // Show Error Message
         throw MRIPressureComputationException("Error: Both First and Second Cells are Zero in EvalFirstSpaceDerivs");
@@ -361,8 +377,22 @@ void MRIStructuredScan::EvalSpaceGradient(int currentCell,int qtyID, double* gra
         }
         break;
     }
+
+    // Get Deltas
+    double deltaMinus = 0.0;
+    double deltaPlus = 0.0;
+    if(firstCell>-1){
+      deltaMinus = 0.5*(cellLengths[loopA][currentCellCoords[loopA]] + cellLengths[loopA][currentCellCoords[loopA]-1]);
+    }else{
+      deltaMinus = 0.0;
+    }
+    if(secondCell>-1){
+      deltaPlus = 0.5*(cellLengths[loopA][currentCellCoords[loopA]] + cellLengths[loopA][currentCellCoords[loopA]+1]);
+    }else{
+      deltaPlus = 0.0;
+    }
+
     // Eval Cell Distance for Coordinate LoopA
-    double delta = cellLength[loopA];
     double firstVComponent = 0.0;
     double secondVComponent = 0.0;
     double currentVComponent = 0.0;
@@ -384,13 +414,13 @@ void MRIStructuredScan::EvalSpaceGradient(int currentCell,int qtyID, double* gra
     // FIRST DERIVS
     if(firstCell<0){
       // Simple Euler Formula
-      gradient[loopA] = (secondVComponent-currentVComponent)/(delta);
+      gradient[loopA] = (secondVComponent-currentVComponent)/(deltaPlus);
     }else if (secondCell<0){
       // Simple Euler Formula
-      gradient[loopA] = (currentVComponent-firstVComponent)/(delta);
+      gradient[loopA] = (currentVComponent-firstVComponent)/(deltaMinus);
     }else if((firstCell>-1)&&(secondCell>-1)){
       // Central Difference Formula
-      gradient[loopA] = (secondVComponent-firstVComponent)/(2.0*delta);
+      gradient[loopA] = (secondVComponent-firstVComponent)/(deltaPlus + deltaMinus);
     }else{
       // Show Error Message
       throw MRIPressureComputationException("Error: Both First and Second Cells are Zero in EvalFirstSpaceDerivs");
@@ -509,8 +539,22 @@ void MRIStructuredScan::EvalReynoldsStressGradient(int currentCell, double** Rey
         }
         break;
     }
+
+    // Get Deltas
+    double deltaMinus = 0.0;
+    double deltaPlus = 0.0;
+    if(firstCell>-1){
+      deltaMinus = 0.5*(cellLengths[loopA][currentCellCoords[loopA]] + cellLengths[loopA][currentCellCoords[loopA]-1]);
+    }else{
+      deltaMinus = 0.0;
+    }
+    if(secondCell>-1){
+      deltaPlus = 0.5*(cellLengths[loopA][currentCellCoords[loopA]] + cellLengths[loopA][currentCellCoords[loopA]+1]);
+    }else{
+      deltaPlus = 0.0;
+    }
+
     // Eval Cell Distance for Coordinate LoopA
-    double delta = cellLength[loopA];
     double firstVComponent = 0.0;
     double secondVComponent = 0.0;
     double currentVComponent = 0.0;
@@ -534,13 +578,13 @@ void MRIStructuredScan::EvalReynoldsStressGradient(int currentCell, double** Rey
       // FIRST DERIVS
       if(firstCell<0){
         // Simple Euler Formula
-        ReynoldsStressGradient[loopA][loopB] = (secondVComponent-currentVComponent)/(delta);
+        ReynoldsStressGradient[loopA][loopB] = (secondVComponent-currentVComponent)/(deltaPlus);
       }else if (secondCell<0){
         // Simple Euler Formula
-        ReynoldsStressGradient[loopA][loopB] = (currentVComponent-firstVComponent)/(delta);
+        ReynoldsStressGradient[loopA][loopB] = (currentVComponent-firstVComponent)/(deltaMinus);
       }else if((firstCell>-1)&&(secondCell>-1)){
         // Central Difference Formula
-        ReynoldsStressGradient[loopA][loopB] = (secondVComponent-firstVComponent)/(2.0*delta);
+        ReynoldsStressGradient[loopA][loopB] = (secondVComponent-firstVComponent)/(deltaPlus + deltaMinus);
       }else{
         // Show Error Message
         throw MRIPressureComputationException("Error: Both First and Second Cells are Zero in EvalFirstSpaceDerivs");

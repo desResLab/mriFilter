@@ -19,9 +19,15 @@
 // COPY CONSTRUCTOR
 // ================
 MRIStructuredScan::MRIStructuredScan(MRIStructuredScan &copyScan):MRIScan(copyScan){
+  // COPY THE CELL TOTALS
+  cellLengths.resize(3);
   for(int loopA=0;loopA<3;loopA++){
-    cellTotals[loopA] = copyScan.cellTotals[loopA];
-    cellLength[loopA] = copyScan.cellLength[loopA];
+    cellTotals[loopA] = copyScan.cellTotals[loopA];    
+    cellLengths[loopA].resize(copyScan.cellLengths[loopA].size());
+    // FILL THE LENGTHS
+    for(size_t loopB=0;loopB<copyScan.cellLengths[loopA].size();loopB++){
+      cellLengths[loopA][loopB] = copyScan.cellLengths[loopA][loopB];
+    }
   }
 }
 
@@ -101,8 +107,8 @@ std::ifstream::pos_type GetFileSize(const char* filename)
 };
 
 // Get Statistic String
-std::string MRIStructuredScan::WriteStatistics()
-{
+std::string MRIStructuredScan::WriteStatistics(){
+
   std::string myresult = "FILE STATISTICS -------------------------\n";
   myresult += "--------------------------------\n";
   myresult += "Total Number Of Cells Read: "+MRIUtils::IntToStr(totalCellPoints)+"\n";
@@ -111,10 +117,13 @@ std::string MRIStructuredScan::WriteStatistics()
   myresult += "X Direction: "+MRIUtils::IntToStr(cellTotals[0])+"\n";
   myresult += "Y Direction: "+MRIUtils::IntToStr(cellTotals[1])+"\n";
   myresult += "Z Direction: "+MRIUtils::IntToStr(cellTotals[2])+"\n";
-  myresult += "Cells Size\n";
-  myresult += "X Direction: "+MRIUtils::FloatToStr(cellLength[0])+"\n";
-  myresult += "Y Direction: "+MRIUtils::FloatToStr(cellLength[1])+"\n";
-  myresult += "Z Direction: "+MRIUtils::FloatToStr(cellLength[2])+"\n";
+  myresult += "Cells Lengths\n";
+  myresult += "X Direction - MIN: "+MRIUtils::FloatToStr(*min_element(cellLengths[0].begin(),cellLengths[0].end()))+"\n";
+  myresult += "X Direction - MAX: "+MRIUtils::FloatToStr(*max_element(cellLengths[0].begin(),cellLengths[0].end()))+"\n";
+  myresult += "Y Direction - MIN: "+MRIUtils::FloatToStr(*min_element(cellLengths[1].begin(),cellLengths[1].end()))+"\n";
+  myresult += "Y Direction - MAX: "+MRIUtils::FloatToStr(*max_element(cellLengths[1].begin(),cellLengths[1].end()))+"\n";
+  myresult += "Z Direction - MIN: "+MRIUtils::FloatToStr(*min_element(cellLengths[2].begin(),cellLengths[2].end()))+"\n";
+  myresult += "Z Direction - MAX: "+MRIUtils::FloatToStr(*max_element(cellLengths[2].begin(),cellLengths[2].end()))+"\n";
   myresult += "--------------------------------\n";
   myresult += "Domain Size\n";
   myresult += "Minimum X: "+MRIUtils::FloatToStr(domainSizeMin[0])+"\n";
@@ -125,8 +134,9 @@ std::string MRIStructuredScan::WriteStatistics()
   myresult += "Maximum Z: "+MRIUtils::FloatToStr(domainSizeMax[2])+"\n";
   myresult += "--------------------------------\n";
   myresult += "Maximum Velocity Module: "+MRIUtils::FloatToStr(maxVelModule)+"\n";
-	return myresult;
-};
+  // Return String
+  return myresult;
+}
 
 // Write IO Log
 void WriteIOLog(std::string LogFileName, std::string MsgsString)
@@ -341,13 +351,18 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
   myCellPoint.velocity[0] = 0.0;
   myCellPoint.velocity[1] = 0.0;
   myCellPoint.velocity[2] = 0.0;
-  // Resize: CHECK!!!
+
+  // Resize CellPoints
   cellPoints.resize(totalCellPoints,myCellPoint);
-  
-  // Compute Cell Length
-  cellLength[0] = fabs(domainSizeMax[0]-domainSizeMin[0])/(TotalXCoords-1);
-  cellLength[1] = fabs(domainSizeMax[1]-domainSizeMin[1])/(TotalYCoords-1);
-  cellLength[2] = fabs(domainSizeMax[2]-domainSizeMin[2])/(TotalZCoords-1);
+
+  // Resize CellLenghts: UNIFORM CASE
+  cellLengths.resize(3);
+  for(int loopA=0;loopA<3;loopA++){
+    cellLengths[loopA].resize(cellTotals[loopA]);
+    for(int loopB=0;loopA<cellTotals[loopA];loopA++){
+      cellLengths[loopA][loopB] = fabs(domainSizeMax[loopA]-domainSizeMin[loopA])/(cellTotals[loopA]-1);
+    }
+  }
   
   // Finished Reading File
   WriteSchMessage(std::string("File reading completed.\n"));
@@ -626,17 +641,28 @@ bool MRIStructuredScan::ValidateVOLBinData(MRIVolData &VolDataAn, MRIVolData &Vo
 // ----------------------------------------------
 // Build The Global Data Structure From VOL Files
 // ----------------------------------------------
-void MRIStructuredScan::FormGlobadDataFromVOL(MRIVolData &VolDataAn, MRIVolData &VolDataX, MRIVolData &VolDataY, MRIVolData &VolDataZ)
-{
-  int* coords = new int[kNumberOfDimensions];
+void MRIStructuredScan::FormGlobadDataFromVOL(MRIVolData &VolDataAn, MRIVolData &VolDataX, MRIVolData &VolDataY, MRIVolData &VolDataZ){
+
+  // Allocate Variables
+  int coords[kNumberOfDimensions];
+  double pos[kNumberOfDimensions];
+
   // Cells Totals
   cellTotals[0] = VolDataAn.GridX;
   cellTotals[1] = VolDataAn.GridY;
   cellTotals[2] = VolDataAn.GridZ;
+
   // Cells Length
-  cellLength[0] = VolDataAn.SpaceX;
-  cellLength[1] = VolDataAn.SpaceY;
-  cellLength[2] = VolDataAn.SpaceSlice;
+  cellLengths.resize(3);
+  for(int loopB=0;loopB<cellTotals[0];loopB++){
+    cellLengths[0][loopB] = VolDataAn.SpaceX;
+  }
+  for(int loopB=0;loopB<cellTotals[1];loopB++){
+    cellLengths[1][loopB] = VolDataAn.SpaceY;
+  }
+  for(int loopB=0;loopB<cellTotals[2];loopB++){
+    cellLengths[2][loopB] = VolDataAn.SpaceSlice;
+  }
 
   // Velocities And Concentrations for all Measure Points
   totalCellPoints = cellTotals[0] * cellTotals[1] * cellTotals[2];
@@ -672,47 +698,52 @@ void MRIStructuredScan::FormGlobadDataFromVOL(MRIVolData &VolDataAn, MRIVolData 
   domainSizeMax[2] = -std::numeric_limits<double>::max();
 
   // Get The Position From The Index
-	double LocalXCoord,LocalYCoord,LocalZCoord;
-  for(int LoopA=0;LoopA<totalCellPoints;LoopA++)
-  {
+  for(int LoopA=0;LoopA<totalCellPoints;LoopA++){
+
     // Map Index To Coords
     MapIndexToCoords(LoopA,coords);
-    // Get Local Coords
-    LocalXCoord = coords[0] * cellLength[0];
-    LocalYCoord = coords[1] * cellLength[1];
-    LocalZCoord = coords[2] * cellLength[2];
-    // Position
-    cellPoints[LoopA].position[0] = LocalXCoord;
-    cellPoints[LoopA].position[1] = LocalYCoord;
-    cellPoints[LoopA].position[2] = LocalZCoord;
+
+    // Map Integer Coords to Double Coords
+    MapCoordsToPosition(coords,pos);
+
+    // Store Position
+    cellPoints[LoopA].position[0] = pos[0];
+    cellPoints[LoopA].position[1] = pos[1];
+    cellPoints[LoopA].position[2] = pos[2];
+
     // Min
-    if (LocalXCoord<domainSizeMin[0]) domainSizeMin[0] = LocalXCoord;
-    if (LocalYCoord<domainSizeMin[1]) domainSizeMin[1] = LocalYCoord;
-    if (LocalZCoord<domainSizeMin[2]) domainSizeMin[2] = LocalZCoord;
+    if (pos[0]<domainSizeMin[0]) domainSizeMin[0] = pos[0];
+    if (pos[1]<domainSizeMin[1]) domainSizeMin[1] = pos[1];
+    if (pos[2]<domainSizeMin[2]) domainSizeMin[2] = pos[2];
+
     // Max
-    if (LocalXCoord>domainSizeMax[0]) domainSizeMax[0] = LocalXCoord;
-    if (LocalYCoord>domainSizeMax[1]) domainSizeMax[1] = LocalYCoord;
-    if (LocalZCoord>domainSizeMax[2]) domainSizeMax[2] = LocalZCoord;
+    if (pos[0]>domainSizeMax[0]) domainSizeMax[0] = pos[0];
+    if (pos[1]>domainSizeMax[1]) domainSizeMax[1] = pos[1];
+    if (pos[2]>domainSizeMax[2]) domainSizeMax[2] = pos[2];
   }
+
   // Write Statistics
   std::string Stats = WriteStatistics();
-  // Deallocate
-  delete [] coords;
-};
+}
 
-// ----------------------
-// Create Vol Data Record
-// ----------------------
+// ======================
+// CREATE VOL DATA RECORD
+// ======================
 void MRIStructuredScan::CreateVolDataRecord(int volDataType, MRIVolData &VolData){
   // Cells Totals
   VolData.GridX = cellTotals[0];
   VolData.GridY = cellTotals[1];
   VolData.GridZ = cellTotals[2];
 
-  // Cells Length
-  VolData.SpaceX = cellLength[0];
-  VolData.SpaceY = cellLength[1];
-  VolData.SpaceSlice = cellLength[2];
+  // Only Uniform Case
+  if(!isUniform()){
+    throw MRIException("Error. Mesh is not uniform.\n");
+  }
+
+  // Cells Length: ASSUME
+  VolData.SpaceX = cellLengths[0][0];
+  VolData.SpaceY = cellLengths[1][0];
+  VolData.SpaceSlice = cellLengths[2][0];
   VolData.SpaceThick = VolData.SpaceSlice;
 
   // Write Values
@@ -932,6 +963,11 @@ void MRIStructuredScan::AssembleEncodingMatrix(int &totalRows, int &totalColumns
   int faceXColumn = 0;
   int faceYColumn = 0;
   int faceZColumn = 0;
+  double faceXArea = 0.0;
+  double faceYArea = 0.0;
+  double faceZArea = 0.0;
+  double Areas[3] = {0.0};
+
   
   // Values For Internal and Edges
   double edgeFactor = 0.5;
@@ -940,10 +976,6 @@ void MRIStructuredScan::AssembleEncodingMatrix(int &totalRows, int &totalColumns
   // FIND THE TOTAL NUMBER OF FACES
   totalRows = GetTotalFaces();
   totalColumns = 3*totalCellPoints;
-  // EVAL AREAS
-  double faceXArea = cellLength[1]*cellLength[2];
-  double faceYArea = cellLength[0]*cellLength[2];
-  double faceZArea = cellLength[0]*cellLength[1];
 
   // ALLOCATE MATRIX
   int faceConn[totalRows];
@@ -977,13 +1009,21 @@ void MRIStructuredScan::AssembleEncodingMatrix(int &totalRows, int &totalColumns
   }
   // LOOP THROUGH THE FACES
   for(int loopA=0;loopA<totalCellPoints;loopA++){
-    // Eval Neighbours
+
+    // EVAL NEIGHBOURS
     faceXPlus =  GetAdjacentFace(loopA,kfacePlusX);
     faceXMinus = GetAdjacentFace(loopA,kfaceMinusX);
     faceYPlus =  GetAdjacentFace(loopA,kfacePlusY);
     faceYMinus = GetAdjacentFace(loopA,kfaceMinusY);
     faceZPlus =  GetAdjacentFace(loopA,kfacePlusZ);
     faceZMinus = GetAdjacentFace(loopA,kfaceMinusZ);
+
+    // EVAL AREAS
+    evalCellAreas(loopA,Areas);
+    faceXArea = Areas[0];
+    faceYArea = Areas[1];
+    faceZArea = Areas[2];
+
     // Eval Column Number
     faceXColumn = loopA;
     faceYColumn = totalCellPoints + loopA;
@@ -1053,16 +1093,15 @@ void MRIStructuredScan::AssembleDecodingMatrix(int &totalRows, int &totalColumns
   int faceXRow = 0;
   int faceYRow = 0;
   int faceZRow = 0;
+  double Areas[3] = {0.0};
+  double faceXArea = 0.0;
+  double faceYArea = 0.0;
+  double faceZArea = 0.0;
   
   // FIND THE TOTAL NUMBER OF FACES
   totalRows = 3*totalCellPoints;
   totalColumns = GetTotalFaces();
   
-  // EVAL AREAS
-  double faceXArea = cellLength[1]*cellLength[2];
-  double faceYArea = cellLength[0]*cellLength[2];
-  double faceZArea = cellLength[0]*cellLength[1];
-
   // ALLOCATE MATRIX
   Mat = new double*[totalRows];
   for(int loopA=0;loopA<totalRows;loopA++){
@@ -1076,6 +1115,12 @@ void MRIStructuredScan::AssembleDecodingMatrix(int &totalRows, int &totalColumns
   }
   // LOOP THROUGH THE FACES
   for(int loopA=0;loopA<totalCellPoints;loopA++){
+    // Get Areas
+    evalCellAreas(loopA,Areas);
+    faceXArea = Areas[0];
+    faceYArea = Areas[1];
+    faceZArea = Areas[2];
+
     // Eval Neighbours
     faceXPlus =  GetAdjacentFace(loopA,kfacePlusX);
     faceXMinus = GetAdjacentFace(loopA,kfaceMinusX);
@@ -1268,10 +1313,12 @@ void MRIStructuredScan::ScaleVelocities(double factor){
 
 // SCALE POSITIONS
 void MRIStructuredScan::ScalePositions(double factor){
-  // SCALE CELL LENGTH
-  cellLength[0] *= factor;
-  cellLength[1] *= factor;
-  cellLength[2] *= factor;
+  // SCALE CELL LENGTHS
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    for(size_t loopB=0;loopB<cellLengths[loopA].size();loopB++){
+      cellLengths[loopA][loopB] *= factor;
+    }
+  }
   // SCALE POSITIONS
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     cellPoints[loopA].position[0] = (cellPoints[loopA].position[0] - domainSizeMin[0])*factor;
@@ -1293,8 +1340,12 @@ void MRIStructuredScan::ScalePositions(double factor){
 // Write to VTK File
 // =================
 void MRIStructuredScan::ExportToVTK(std::string fileName){
-  // Print Aux Flag
+
+  // Declare
   bool printAux = true;
+  double currXCoord = 0.0;
+  double currYCoord = 0.0;
+  double currZCoord = 0.0;
 
   // Open Output File
   FILE* outFile;
@@ -1304,11 +1355,35 @@ void MRIStructuredScan::ExportToVTK(std::string fileName){
   fprintf(outFile,"Grid Point Model\n");
   fprintf(outFile,"ASCII\n");
 
-  // Writre Data Set
-  fprintf(outFile,"DATASET STRUCTURED_POINTS\n");
+  // Write Data Set
+  fprintf(outFile,"DATASET RECTILINEAR_GRID\n");
   fprintf(outFile,"DIMENSIONS %d %d %d\n",cellTotals[0],cellTotals[1],cellTotals[2]);
-  fprintf(outFile,"ORIGIN %e %e %e\n",domainSizeMin[0],domainSizeMin[1],domainSizeMin[2]);
-  fprintf(outFile,"SPACING %e %e %e\n",cellLength[0],cellLength[1],cellLength[2]);
+
+  // Export X Coordinates
+  fprintf(outFile,"X_COORDINATES %d double\n",(int)cellLengths[0].size());
+  currXCoord = domainSizeMin[0];
+  for(size_t loopA=1;loopA<cellLengths[0].size();loopA++){
+    fprintf(outFile,"%e ",currXCoord);
+    currXCoord += 0.5*(cellLengths[0][loopA-1] + cellLengths[0][loopA]);
+  }
+
+  // Export Y Coordinates
+  fprintf(outFile,"Y_COORDINATES %d double\n",(int)cellLengths[1].size());
+  currYCoord = domainSizeMin[1];
+  for(size_t loopA=1;loopA<cellLengths[1].size();loopA++){
+    fprintf(outFile,"%e ",currYCoord);
+    currYCoord += 0.5*(cellLengths[1][loopA-1] + cellLengths[1][loopA]);
+  }
+
+  // Export Z Coordinates
+  fprintf(outFile,"Z_COORDINATES %d double\n",(int)cellLengths[2].size());
+  currZCoord = domainSizeMin[2];
+  for(size_t loopA=1;loopA<cellLengths[2].size();loopA++){
+    fprintf(outFile,"%e ",currZCoord);
+    currZCoord += 0.5*(cellLengths[2][loopA-1] + cellLengths[2][loopA]);
+  }
+
+  // Export Point quantities
   fprintf(outFile,"POINT_DATA %d\n",totalCellPoints);
 
   // Print Scalar Concentration
@@ -1426,10 +1501,14 @@ void MRIStructuredScan::ReadRAWFileSequence(std::string fileListName){
   cellTotals[0] = data.sizeX;
   cellTotals[1] = data.sizeY;
   cellTotals[2] = fileList.size();
-  // Set cell Lengths
-  cellLength[0] = 1.0;
-  cellLength[1] = 1.0;
-  cellLength[2] = 1.0;
+
+  // Set cell Lengths 1.0 Uniform in all directions
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    for(size_t loopB=0;loopB<cellLengths[loopA].size();loopB++){
+      cellLengths[loopA][loopB] = 1.0;
+    }
+  }
+
   // Set total Points
   totalCellPoints = cellTotals[0] * cellTotals[1] * cellTotals[2];
 
@@ -1542,7 +1621,11 @@ int MRIStructuredScan::ReadRawImage(std::string FileName, MRIImageData &data){
 // ===================
 // READ EXPANSION FILE
 // ===================
-void ReadExpansionFile(std::string fileName,int* tot,double* length,double* minlimits,double* maxlimits,MRIExpansion* &exp){
+void ReadExpansionFile(std::string fileName,int* tot,
+                       std::vector<double> lengthX,
+                       std::vector<double> lengthY,
+                       std::vector<double> lengthZ,
+                       double* minlimits,double* maxlimits,MRIExpansion* &exp){
 
   // ASSIGN FILE
   int lineCount = 0;
@@ -1559,13 +1642,47 @@ void ReadExpansionFile(std::string fileName,int* tot,double* length,double* minl
   tot[1] = atoi(ResultArray[1].c_str());
   tot[2] = atoi(ResultArray[2].c_str());
 
-  // GET CELL LENGTHS
-  lineCount++;
-  std::getline(inFile,Buffer);
-  ResultArray = MRIUtils::ExctractSubStringFromBufferMS(Buffer);
-  length[0] = atof(ResultArray[0].c_str());
-  length[1] = atof(ResultArray[1].c_str());
-  length[2] = atof(ResultArray[2].c_str());
+  // GET CELL X LENGTHS
+  int lengthCount = 0;
+  while(lengthCount<tot[0]){
+    std::getline(inFile,Buffer);
+    boost::trim(Buffer);
+    ResultArray = MRIUtils::ExctractSubStringFromBufferMS(Buffer);
+    for(size_t loopA=0;loopA<ResultArray.size();loopA++){
+      // Assign Length
+      lengthX.push_back(atof(ResultArray[loopA].c_str()));
+      // Update Counter
+      lengthCount++;
+    }
+  }
+
+  // GET CELL Y LENGTHS
+  lengthCount = 0;
+  while(lengthCount<tot[1]){
+    std::getline(inFile,Buffer);
+    boost::trim(Buffer);
+    ResultArray = MRIUtils::ExctractSubStringFromBufferMS(Buffer);
+    for(size_t loopA=0;loopA<ResultArray.size();loopA++){
+      // Assign Length
+      lengthY.push_back(atof(ResultArray[loopA].c_str()));
+      // Update Counter
+      lengthCount++;
+    }
+  }
+
+  // GET CELL Z LENGTHS
+  lengthCount = 0;
+  while(lengthCount<tot[2]){
+    std::getline(inFile,Buffer);
+    boost::trim(Buffer);
+    ResultArray = MRIUtils::ExctractSubStringFromBufferMS(Buffer);
+    for(size_t loopA=0;loopA<ResultArray.size();loopA++){
+      // Assign Length
+      lengthZ.push_back(atof(ResultArray[loopA].c_str()));
+      // Update Counter
+      lengthCount++;
+    }
+  }
 
   // GET MIN LIMITS
   lineCount++;
@@ -1603,25 +1720,39 @@ void ReadExpansionFile(std::string fileName,int* tot,double* length,double* minl
 // =============================
 void MRIStructuredScan::ReadFromExpansionFile(std::string fileName,bool applyThreshold, int thresholdType,double thresholdRatio){
 
-  // ALLOCATE VARIABLES
+  // Allocate Variables
   int tot[3];
-  double length[3];
+  std::vector<double> lengthX;
+  std::vector<double> lengthY;
+  std::vector<double> lengthZ;
   double minlimits[3];
   double maxlimits[3];
   MRIExpansion* exp = NULL;
 
-  // READ QUANTITIES FROM FILE
-  ReadExpansionFile(fileName,tot,length,minlimits,maxlimits,exp);
+  // Read Quantities From File
+  ReadExpansionFile(fileName,tot,lengthX,lengthY,lengthZ,minlimits,maxlimits,exp);
 
   // SET UP SCAN QUANTITIES
   // CELL TOTALS
   cellTotals[0] = tot[0];
   cellTotals[1] = tot[1];
   cellTotals[2] = tot[2];
+
   // CELL LENGTHS
-  cellLength[0] = length[0];
-  cellLength[1] = length[1];
-  cellLength[2] = length[2];
+  cellLengths.resize(kNumberOfDimensions);
+  // X
+  for(size_t loopA=0;loopA<lengthX.size();loopA++){
+    cellLengths[0].push_back(lengthX[loopA]);
+  }
+  // Y
+  for(size_t loopA=0;loopA<lengthY.size();loopA++){
+    cellLengths[0].push_back(lengthY[loopA]);
+  }
+  // Z
+  for(size_t loopA=0;loopA<lengthZ.size();loopA++){
+    cellLengths[0].push_back(lengthZ[loopA]);
+  }
+
   // DIMENSIONS
   // MIN
   domainSizeMin[0] = minlimits[0];
@@ -1655,12 +1786,14 @@ void MRIStructuredScan::ReadFromExpansionFile(std::string fileName,bool applyThr
     cellPoints.push_back(newCell);
   }
   // INITIALIZE POSITIONS
-  int intCoords[3];
+  int intCoords[3] = {0};
+  double Pos[3] = {0.0};
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     MapIndexToCoords(loopA,intCoords);
-    cellPoints[loopA].setQuantity(kQtyPositionX,domainSizeMin[0] + intCoords[0]*length[0]);
-    cellPoints[loopA].setQuantity(kQtyPositionY,domainSizeMin[1] + intCoords[1]*length[1]);
-    cellPoints[loopA].setQuantity(kQtyPositionZ,domainSizeMin[2] + intCoords[2]*length[2]);
+    MapCoordsToPosition(intCoords,Pos);
+    cellPoints[loopA].setQuantity(kQtyPositionX,domainSizeMin[0] + Pos[0]);
+    cellPoints[loopA].setQuantity(kQtyPositionY,domainSizeMin[1] + Pos[1]);
+    cellPoints[loopA].setQuantity(kQtyPositionZ,domainSizeMin[2] + Pos[2]);
   }
 
   // REORDER MODEL
@@ -1682,8 +1815,23 @@ void MRIStructuredScan::WriteExpansionFile(std::string fileName){
 
   // WRITE TOTAL CELLS
   fprintf(fid,"%15d %15d %15d\n",cellTotals[0],cellTotals[1],cellTotals[2]);
-  // GET CELL LENGTHS
-  fprintf(fid,"%15.6e %15.6e %15.6e\n",cellLength[0],cellLength[1],cellLength[2]);
+
+
+  // WRITE CELL LENGTHS X
+  for(int loopA=0;loopA<cellTotals[0];loopA++){
+    fprintf(fid,"%15.6e\n",cellLengths[0][loopA]);
+  }
+
+  // WRITE CELL LENGTHS Y
+  for(int loopA=0;loopA<cellTotals[1];loopA++){
+    fprintf(fid,"%15.6e\n",cellLengths[1][loopA]);
+  }
+
+  // WRITE CELL LENGTHS Z
+  for(int loopA=0;loopA<cellTotals[2];loopA++){
+    fprintf(fid,"%15.6e\n",cellLengths[2][loopA]);
+  }
+
   // MIN DOMAIN SIZE
   fprintf(fid,"%15.6e %15.6e %15.6e\n",domainSizeMin[0],domainSizeMin[1],domainSizeMin[2]);
   // MAX DOMAIN SIZE
@@ -1829,3 +1977,98 @@ int MRIStructuredScan::GetFacewithCellVector(int CurrentCell, double* UnitVector
   return resultFace;
 }
 
+// ==================
+// GET CELL FACE AREA
+// ==================
+void MRIStructuredScan::evalCellAreas(int cellNumber,double* Areas){
+  int intCoords[3];
+  MapIndexToCoords(cellNumber,intCoords);
+  // Get the Three Edge Lengths
+  double EdgeX = cellLengths[0][intCoords[0]];
+  double EdgeY = cellLengths[1][intCoords[1]];
+  double EdgeZ = cellLengths[2][intCoords[2]];
+  // Write Results
+  Areas[0] = EdgeY * EdgeZ;
+  Areas[1] = EdgeX * EdgeZ;
+  Areas[2] = EdgeX * EdgeY;
+}
+
+// =======================
+// BUILD GRID CONNECTIVITY
+// =======================
+
+
+// ==========================
+// ASSEMBLE VORTEX FACE LISTS
+// ==========================
+void MRIStructuredScan::assembleVortexFaceLists(){
+  // Get Total Number of vortexes
+  int totVortexes = EvalTotalVortex();
+
+  // Resize Vectors
+  vortexBottomFaces.resize(totVortexes);
+  vortexTopFaces.resize(totVortexes);
+  vortexLeftFaces.resize(totVortexes);
+  vortexRightFaces.resize(totVortexes);
+
+  // Loop through all cells
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    // Eval Neighbour Faces
+    faceXPlus =  GetAdjacentFace(loopA,kfacePlusX);
+    faceXMinus = GetAdjacentFace(loopA,kfaceMinusX);
+    faceYPlus =  GetAdjacentFace(loopA,kfacePlusY);
+    faceYMinus = GetAdjacentFace(loopA,kfaceMinusY);
+    faceZPlus =  GetAdjacentFace(loopA,kfacePlusZ);
+    faceZMinus = GetAdjacentFace(loopA,kfaceMinusZ);
+
+    // Eval Neighbour Vortex
+    // X
+    vortX1 =  GetAdjacentVortex(loopA,kvortX1);
+    vortX2 =  GetAdjacentVortex(loopA,kvortX2);
+    vortX3 =  GetAdjacentVortex(loopA,kvortX3);
+    vortX4 =  GetAdjacentVortex(loopA,kvortX4);
+    // Y
+    vortY1 =  GetAdjacentVortex(loopA,kvortY1);
+    vortY2 =  GetAdjacentVortex(loopA,kvortY2);
+    vortY3 =  GetAdjacentVortex(loopA,kvortY3);
+    vortY4 =  GetAdjacentVortex(loopA,kvortY4);
+    // Z
+    vortZ1 =  GetAdjacentVortex(loopA,kvortZ1);
+    vortZ2 =  GetAdjacentVortex(loopA,kvortZ2);
+    vortZ3 =  GetAdjacentVortex(loopA,kvortZ3);
+    vortZ4 =  GetAdjacentVortex(loopA,kvortZ4);
+
+    // Fill Vectors
+    // Resize Vectors
+    // X
+    vortexTopFaces[vortX1] = faceYMinus;
+    vortexRightFaces[vortX1] = faceZMinus;
+    vortexTopFaces[vortX2] = faceYPlus;
+    vortexLeftFaces[vortX2] = faceZMinus;
+    vortexBottomFaces[vortX3] = faceYPlus;
+    vortexLeftFaces[vortX3] = faceZPlus;
+    vortexBottomFaces[vortX4] = faceYMinus;
+    vortexRightFaces[vortX4] = faceZPlus;
+    // Y
+    vortexTopFaces[vortY1] = faceXMinus;
+    vortexRightFaces[vortY1] = faceZMinus;
+    vortexTopFaces[vortY2] = faceXPlus;
+    vortexLeftFaces[vortY2] = ;
+    vortexBottomFaces[vortY3] = ;
+    vortexLeftFaces[vortY3] = ;
+    vortexBottomFaces[vortY4] = ;
+    vortexRightFaces[vortY4] = ;
+    // Z
+    vortexTopFaces[vortZ1] = ;
+    vortexRightFaces[vortZ1] = ;
+    vortexTopFaces[vortZ2] = ;
+    vortexLeftFaces[vortZ2] = ;
+    vortexBottomFaces[vortZ3] = ;
+    vortexLeftFaces[vortZ3] = ;
+    vortexBottomFaces[vortZ4] = ;
+    vortexRightFaces[vortZ4] = ;
+
+
+
+  }
+}

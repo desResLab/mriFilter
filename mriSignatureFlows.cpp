@@ -436,9 +436,22 @@ void MRIStructuredScan::CreateSampleCase(MRISamples sampleType,
   cellTotals[1] = sizeY;
   cellTotals[2] = sizeZ;
   // Set Cell Lengths
-  cellLength[0] = distX;
-  cellLength[1] = distY;
-  cellLength[2] = distZ;
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    for(int loopB=0;loopB<cellTotals[loopA];loopB++){
+      switch(loopA){
+        case 0:
+          cellLengths[loopA][loopB] = distX;
+          break;
+        case 1:
+          cellLengths[loopA][loopB] = distY;
+          break;
+        case 2:
+          cellLengths[loopA][loopB] = distZ;
+          break;
+      }
+    }
+  }
+
   // Set Global Dimensions
   // Min
   domainSizeMin[0] = 0.0;

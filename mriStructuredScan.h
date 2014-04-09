@@ -1,5 +1,6 @@
 #ifndef MRIUNSTRUCTUREDSCAN_H
 #define MRIUNSTRUCTUREDSCAN_H
+
 #include <stdio.h>
 #include <string>
 #include <vector>
@@ -17,7 +18,6 @@
 #include "mriExpansion.h"
 #include "mriOptions.h"
 
-
 // ========================
 // UNSTRUCTURED GRID LAYOUT
 // ========================
@@ -25,7 +25,13 @@ class MRIStructuredScan: public MRIScan{
   public:
     // Cells Totals
     int cellTotals[3];
-    double cellLength[3];
+    //double cellLength[3];
+    std::vector<std::vector<double>> cellLengths;
+    // Aux Vector to Assemble Vortex Faces
+    std::vector<int> vortexBottomFaces;
+    std::vector<int> vortexTopFaces;
+    std::vector<int> vortexLeftFaces;
+    std::vector<int> vortexRightFaces;
     // ================
     // MEMBER FUNCTIONS
     // ================
@@ -111,8 +117,12 @@ class MRIStructuredScan: public MRIScan{
     // Get Unit Vector From Current Cell To Face Centre
     void GetGlobalCoords(int DimNumber, int SliceNumber, double FaceCoord1, double FaceCoord2, double* &globalCoords);
     int  FaceLocaltoGlobal(int LocalFace,int DimNumber,int SliceNumber);
+    // Sequential Index to Integer Coords
     void MapIndexToCoords(int index, int* intCoords);
     int  MapCoordsToIndex(int i, int j, int k);
+    // Map Integer Coords to Position
+    void MapCoordsToPosition(int* coords,double* pos);
+
     void GetLocalStarFaces(int StarNum, int CellsX, int CellsY, int &BottomFace, int &TopFace, int &LeftFace, int &RightFace);
     int  findFirstNotVisited(int cellTotal, bool* visitedCell, std::vector<int> cellStack);
     void formNotVisitedList(int cellTotal, bool* visitedCell,std::vector<bool>& notVisitedList);
@@ -136,11 +146,15 @@ class MRIStructuredScan: public MRIScan{
     void AssembleDecodingMatrix(int &totalFaces, int &totalBasis, double** &Mat);
     void AssembleStarMatrix(int &totalFaces, int &totalBasis, double** &Matrix);
       
-    // INFO Functions
+    // ==============
+    // INFO FUNCTIONS
+    // ==============
     double EvalAverageVelocityMod();
+    void   evalCellAreas(int cellNumber,double* Areas);
+    bool   isUniform();
     virtual int EvalTotalVortex();
     virtual int getTotalFaces();
-  
+
     // CELL SAMPLING
     void SampleVelocities(MRISamplingOptions SamplingOptions);
 

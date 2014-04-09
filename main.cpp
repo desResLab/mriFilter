@@ -947,6 +947,7 @@ int main(int argc, char **argv)
 {
   // WRITE PROGRAM HEADER
   WriteHeader();
+
   // CHECK FIRST ARGUMENT IF AVAILABLE
   std::string firstOption("");
   if(argc>1){
