@@ -1996,79 +1996,140 @@ void MRIStructuredScan::evalCellAreas(int cellNumber,double* Areas){
 // =======================
 // BUILD GRID CONNECTIVITY
 // =======================
-
-
-// ==========================
-// ASSEMBLE VORTEX FACE LISTS
-// ==========================
-void MRIStructuredScan::assembleVortexFaceLists(){
-  // Get Total Number of vortexes
-  int totVortexes = EvalTotalVortex();
-
-  // Resize Vectors
-  vortexBottomFaces.resize(totVortexes);
-  vortexTopFaces.resize(totVortexes);
-  vortexLeftFaces.resize(totVortexes);
-  vortexRightFaces.resize(totVortexes);
-
-  // Loop through all cells
-  for(int loopA=0;loopA<totalCellPoints;loopA++){
-    // Eval Neighbour Faces
-    faceXPlus =  GetAdjacentFace(loopA,kfacePlusX);
-    faceXMinus = GetAdjacentFace(loopA,kfaceMinusX);
-    faceYPlus =  GetAdjacentFace(loopA,kfacePlusY);
-    faceYMinus = GetAdjacentFace(loopA,kfaceMinusY);
-    faceZPlus =  GetAdjacentFace(loopA,kfacePlusZ);
-    faceZMinus = GetAdjacentFace(loopA,kfaceMinusZ);
-
-    // Eval Neighbour Vortex
-    // X
-    vortX1 =  GetAdjacentVortex(loopA,kvortX1);
-    vortX2 =  GetAdjacentVortex(loopA,kvortX2);
-    vortX3 =  GetAdjacentVortex(loopA,kvortX3);
-    vortX4 =  GetAdjacentVortex(loopA,kvortX4);
-    // Y
-    vortY1 =  GetAdjacentVortex(loopA,kvortY1);
-    vortY2 =  GetAdjacentVortex(loopA,kvortY2);
-    vortY3 =  GetAdjacentVortex(loopA,kvortY3);
-    vortY4 =  GetAdjacentVortex(loopA,kvortY4);
-    // Z
-    vortZ1 =  GetAdjacentVortex(loopA,kvortZ1);
-    vortZ2 =  GetAdjacentVortex(loopA,kvortZ2);
-    vortZ3 =  GetAdjacentVortex(loopA,kvortZ3);
-    vortZ4 =  GetAdjacentVortex(loopA,kvortZ4);
-
-    // Fill Vectors
-    // Resize Vectors
-    // X
-    vortexTopFaces[vortX1] = faceYMinus;
-    vortexRightFaces[vortX1] = faceZMinus;
-    vortexTopFaces[vortX2] = faceYPlus;
-    vortexLeftFaces[vortX2] = faceZMinus;
-    vortexBottomFaces[vortX3] = faceYPlus;
-    vortexLeftFaces[vortX3] = faceZPlus;
-    vortexBottomFaces[vortX4] = faceYMinus;
-    vortexRightFaces[vortX4] = faceZPlus;
-    // Y
-    vortexTopFaces[vortY1] = faceXMinus;
-    vortexRightFaces[vortY1] = faceZMinus;
-    vortexTopFaces[vortY2] = faceXPlus;
-    vortexLeftFaces[vortY2] = ;
-    vortexBottomFaces[vortY3] = ;
-    vortexLeftFaces[vortY3] = ;
-    vortexBottomFaces[vortY4] = ;
-    vortexRightFaces[vortY4] = ;
-    // Z
-    vortexTopFaces[vortZ1] = ;
-    vortexRightFaces[vortZ1] = ;
-    vortexTopFaces[vortZ2] = ;
-    vortexLeftFaces[vortZ2] = ;
-    vortexBottomFaces[vortZ3] = ;
-    vortexLeftFaces[vortZ3] = ;
-    vortexBottomFaces[vortZ4] = ;
-    vortexRightFaces[vortZ4] = ;
-
-
-
+void MRIStructuredScan::buildCellConnections(){
+  for(int loopA=0;loopA<totalCellPoints;loopB++){
+    // Get Coordinates
+    MapIndexToCoords(loopA,intCoords);
+    // Get The Nodes
+    // Front Nodes in Z
+    // Total Nodes in a Z layer
+    totZSilceNodes = (cellTotals[0]+1)*(cellTotals[1]+1);
+    zOffset = intCoords[2] * totZSilceNodes;
+    yOffset = intCoords[1] * (cellTotals[0]+1);
+    xOffset = intCoords[0];
+    // Add Node 1
+    cellConnections[loopA].push_back(zOffset + yOffset + xOffset);
+    // Add Node 2
+    cellConnections[loopA].push_back(zOffset + yOffset + xOffset + 1);
+    // Add Node 3
+    cellConnections[loopA].push_back(zOffset + yOffset + xOffset + cellTotals[0] -1);
+    // Add Node 4
+    cellConnections[loopA].push_back(zOffset + yOffset + xOffset + cellTotals[0]);
+    // Change zOffset
+    zOffset += (cellTotals[0]+1)*(cellTotals[1]+1);
+    // Add Node 5
+    cellConnections[loopA].push_back(zOffset + yOffset + xOffset);
+    // Add Node 6
+    cellConnections[loopA].push_back(zOffset + yOffset + xOffset + 1);
+    // Add Node 7
+    cellConnections[loopA].push_back(zOffset + yOffset + xOffset + cellTotals[0] -1);
+    // Add Node 8
+    cellConnections[loopA].push_back(zOffset + yOffset + xOffset + cellTotals[0]);
   }
 }
+
+// ==========================
+// GET LOCAL FACE CONNECTIONS
+// ==========================
+void getFaceConnections(int faceID, std::vector<int> cellConnections, std::vector<int> faceIds){
+  faceIds.clear();
+  switch(faceID){
+    case 1:
+      faceIds.push_back(cellConnections[1]);
+      faceIds.push_back(cellConnections[2]);
+      faceIds.push_back(cellConnections[3]);
+      faceIds.push_back(cellConnections[4]);
+      break;
+    case 2:
+      faceIds.push_back(cellConnections[5]);
+      faceIds.push_back(cellConnections[6]);
+      faceIds.push_back(cellConnections[7]);
+      faceIds.push_back(cellConnections[8]);
+      break;
+    case 3:
+      faceIds.push_back(cellConnections[1]);
+      faceIds.push_back(cellConnections[5]);
+      faceIds.push_back(cellConnections[8]);
+      faceIds.push_back(cellConnections[4]);
+      break;
+    case 4:
+      faceIds.push_back(cellConnections[2]);
+      faceIds.push_back(cellConnections[6]);
+      faceIds.push_back(cellConnections[7]);
+      faceIds.push_back(cellConnections[3]);
+      break;
+    case 5:
+      faceIds.push_back(cellConnections[1]);
+      faceIds.push_back(cellConnections[2]);
+      faceIds.push_back(cellConnections[6]);
+      faceIds.push_back(cellConnections[5]);
+      break;
+    case 6:
+      faceIds.push_back(cellConnections[4]);
+      faceIds.push_back(cellConnections[3]);
+      faceIds.push_back(cellConnections[7]);
+      faceIds.push_back(cellConnections[8]);
+      break;
+  }
+}
+
+// =====================
+// ADD FACE TO FACE LIST
+// =====================
+void MRIStructuredScan::addToFaceConnections(faceIds){
+  found = false;
+  count = 0;
+  while(!found){
+    found = MRIUtils::isSameVector(faceIds,faceConnections[count]);
+    // Update
+    if(!found){
+      count++;
+    }
+  }
+  if(!found){
+    for(int loopA=0;loopA<faceIds.size();loopA++){
+      faceConnections.push_back(faceIds);
+    }
+    return (faceConnections.size()-1);
+  }else{
+    return count;
+  }
+}
+
+// =======================
+// BUILD FACE CONNECTIVITY
+// =======================
+void MRIStructuredScan::buildFaceConnections(){
+  int currFace = 0;
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    for(int loopB=0;loopB<k3DNeighbors;loopB++){
+      // Get Face Connections
+      getFaceConnections(loopB,cellConnections[loopA],faceIds);
+      // Sort Face Connections
+      MRIUtils::SortIntArray(faceIds);
+      // Add to Face Connections
+      currFace = addToFaceConnections(faceIds);
+      // Add to Cell Faces
+      cellFaces.push_back(currFace);
+    }
+  }
+}
+
+// =======================
+// BUILD EDGE CONNECTIVITY
+// =======================
+void MRIStructuredScan::buildEdgeConnections(){
+  for(int loopA=0;loopA<faceConnections.size();loopA++){
+    for(int loopB=0;loopB<4;loopB++){
+      // Get Face Connections
+      getEdgeConnections(loopB,faceConnections[loopA],edgeIds);
+      // Sort Face Connections
+      MRIUtils::SortIntArray(edgeIds);
+      // Add to Face Connections
+      currEdge = addToEdgeConnections(faceIds);
+      // Add to Face Edges
+      faceEdges.push_back(currEdge);
+    }
+  }
+}
+

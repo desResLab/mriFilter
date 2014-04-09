@@ -590,6 +590,41 @@ inline void Compute3x3MatrixEigenvals(double A[3][3], double root[3]){
   }
 }
 
+// BOUBLE SORT ARRAY OF INTEGER
+inline void SortIntArray(std::vector<int> &faceIds){
+  int firstIdx = 0;
+  int secondIdx = 0;
+  int temp = 0;
+  for(int loopA=0;loopA<faceIds.size()-1;loopA++){
+    for(int loopB=loopA+1;loopB<faceIds.size();loopB++){
+      firstIdx = faceIds[loopA];
+      secondIdx = faceIds[loopB];
+      if(firstIdx>secondIdx){
+        temp = faceIds[loopA];
+        faceIds[loopA] = faceIds[loopB];
+        faceIds[loopB] = temp;
+      }
+    }
+  }
+}
+
+// CHECK THAT TWO VECTORS ARE THE SAME
+inline bool isSameIntVector(std::vector<int> first, std::vector<int> second){
+  bool res = true;
+  if(first.size()!=second.size()){
+    return false;
+  }
+  for(int loopA=0;loopA<first.size();loopA++){
+    res = res && (first[loopA] == second[loopA]);
+  }
+  return res;
+}
+
+// FIND HOW MANY INTERVALS
+inline bool FindHowMany(double distance, std::vector<double> lengths){
+
+}
+
 
 }
 #endif //MRIUTILS_H
