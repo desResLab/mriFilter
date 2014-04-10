@@ -18,6 +18,21 @@
 #include "mriExpansion.h"
 #include "mriOptions.h"
 
+// RELATIVE POSITION BETWEEN EDGE AND FACE
+enum EdgeFacePositionType{ptTop,ptBottom,ptLeft,ptRight};
+
+// AUXILIARY FACE
+struct mriFace{
+  int number;
+  std::vector<int> connections;
+};
+
+// AUXILIARY EDGE
+struct mriEdge{
+  int number;
+  std::vector<int> connections;
+};
+
 // ========================
 // UNSTRUCTURED GRID LAYOUT
 // ========================
@@ -26,11 +41,18 @@ class MRIStructuredScan: public MRIScan{
     // Cells Totals
     int cellTotals[3];
     std::vector<std::vector<double>> cellLengths;
-    // Aux Vector to Assemble Vortex Faces
+    // Cells Topology
     std::vector<std::vector<int>> cellConnections;
     std::vector<std::vector<int>> cellFaces;
+    // Face Topology
     std::vector<std::vector<int>> faceConnections;
-    std::vector<std::vector<int>> egdeConnections;
+    std::vector<std::vector<int>> faceEdges;
+    std::vector<double> faceArea;
+    std::vector<std::vector<double>> faceNormal;
+    // Edge Topology
+    std::vector<std::vector<int>> edgeConnections;
+    std::vector<std::vector<int>> edgeFaces;
+
     // ================
     // MEMBER FUNCTIONS
     // ================
@@ -80,7 +102,31 @@ class MRIStructuredScan: public MRIScan{
     bool ValidateVOLBinData(MRIVolData &VolDataAn, MRIVolData &VolDataX, MRIVolData &VolDataY, MRIVolData &VolDataZ);
     void FormGlobadDataFromVOL(MRIVolData &VolDataAn, MRIVolData &VolDataX, MRIVolData &VolDataY, MRIVolData &VolDataZ);
     void CreateVolDataRecord(int volDataType, MRIVolData &VolData);
-  
+
+    // ========
+    // TOPOLOGY
+    // ========
+    // MAIN
+    void CreateTopology();
+    // CELLS
+    void buildCellConnections();
+    int addToFaceConnections(std::vector<std::vector<mriFace* >> &AuxFirstNodeFaceList, std::vector<int> faceIds);
+    // FACES
+    void buildFaceConnections();
+    void buildFaceAreasAndNormals();
+    // EDGES
+    void buildEdgeConnections();
+    int  addToEdgeConnections(std::vector<std::vector<mriEdge*>> &AuxFirstNodeEdgeList, std::vector<int> edgeIds);
+    void assembleEdgeToFaceConnectivity(std::vector<int> &vortexBottomFaces,std::vector<int> &vortexTopFaces,std::vector<int> &vortexLeftFaces,std::vector<int> &vortexRightFaces);
+    // VORTEX COEFFICIENTS
+    double getEdgeFaceVortexCoeff(int edgeID, int faceID);
+    // AUXILIARY GEOMETRY
+    void   getAuxNodeCoordinates(int nodeNum, double* pos);
+    void   getEdgeDirection(int edgeID, std::vector<double> &edgeDirVector);
+    void   getEdgeCenter(int edgeID, double* ec);
+    void   getFaceCenter(int faceID, double* fc);
+    void   getEdgeToFaceDirection(int edgeID, int faceID, std::vector<double> &edgeFaceVector);
+
     // =============================
     // TRANSFORMATIONS AND THRESHOLD
     // =============================
@@ -118,10 +164,11 @@ class MRIStructuredScan: public MRIScan{
     int  FaceLocaltoGlobal(int LocalFace,int DimNumber,int SliceNumber);
     // Sequential Index to Integer Coords
     void MapIndexToCoords(int index, int* intCoords);
+    void MapIndexToAuxNodeCoords(int index, int* intCoords);
     int  MapCoordsToIndex(int i, int j, int k);
     // Map Integer Coords to Position
-    void MapCoordsToPosition(int* coords,double* pos);
-
+    void MapCoordsToPosition(int* coords, bool addMeshMinima, double* pos);
+    void MapAuxCoordsToPosition(int* auxCoords, double* pos);
     void GetLocalStarFaces(int StarNum, int CellsX, int CellsY, int &BottomFace, int &TopFace, int &LeftFace, int &RightFace);
     int  findFirstNotVisited(int cellTotal, bool* visitedCell, std::vector<int> cellStack);
     void formNotVisitedList(int cellTotal, bool* visitedCell,std::vector<bool>& notVisitedList);
@@ -130,12 +177,13 @@ class MRIStructuredScan: public MRIScan{
     // MP FILTER
     // =========
     int    GetTotalBasisNumber();
-    virtual void   AssembleResidualVector(bool useBCFilter, MRIThresholdCriteria thresholdCriteria, int &totalFaces, double* &ResVec, double* &filteredVec, double &resNorm);
+    virtual void   applySMPFilter(MRIOptions* options);
+    virtual void   AssembleResidualVector(bool useBCFilter, MRIThresholdCriteria* thresholdCriteria, int &totalFaces, double* &ResVec, double* &filteredVec, double &resNorm);
     virtual void   AssembleConstantPattern(int currentDim, int &totalConstantFaces, std::vector<int> &facesID, std::vector<double> &facesCoeffs);
     virtual void   AssembleStarShape(int vortexNumber, int &totalFaces,std::vector<int> &facesID,std::vector<double> &facesCoeffs);
     virtual double EvalMaxDivergence(double* filteredVec);
+    virtual void   RecoverGlobalErrorEstimates(double& AvNormError, double& AvAngleError);
     void   ExpandStarShape(int totalStarFaces, int* facesID, double* facesCoeffs, double* &fullStarVector);
-    void   RecoverGlobalErrorEstimates(double& AvNormError,double& AvAngleError);
     void   RecoverCellVelocitiesRT0(bool useBCFilter, double* filteredVec);
     void   ReconstructFromExpansion();
     void   getDimensionSliceStarFromVortex(int vortexNumber,int &dimNumber,int &sliceNumber,int &starNumber);
@@ -150,9 +198,10 @@ class MRIStructuredScan: public MRIScan{
     // ==============
     double EvalAverageVelocityMod();
     void   evalCellAreas(int cellNumber,double* Areas);
+    int    getTotalAuxNodes();
     bool   isUniform();
-    virtual int EvalTotalVortex();
-    virtual int getTotalFaces();
+    virtual int  EvalTotalVortex();
+    virtual int  getTotalFaces();
 
     // CELL SAMPLING
     void SampleVelocities(MRISamplingOptions SamplingOptions);
@@ -214,7 +263,7 @@ class MRIStructuredScan: public MRIScan{
 
     // SPATIAL REPRESENTATION OF VORTEX COEFFICIENTS
     double EvalVortexCriteria(MRIExpansion* exp);
-    void getNeighborVortexes(int cellNumber,int dim,int& idx1,int& idx2,int& idx3,int& idx4);
+    void   getNeighborVortexes(int cellNumber,int dim,int& idx1,int& idx2,int& idx3,int& idx4);
     
     // ADD GAUSSIAN NOISE
     void ApplyGaussianNoise(double stDev);

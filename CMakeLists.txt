@@ -20,7 +20,7 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   message( using Visual Studio C++ )
 endif()
 #
-add_definitions("-g -Wall -m64 -O0 -std=c++0x")
+add_definitions("-g -Wall -m64 -O0 -std=c++0x -fbounds-check")
 
 add_executable(${PROJECT_NAME} ${SRC_LIST})
 #

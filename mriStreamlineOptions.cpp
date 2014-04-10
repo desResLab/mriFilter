@@ -23,8 +23,7 @@ MRIStreamlineOptions::MRIStreamlineOptions(double minX, double maxX, double minY
   totalT = 1000.0;
 }
 
-MRIStreamlineOptions::~MRIStreamlineOptions()
-{
+MRIStreamlineOptions::~MRIStreamlineOptions(){
 }
 
 // Set Limits

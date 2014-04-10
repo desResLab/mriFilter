@@ -93,8 +93,8 @@ class MRIScan{
     void ApplyGaussianNoise(double stDev);
 
     // SMP FILTER
-    void applySMPFilter(MRIOptions* options);
-    void RecoverGlobalErrorEstimates(double& AvNormError, double& AvAngleError);
+    virtual void applySMPFilter(MRIOptions* options){};
+    virtual void RecoverGlobalErrorEstimates(double& AvNormError, double& AvAngleError){};
 
     // RECONSTRUCT FROM EXPANSION
     void ReconstructFromExpansion();

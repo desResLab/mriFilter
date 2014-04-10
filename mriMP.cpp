@@ -38,79 +38,24 @@ void PrintResidualVector(std::string fileName, int totalFaces, double* resVec){
 
 // ASSEMBLE STAR SHAPE
 void MRIStructuredScan::AssembleConstantPattern(int currentDim, int &totalConstantFaces, std::vector<int> &facesID, std::vector<double> &facesCoeffs){
+
   // Clear Vectors
   totalConstantFaces = 0;
   facesID.clear();
-  facesCoeffs.clear();  
-  // Eval The total Number Of Cells
-  switch(currentDim){
-    case 0: 
-      // X
-      totalConstantFaces = cellTotals[1]*cellTotals[2]*(cellTotals[0]+1);
-      break;
-    case 1: 
-      // Y
-      totalConstantFaces = cellTotals[0]*cellTotals[2]*(cellTotals[1]+1);
-      break;
-    case 2: 
-      // Z
-      totalConstantFaces = cellTotals[0]*cellTotals[1]*(cellTotals[2]+1);
-      break;
-  }
-  // Loop On Cells
-  int currentComponent = 0;
-  int testCount = 0;
-	int faceLocation = 0;
-	int currentFace = 0;
-	bool isLastCell = false;
-	int* intCoords = new int[3];
-  for(int loopA=0;loopA<totalCellPoints;loopA++){
-    // Get Coordinate of the Present Cell
-    MapIndexToCoords(loopA,intCoords);
-    // Get Face Type
-    switch(currentDim){
-      case 0: 
-			  faceLocation = kfaceMinusX;
-				break;
-      case 1: 
-			  faceLocation = kfaceMinusY;
-				break;
-      case 2: 
-			  faceLocation = kfaceMinusZ;
-				break;
-		}
-    // Get Current Face
-    currentFace = GetAdjacentFace(loopA,faceLocation);
-    // Assemble
-    currentComponent++;
-    facesID.push_back(currentFace);
-    facesCoeffs.push_back((1.0/sqrt(totalConstantFaces)));
-    // Check If Is Last Cell
-    isLastCell = (intCoords[currentDim] == (cellTotals[currentDim]-1));
-    if(isLastCell){
-      // Get Face Type
-      switch(currentDim){
-        case 0: 
-				  faceLocation = kfacePlusX;
-					break;
-        case 1: 
-				  faceLocation = kfacePlusY;
-					break;
-        case 2: 
-				  faceLocation = kfacePlusZ;
-					break;
-      }
-      // Get Current Face
-      currentFace = GetAdjacentFace(loopA,faceLocation);
-      // Assemble
-      currentComponent++;
-      testCount++;
-      facesID.push_back(currentFace);
-      facesCoeffs.push_back((1.0/sqrt(totalConstantFaces)));
+  facesCoeffs.clear();
+
+  // Loop Over Faces
+  for(int loopA=0;loopA<faceConnections.size();loopA++){
+    if(fabs(faceNormal[loopA][currentDim])>kMathZero){
+      facesID.push_back(loopA);
     }
-	}
-  // Deallocate
-  delete [] intCoords;
+  }
+
+  // Fill Coefficients
+  for(int loopA=0;loopA<facesID.size();loopA++){
+    facesCoeffs.push_back((1.0/sqrt((double)facesID.size())));
+  }
+
 }
 
 // ASSEMBLE STAR MATRIX
@@ -297,7 +242,7 @@ void MRIStructuredScan::ReorderCells(int* Perm){
       // Get Coords
       MapIndexToCoords(loopA,intCoords);
       // Get Position
-      MapCoordsToPosition(intCoords,Pos);
+      MapCoordsToPosition(intCoords,true,Pos);
       // Assign
       cellPoints[loopA].position[0] = Pos[0];
       cellPoints[loopA].position[1] = Pos[1];
@@ -308,8 +253,6 @@ void MRIStructuredScan::ReorderCells(int* Perm){
       cellPoints[loopA].position[2] = tempCellPoints[loopA].position[2];
     }
   }
-  // Deallocate
-  delete [] intCoords;
 }
 
 // ===================================
@@ -369,8 +312,8 @@ void MRIStructuredScan::RecoverCellVelocitiesRT0(bool useBCFilter, double* filte
 // =======================================================
 void MRIStructuredScan::getDimensionSliceStarFromVortex(int vortexNumber,int &dimNumber,int &sliceNumber,int &starNumber){
   // Declare
-  int totalSlices[3] = {0.0};
-  int totalStars[3] = {0.0};
+  int totalSlices[3] = {0};
+  int totalStars[3] = {0};
   int vortexOffset = 0;
   
   // Get Dimension,Slice and Star from the cardinality
@@ -414,83 +357,24 @@ void MRIStructuredScan::getDimensionSliceStarFromVortex(int vortexNumber,int &di
 // ASSEMBLE STAR SHAPES
 // ====================
 void MRIStructuredScan::AssembleStarShape(int vortexNumber, int &totalFaces, std::vector<int> &facesID, std::vector<double> &facesCoeffs){
-
-  int cells1 = 0;
-  int cells2 = 0;
-  int localBottomFace = 0;
-  int localTopFace = 0;
-  int localLeftFace = 0;
-  int localRightFace = 0;
-
-  // Faces
-  int bottomFace = 0;
-  int topFace = 0;
-  int leftFace = 0;
-  int rightFace = 0;
+  // Declare
+  int currFace = 0;
+  double currCoeff = 0.0;
 
   // Clear Array and Reset Counters
   totalFaces = 0;
-  facesID.clear();
-  facesCoeffs.clear();
-  int dimNumber = 0;
-  int sliceNumber = 0;
-  int starNumber = 0;
+  facesID.resize(0);
+  facesCoeffs.resize(0);
 
-  // Get Dimension, Slice and Star
-  getDimensionSliceStarFromVortex(vortexNumber,dimNumber,sliceNumber,starNumber);
-
-  // Assemble
-  switch(dimNumber){
-    case 0:
-      // YZ
-      cells1 = cellTotals[1];
-      cells2 = cellTotals[2];
-      break;
-    case 1:
-      // XZ
-      cells1 = cellTotals[0];
-      cells2 = cellTotals[2];
-      break;
-    case 2:
-      // XY
-      cells1 = cellTotals[0];
-      cells2 = cellTotals[1];
-      break;
+  // Loop Over All Faces
+  for(int loopB=0;loopB<edgeFaces[vortexNumber].size();loopB++){
+    currFace = edgeFaces[vortexNumber][loopB];
+    currCoeff = getEdgeFaceVortexCoeff(vortexNumber,currFace);
+    MRIUtils::InsertInIntList(currFace,totalFaces,facesID);
+    facesCoeffs.push_back(currCoeff);
   }
 
-  // Assign Four Faces Belonging to Vortex
-  bottomFace = vortexBottomFaces[vortexNumber];
-  topFace =    vortexTopFaces[vortexNumber];
-  leftFace =   vortexLeftFaces[vortexNumber];
-  rightFace =  vortexRightFaces[vortexNumber];
-
-  // Get Local Adjacent Plane
-  //GetLocalStarFaces(starNumber,cells1,cells2,localBottomFace,localTopFace,localLeftFace,localRightFace);
-  // Convert To Global Faces
-  //bottomFace = FaceLocaltoGlobal(localBottomFace,dimNumber,sliceNumber);
-  //topFace =    FaceLocaltoGlobal(localTopFace,dimNumber,sliceNumber);
-  //leftFace =   FaceLocaltoGlobal(localLeftFace,dimNumber,sliceNumber);
-  //rightFace =  FaceLocaltoGlobal(localRightFace,dimNumber,sliceNumber);
-
-  // Insert In Lists
-  if(bottomFace>-1){
-    MRIUtils::InsertInIntList(bottomFace,totalFaces,facesID);
-    facesCoeffs.push_back(-1.0);
-  }
-  if(topFace>-1){
-    MRIUtils::InsertInIntList(topFace,totalFaces,facesID);
-    facesCoeffs.push_back(1.0);
-  }
-  if(leftFace>-1){
-    MRIUtils::InsertInIntList(leftFace,totalFaces,facesID);
-    facesCoeffs.push_back(1.0);
-  }
-  if(rightFace>-1){
-    MRIUtils::InsertInIntList(rightFace,totalFaces,facesID);
-    facesCoeffs.push_back(-1.0);
-  }
-
-  // Normalize
+  // Normalize Face Coefficients
   double norm = 0.0;
   for(int loopA=0;loopA<totalFaces;loopA++){
     norm = norm + (facesCoeffs[loopA]*facesCoeffs[loopA]);
@@ -561,91 +445,53 @@ std::string GetFaceLocationString(int faceLocation){
 }
 
 // Assemble Face Flux Vectors
-void MRIStructuredScan::AssembleResidualVector(bool useBCFilter, MRIThresholdCriteria thresholdCriteria,
+void MRIStructuredScan::AssembleResidualVector(bool useBCFilter, MRIThresholdCriteria* thresholdCriteria,
                                                  int &totalFaces, double* &resVec, double* &filteredVec, double &resNorm){
   bool   continueToProcess = false;
   double currentValue = 0.0;
-  double currentVelX = 0.0;
-  double currentVelY = 0.0;
-  double currentVelZ = 0.0;
-  int    faceLocation = 0;
-  double faceArea = 0.0;
   double faceComponent = 0.0;
   int    currentFace = 0;
+  double currFaceArea = 0.0;
   bool   checkPassed = false;
-  double Areas[3] = {0.0};
+
   // Get Total Number Of Faces
-  totalFaces = cellTotals[0]*cellTotals[1]*(cellTotals[2]+1)+
-               cellTotals[1]*cellTotals[2]*(cellTotals[0]+1)+
-               cellTotals[2]*cellTotals[0]*(cellTotals[1]+1);
+  totalFaces = faceConnections.size();
+
   // Allocate
   resVec = new double[totalFaces];
   filteredVec = new double[totalFaces];
   int* resID = new int[totalFaces];
+
   // Initialize
   for(int loopA=0;loopA<totalFaces;loopA++){
     resVec[loopA] = 0.0;
-  }
-  for(int loopA=0;loopA<totalFaces;loopA++){
     resID[loopA] = 0;
-  }
-  for(int loopA=0;loopA<totalFaces;loopA++){
     filteredVec[loopA] = 0.0;
   }
+
   // Loop To Assemble Residual Vector
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     // Check for BC
     if(useBCFilter){
-      currentValue = cellPoints[loopA].getQuantity(thresholdCriteria.thresholdQty);
-      continueToProcess = thresholdCriteria.MeetsCriteria(currentValue);
+      currentValue = cellPoints[loopA].getQuantity(thresholdCriteria->thresholdQty);
+      continueToProcess = thresholdCriteria->MeetsCriteria(currentValue);
     }else{
       continueToProcess = true;
     }
     if(continueToProcess){
-      // Store Local Values
-      currentVelX = cellPoints[loopA].velocity[0];
-      currentVelY = cellPoints[loopA].velocity[1];
-      currentVelZ = cellPoints[loopA].velocity[2];
-      // Get Areas
-      evalCellAreas(loopA,Areas);
       // Loop On Faces
       for(int loopB=0;loopB<k3DNeighbors;loopB++){
-        switch(loopB){
-          case 0:
-            faceLocation = kfacePlusX;
-            faceArea = Areas[0];
-            faceComponent = currentVelX;
-            break;
-          case 1:
-            faceLocation = kfaceMinusX;
-            faceArea = Areas[0];
-            faceComponent = currentVelX;
-            break;
-          case 2:
-            faceLocation = kfacePlusY;
-            faceArea = Areas[1];
-            faceComponent = currentVelY;
-            break;
-          case 3:
-            faceLocation = kfaceMinusY;
-            faceArea = Areas[1];
-            faceComponent = currentVelY;
-            break;
-          case 4:
-            faceLocation = kfacePlusZ;
-            faceArea = Areas[2];
-            faceComponent = currentVelZ;
-            break;
-          case 5:
-            faceLocation = kfaceMinusZ;
-            faceArea = Areas[2];
-            faceComponent = currentVelZ;
-            break;
-        }        
         // Get Current Face
-        currentFace = GetAdjacentFace(loopA,faceLocation);
+        currentFace = cellFaces[loopA][loopB];
+        // Get Face Area
+        currFaceArea = faceArea[currentFace];
+        // Get Normal Veclocity
+        faceComponent = 0.0;
+        for(int loopC=0;loopC<kNumberOfDimensions;loopC++){
+          faceComponent += cellPoints[loopA].velocity[loopC] * faceNormal[currentFace][loopC];
+        }
         // Assemble
-        resVec[currentFace] = resVec[currentFace] + faceArea * faceComponent;
+        resVec[currentFace] = resVec[currentFace] + currFaceArea * faceComponent;
         resID[currentFace]++;
       }
     }
@@ -691,7 +537,7 @@ void MRIStructuredScan::AssembleResidualVector(bool useBCFilter, MRIThresholdCri
 // =================
 // PHYSICS FILTERING
 // =================
-void MRIScan::applySMPFilter(MRIOptions* options){
+void MRIStructuredScan::applySMPFilter(MRIOptions* options){
   // Initialization
   int totalFaces = 0;
   double* resVec = NULL;
@@ -699,8 +545,6 @@ void MRIScan::applySMPFilter(MRIOptions* options){
   std::vector<int> facesID;
   std::vector<double> facesCoeffs;
   double corrCoeff = 0.0;
-  int totalSlices = 0;
-  int totalStars = 0;
   int totalStarFaces = 0;
   double maxDivergence = 0.0;
   double maxNormError = 0.0;
@@ -879,7 +723,8 @@ void MRIScan::applySMPFilter(MRIOptions* options){
 
   // Filtered Velocities Are Available
   //AreVelocityFiltered:=TRUE;
-  
+
+  for(int loopA=0;loopA<3;loopA++)
   // Deallocate
   delete [] resVec;
   delete [] filteredVec;
