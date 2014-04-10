@@ -106,6 +106,15 @@ inline Type Do3DEucNorm(Type* v){
   }  
   return sqrt(norm2);
 }
+template<typename Type>
+inline Type Do3DEucNorm(std::vector<Type> v){
+  Type norm2 = 0.0;
+  for(int i = 0;i<kNumberOfDimensions;i++){
+    norm2 += v[i]*v[i];
+  }
+  return sqrt(norm2);
+}
+
 
 // ===================
 // NORMALIZE 3D VECTOR
@@ -119,6 +128,16 @@ inline void Normalize3DVector(double* v){
     }
   }
 }
+inline void Normalize3DVector(std::vector<double> v){
+  double norm = Do3DEucNorm(v);
+  if(norm>kMathZero){
+    for(int LoopA=0;LoopA<kNumberOfDimensions;LoopA++)
+    {
+      v[LoopA] = v[LoopA]/norm;
+    }
+  }
+}
+
 
 // =======================================
 // INSERTION IN VECTORS WITH NO DUPLICATES
@@ -225,6 +244,12 @@ inline void Do3DExternalProduct(double* v1, double* v2, double* resVec){
   resVec[1] = v1[2] * v2[0] - v2[2] * v1[0];
   resVec[2] = v1[0] * v2[1] - v2[0] * v1[1];
 }
+inline void Do3DExternalProduct(std::vector<double> v1, std::vector<double> v2, std::vector<double> resVec){
+  resVec[0] = v1[1] * v2[2] - v2[1] * v1[2];
+  resVec[1] = v1[2] * v2[0] - v2[2] * v1[0];
+  resVec[2] = v1[0] * v2[1] - v2[0] * v1[1];
+}
+
 
 // ============================
 // CHECK IF POINT IS INSIDE BOX
@@ -611,6 +636,9 @@ inline void SortIntArray(std::vector<int> &faceIds){
 // CHECK THAT TWO VECTORS ARE THE SAME
 inline bool isSameIntVector(std::vector<int> first, std::vector<int> second){
   bool res = true;
+  if((first.size() == 0)||(second.size() == 0)){
+    return false;
+  }
   if(first.size()!=second.size()){
     return false;
   }
@@ -621,8 +649,18 @@ inline bool isSameIntVector(std::vector<int> first, std::vector<int> second){
 }
 
 // FIND HOW MANY INTERVALS
-inline bool FindHowMany(double distance, std::vector<double> lengths){
-
+inline int FindHowMany(double distance, std::vector<double> lengths){
+  bool found = false;
+  int count = 0;
+  double currDist = 0.0;
+  while (!found){
+    found = ((distance-currDist) > -kMathZero);
+    if(!found){
+      currDist += lengths[count];
+      count++;
+    }
+  }
+  return count;
 }
 
 

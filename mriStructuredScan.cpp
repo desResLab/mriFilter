@@ -31,6 +31,13 @@ MRIStructuredScan::MRIStructuredScan(MRIStructuredScan &copyScan):MRIScan(copySc
   }
 }
 
+// ===================
+// GET TOTAL AUX NODES
+// ===================
+int MRIStructuredScan::getTotalAuxNodes(){
+  return (cellTotals[0] + 1)*(cellTotals[1] + 1)*(cellTotals[2] + 1);
+}
+
 // ===============
 // GET TOTAL FACES
 // ===============
@@ -359,7 +366,7 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
   cellLengths.resize(3);
   for(int loopA=0;loopA<3;loopA++){
     cellLengths[loopA].resize(cellTotals[loopA]);
-    for(int loopB=0;loopA<cellTotals[loopA];loopA++){
+    for(int loopB=0;loopB<cellTotals[loopA];loopB++){
       cellLengths[loopA][loopB] = fabs(domainSizeMax[loopA]-domainSizeMin[loopA])/(cellTotals[loopA]-1);
     }
   }
@@ -374,10 +381,12 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
   if (DoReorderCells){
     ReorderScan();
   }
-  
-  WriteSchMessage(std::string("\n"));
-  
-  // Write Statistics
+
+  // CREATING TOPOLOGY
+  WriteSchMessage(std::string("Creating Topology...\n"));
+  CreateTopology();
+
+  // WRITE STATISTICS
   std::string CurrentStats = WriteStatistics();
   WriteSchMessage(CurrentStats);
 };
@@ -704,7 +713,7 @@ void MRIStructuredScan::FormGlobadDataFromVOL(MRIVolData &VolDataAn, MRIVolData 
     MapIndexToCoords(LoopA,coords);
 
     // Map Integer Coords to Double Coords
-    MapCoordsToPosition(coords,pos);
+    MapCoordsToPosition(coords,false,pos);
 
     // Store Position
     cellPoints[LoopA].position[0] = pos[0];
@@ -1790,7 +1799,7 @@ void MRIStructuredScan::ReadFromExpansionFile(std::string fileName,bool applyThr
   double Pos[3] = {0.0};
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     MapIndexToCoords(loopA,intCoords);
-    MapCoordsToPosition(intCoords,Pos);
+    MapCoordsToPosition(intCoords,true,Pos);
     cellPoints[loopA].setQuantity(kQtyPositionX,domainSizeMin[0] + Pos[0]);
     cellPoints[loopA].setQuantity(kQtyPositionY,domainSizeMin[1] + Pos[1]);
     cellPoints[loopA].setQuantity(kQtyPositionZ,domainSizeMin[2] + Pos[2]);
@@ -1997,8 +2006,17 @@ void MRIStructuredScan::evalCellAreas(int cellNumber,double* Areas){
 // BUILD GRID CONNECTIVITY
 // =======================
 void MRIStructuredScan::buildCellConnections(){
-  for(int loopA=0;loopA<totalCellPoints;loopB++){
+  // Allocate connections
+  cellConnections.resize(totalCellPoints);
+  // Loop through the cells
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
     // Get Coordinates
+    int intCoords[3] = {0};
+    int totZSilceNodes = 0;
+    int zOffset = 0;
+    int yOffset = 0;
+    int xOffset = 0;
+    // Find Integer Coords
     MapIndexToCoords(loopA,intCoords);
     // Get The Nodes
     // Front Nodes in Z
@@ -2031,66 +2049,134 @@ void MRIStructuredScan::buildCellConnections(){
 // ==========================
 // GET LOCAL FACE CONNECTIONS
 // ==========================
-void getFaceConnections(int faceID, std::vector<int> cellConnections, std::vector<int> faceIds){
+void getFaceConnections(int faceID, std::vector<int> cellConnections, std::vector<int> &faceIds){
   faceIds.clear();
   switch(faceID){
-    case 1:
+    case 0:
+      faceIds.push_back(cellConnections[0]);
       faceIds.push_back(cellConnections[1]);
       faceIds.push_back(cellConnections[2]);
       faceIds.push_back(cellConnections[3]);
-      faceIds.push_back(cellConnections[4]);
       break;
-    case 2:
+    case 1:
+      faceIds.push_back(cellConnections[4]);
       faceIds.push_back(cellConnections[5]);
       faceIds.push_back(cellConnections[6]);
       faceIds.push_back(cellConnections[7]);
-      faceIds.push_back(cellConnections[8]);
+      break;
+    case 2:
+      faceIds.push_back(cellConnections[0]);
+      faceIds.push_back(cellConnections[4]);
+      faceIds.push_back(cellConnections[7]);
+      faceIds.push_back(cellConnections[3]);
       break;
     case 3:
       faceIds.push_back(cellConnections[1]);
       faceIds.push_back(cellConnections[5]);
-      faceIds.push_back(cellConnections[8]);
-      faceIds.push_back(cellConnections[4]);
+      faceIds.push_back(cellConnections[6]);
+      faceIds.push_back(cellConnections[2]);
       break;
     case 4:
-      faceIds.push_back(cellConnections[2]);
-      faceIds.push_back(cellConnections[6]);
-      faceIds.push_back(cellConnections[7]);
-      faceIds.push_back(cellConnections[3]);
+      faceIds.push_back(cellConnections[0]);
+      faceIds.push_back(cellConnections[1]);
+      faceIds.push_back(cellConnections[5]);
+      faceIds.push_back(cellConnections[4]);
       break;
     case 5:
-      faceIds.push_back(cellConnections[1]);
+      faceIds.push_back(cellConnections[3]);
       faceIds.push_back(cellConnections[2]);
       faceIds.push_back(cellConnections[6]);
-      faceIds.push_back(cellConnections[5]);
-      break;
-    case 6:
-      faceIds.push_back(cellConnections[4]);
-      faceIds.push_back(cellConnections[3]);
       faceIds.push_back(cellConnections[7]);
-      faceIds.push_back(cellConnections[8]);
       break;
   }
+}
+
+// ====================================
+// GET LOCAL EDGE CONNECTIONS FROM FACE
+// ====================================
+void getEdgeConnections(int EdgeID, std::vector<int> faceConnections, std::vector<int> &edgeIds){
+    edgeIds.clear();
+    switch(EdgeID){
+      case 0:
+        edgeIds.push_back(faceConnections[0]);
+        edgeIds.push_back(faceConnections[1]);
+        break;
+      case 1:
+        edgeIds.push_back(faceConnections[1]);
+        edgeIds.push_back(faceConnections[2]);
+        break;
+      case 2:
+        edgeIds.push_back(faceConnections[2]);
+        edgeIds.push_back(faceConnections[3]);
+        break;
+      case 3:
+        edgeIds.push_back(faceConnections[3]);
+        edgeIds.push_back(faceConnections[4]);
+        break;
+    }
 }
 
 // =====================
 // ADD FACE TO FACE LIST
 // =====================
-void MRIStructuredScan::addToFaceConnections(faceIds){
-  found = false;
-  count = 0;
-  while(!found){
-    found = MRIUtils::isSameVector(faceIds,faceConnections[count]);
+int MRIStructuredScan::addToFaceConnections(std::vector<std::vector<mriFace* >> &AuxFirstNodeFaceList, std::vector<int> faceIds){
+  mriFace* newFace;
+  // Get first node in connectivity
+  int firstConnectivityNode = faceIds[0];
+  // Try to find with the first node list
+  bool found = false;
+  int count = 0;
+  while((!found)&&(count<AuxFirstNodeFaceList[firstConnectivityNode].size())){
+    found = MRIUtils::isSameIntVector(faceIds,AuxFirstNodeFaceList[firstConnectivityNode][count]->connections);
     // Update
     if(!found){
       count++;
     }
   }
   if(!found){
+    // Add to Face List
+    faceConnections.push_back(faceIds);
+    // Add to AuxFirstNodeFaceList
+    newFace = new mriFace;
     for(int loopA=0;loopA<faceIds.size();loopA++){
-      faceConnections.push_back(faceIds);
+      newFace->connections.push_back(faceIds[loopA]);
     }
+    AuxFirstNodeFaceList[firstConnectivityNode].push_back(newFace);
+    // Return
     return (faceConnections.size()-1);
+  }else{
+    return count;
+  }
+}
+
+// =====================
+// ADD EDGE TO FACE LIST
+// =====================
+int MRIStructuredScan::addToEdgeConnections(std::vector<std::vector<mriEdge*>> &AuxFirstNodeEdgeList, std::vector<int> edgeIds){
+  mriEdge* newEdge;
+  // Get first node in connectivity
+  int firstConnectivityNode = edgeIds[0];
+  // Find it in First Node List
+  bool found = false;
+  int count = 0;
+  while((!found)&&(count<AuxFirstNodeEdgeList[firstConnectivityNode].size())){
+    found = MRIUtils::isSameIntVector(edgeIds,AuxFirstNodeEdgeList[firstConnectivityNode][count]->connections);
+    // Update
+    if(!found){
+      count++;
+    }
+  }
+  if(!found){
+    // Add to Edge List
+    edgeConnections.push_back(edgeIds);
+    // Add to AuxFirstNodeEdgeList
+    newEdge = new mriEdge;
+    for(int loopA=0;loopA<edgeIds.size();loopA++){
+      newEdge->connections.push_back(edgeIds[loopA]);
+    }
+    AuxFirstNodeEdgeList[firstConnectivityNode].push_back(newEdge);
+    // Return
+    return (edgeConnections.size()-1);
   }else{
     return count;
   }
@@ -2100,7 +2186,11 @@ void MRIStructuredScan::addToFaceConnections(faceIds){
 // BUILD FACE CONNECTIVITY
 // =======================
 void MRIStructuredScan::buildFaceConnections(){
+  std::vector<int> faceIds;
+  std::vector<std::vector<mriFace* >> AuxFirstNodeFaceList;
   int currFace = 0;
+  cellFaces.resize(totalCellPoints);
+  AuxFirstNodeFaceList.resize(getTotalAuxNodes());
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     for(int loopB=0;loopB<k3DNeighbors;loopB++){
       // Get Face Connections
@@ -2108,9 +2198,9 @@ void MRIStructuredScan::buildFaceConnections(){
       // Sort Face Connections
       MRIUtils::SortIntArray(faceIds);
       // Add to Face Connections
-      currFace = addToFaceConnections(faceIds);
+      currFace = addToFaceConnections(AuxFirstNodeFaceList,faceIds);
       // Add to Cell Faces
-      cellFaces.push_back(currFace);
+      cellFaces[loopA].push_back(currFace);
     }
   }
 }
@@ -2119,17 +2209,256 @@ void MRIStructuredScan::buildFaceConnections(){
 // BUILD EDGE CONNECTIVITY
 // =======================
 void MRIStructuredScan::buildEdgeConnections(){
+  std::vector<int> edgeIds;
+  std::vector<std::vector<mriEdge*>> AuxFirstNodeEdgeList;
+  int currEdge = 0;
+  edgeFaces.resize(totalCellPoints);
+  AuxFirstNodeEdgeList.resize(getTotalAuxNodes());
   for(int loopA=0;loopA<faceConnections.size();loopA++){
     for(int loopB=0;loopB<4;loopB++){
+      if(((loopA*4)+loopB)%500 == 0){
+        WriteSchMessage(std::string("Loop ") + std::to_string(((loopA*4)+loopB)) + std::string("\n"));
+      }
       // Get Face Connections
       getEdgeConnections(loopB,faceConnections[loopA],edgeIds);
       // Sort Face Connections
-      MRIUtils::SortIntArray(edgeIds);
+      std::sort(edgeIds.begin(),edgeIds.end());
       // Add to Face Connections
-      currEdge = addToEdgeConnections(faceIds);
+      currEdge = addToEdgeConnections(AuxFirstNodeEdgeList,edgeIds);
       // Add to Face Edges
-      faceEdges.push_back(currEdge);
+      edgeFaces[loopA].push_back(currEdge);
     }
   }
 }
 
+// ======================
+// GET VORTEX COEFFICIENT
+// ======================
+double MRIStructuredScan::getEdgeFaceVortexCoeff(int edgeID, int faceID){
+  std::vector<double> edgeDirVector;
+  std::vector<double> edgeFaceVector;
+  std::vector<double> resVec;
+  double res = 0.0;
+  // Get Vectors
+  getEdgeDirection(edgeID,edgeDirVector);
+  getEdgeToFaceDirection(edgeID,faceID,edgeFaceVector);
+  // Eval Vector Product
+  MRIUtils::Do3DExternalProduct(edgeDirVector,edgeFaceVector,resVec);
+  MRIUtils::Normalize3DVector(resVec);
+  // Get Sign
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    res = res + resVec[loopA]/fabs(resVec[loopA]);
+  }
+  return round(res);
+}
+
+// ==================
+// GET EDGE DIRECTION
+// ==================
+void MRIStructuredScan::getEdgeDirection(int edgeID, std::vector<double> edgeDirVector){
+  int node1 = 0;
+  int node2 = 0;
+  double node1Pos[3] = {0.0};
+  double node2Pos[3] = {0.0};
+
+  // Get The Two Nodes
+  node1 = edgeConnections[edgeID][0];
+  node2 = edgeConnections[edgeID][1];
+
+  // Eval Auxiliary Node Coordinates
+  getAuxNodeCoordinates(node1,node1Pos);
+  getAuxNodeCoordinates(node2,node2Pos);
+
+  // Get the versor
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    edgeDirVector[loopA] = node1Pos[loopA] - node2Pos[loopA];
+  }
+  MRIUtils::Normalize3DVector(edgeDirVector);
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    edgeDirVector[loopA] = fabs(edgeDirVector[loopA]);
+  }
+
+}
+
+// ==========================
+// GET EDGE TO FACE DIRECTION
+// ==========================
+void MRIStructuredScan::getEdgeToFaceDirection(int edgeID, int faceID, std::vector<double> edgeFaceVector){
+  // Declare
+  double ec[3] = {0.0};
+  double fc[3] = {0.0};
+
+  // Get Edge Center
+  getEdgeCenter(edgeID,ec);
+
+  // Get Face Center
+  getFaceCenter(faceID,fc);
+
+  // Get the versor
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    edgeFaceVector[loopA] = fc[loopA] - ec[loopA];
+  }
+  MRIUtils::Normalize3DVector(edgeFaceVector);
+}
+
+// ====================================
+// GET COORDINATEDS FOR AUXILIARY NODES
+// ====================================
+void MRIStructuredScan::getAuxNodeCoordinates(int nodeNum, double* pos){
+  int intAuxCoords[3] = {0};
+  // Map To Integer Coordinates
+  MapIndexToAuxNodeCoords(nodeNum,intAuxCoords);
+  // Map To Spatial Position
+  MapAuxCoordsToPosition(intAuxCoords,pos);
+}
+
+// ===============
+// GET EDGE CENTER
+// ===============
+void MRIStructuredScan::getEdgeCenter(int edgeID, double* ec){
+  int node1 = 0;
+  int node2 = 0;
+  double node1Pos[3] = {0.0};
+  double node2Pos[3] = {0.0};
+
+  // Get The Two Nodes
+  node1 = edgeConnections[edgeID][0];
+  node2 = edgeConnections[edgeID][1];
+
+  // Eval Auxiliary Node Coordinates
+  getAuxNodeCoordinates(node1,node1Pos);
+  getAuxNodeCoordinates(node2,node2Pos);
+
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    ec[loopA] = 0.5*(node1Pos[loopA] + node2Pos[loopA]);
+  }
+}
+
+// ===============
+// GET FACE CENTER
+// ===============
+void MRIStructuredScan::getFaceCenter(int faceID, double* fc){
+  int currNode = 0;
+  double pos[3] = {0.0};
+
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    fc[loopA] = 0.0;
+  }
+
+  for(int loopA=0;loopA<faceConnections[faceID].size();loopA++){
+    currNode = faceConnections[faceID][loopA];
+    getAuxNodeCoordinates(currNode,pos);
+    for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+      fc[loopA] += pos[loopA];
+    }
+  }
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    fc[loopA] /= (double)faceConnections[faceID].size();
+  }
+}
+
+// ========================================================
+// EVAL THE AVERGAGE ERROR BETWEEN FILTEREDVEL AND VELOCITY
+// ========================================================
+void MRIStructuredScan::RecoverGlobalErrorEstimates(double& AvNormError, double& AvAngleError){
+  // Init
+  AvNormError = 0.0;
+  AvAngleError = 0.0;
+  double diffVel[3] = {0.0};
+  double diffNorm;
+  double cosAlpha,currentAlpha;
+  double normVel[3] = {0.0};
+  double normFilterVel[3] = {0.0};
+  // Loop
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    // Eval Velocity Difference
+    diffVel[0] = cellPoints[loopA].velocity[0]-cellPoints[loopA].auxVector[0];
+    diffVel[1] = cellPoints[loopA].velocity[1]-cellPoints[loopA].auxVector[1];
+    diffVel[2] = cellPoints[loopA].velocity[2]-cellPoints[loopA].auxVector[2];
+    diffNorm = MRIUtils::Do3DEucNorm(diffVel);
+    AvNormError = AvNormError + diffNorm;
+    // Eval Velocity Angle
+    for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
+      normVel[loopB] = cellPoints[loopA].velocity[loopB];
+      normFilterVel[loopB] = cellPoints[loopA].auxVector[loopB];
+    }
+    // Normalize
+    MRIUtils::Normalize3DVector(normVel);
+    MRIUtils::Normalize3DVector(normFilterVel);
+    cosAlpha = normVel[0]*normFilterVel[0]+
+               normVel[1]*normFilterVel[1]+
+               normVel[2]*normFilterVel[2];
+    if(cosAlpha>1.0) cosAlpha = 1.0;
+    if(cosAlpha<-1.0) cosAlpha = -1.0;
+    currentAlpha = acos(cosAlpha);
+    AvAngleError = AvAngleError + currentAlpha;
+  }
+  // Eval Average Values
+  if (totalCellPoints>0){
+    AvNormError = (AvNormError/totalCellPoints);
+    AvAngleError = (AvAngleError/totalCellPoints);
+  }else{
+    AvNormError = -1.0;
+    AvAngleError = -1.0;
+  }
+}
+
+// ======================
+// BUILD FACE AREA VECTOR
+// ======================
+void MRIStructuredScan::buildFaceAreasAndNormals(){
+  faceArea.resize(faceConnections.size());
+  faceNormal.resize(faceConnections.size());
+  double currNormal[3] = {0.0};
+  for(int loopA=0;loopA<faceConnections.size();loopA++){
+    int node1Coords[3] = {0};
+    int node2Coords[3] = {0};
+    int node3Coords[3] = {0};
+    // Get the integer coordinates for the first three nodes
+    MapIndexToAuxNodeCoords(faceConnections[loopA][0],node1Coords);
+    MapIndexToAuxNodeCoords(faceConnections[loopA][1],node2Coords);
+    MapIndexToAuxNodeCoords(faceConnections[loopA][2],node3Coords);
+    // Get the positions for the first three nodes
+    double node1Pos[3] = {0.0};
+    double node2Pos[3] = {0.0};
+    double node3Pos[3] = {0.0};
+    MapAuxCoordsToPosition(node1Coords,node1Pos);
+    MapAuxCoordsToPosition(node2Coords,node2Pos);
+    MapAuxCoordsToPosition(node3Coords,node3Pos);
+    // Get the difference
+    double diff1[3] = {0.0};
+    double diff2[3] = {0.0};
+    for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
+      diff1[loopB] = node2Pos[loopB] - node1Pos[loopB];
+      diff2[loopB] = node3Pos[loopB] - node1Pos[loopB];
+    }
+    double d1 = MRIUtils::Do3DEucNorm(diff1);
+    double d2 = MRIUtils::Do3DEucNorm(diff2);
+    // Evaluate Face Area
+    faceArea[loopA] = d1 * d2;
+    // Get the normal
+    MRIUtils::Do3DExternalProduct(diff1,diff2,currNormal);
+    faceNormal[loopA].push_back(currNormal[0]);
+    faceNormal[loopA].push_back(currNormal[1]);
+    faceNormal[loopA].push_back(currNormal[2]);
+  }
+}
+
+// ===============================
+// CREATE STRUCTURED MESH TOPOLOGY
+// ===============================
+void MRIStructuredScan::CreateTopology(){
+  // Build Cell Connections
+  WriteSchMessage(std::string("Build Cell Connection...\n"));
+  buildCellConnections();
+  // Build Face Connections
+  WriteSchMessage(std::string("Build Face Connection...\n"));
+  buildFaceConnections();
+  // Build Face Area and Face Normal Vector
+  WriteSchMessage(std::string("Build Areas and Normals...\n"));
+  buildFaceAreasAndNormals();
+  // Build Edge Connections
+  WriteSchMessage(std::string("Build Edge Connections...\n"));
+  buildEdgeConnections();
+  WriteSchMessage(std::string("Topology Creation Finished...\n"));
+}

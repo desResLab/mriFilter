@@ -59,8 +59,6 @@ MRIScan::MRIScan(const MRIScan &copyScan){
   }
 }
 
-
-
 // =================================
 // UPDATE VELOCITIES FROM AUX VECTOR
 // =================================
@@ -94,51 +92,6 @@ void MRIScan::ExportNodesToFile(std::string fileName){
     fclose(outFile);
 }
 
-// ========================================================
-// EVAL THE AVERGAGE ERROR BETWEEN FILTEREDVEL AND VELOCITY
-// ========================================================
-void MRIScan::RecoverGlobalErrorEstimates(double& AvNormError, double& AvAngleError){
-    // Init
-  AvNormError = 0.0;
-  AvAngleError = 0.0;
-    double diffVel[3] = {0.0};
-    double diffNorm;
-    double cosAlpha,currentAlpha;
-  double normVel[3] = {0.0};
-  double normFilterVel[3] = {0.0};
-    // Loop
-  for(int loopA=0;loopA<totalCellPoints;loopA++){
-    // Eval Velocity Difference
-    diffVel[0] = cellPoints[loopA].velocity[0]-cellPoints[loopA].auxVector[0];
-    diffVel[1] = cellPoints[loopA].velocity[1]-cellPoints[loopA].auxVector[1];
-    diffVel[2] = cellPoints[loopA].velocity[2]-cellPoints[loopA].auxVector[2];
-    diffNorm = MRIUtils::Do3DEucNorm(diffVel);
-    AvNormError = AvNormError + diffNorm;
-    // Eval Velocity Angle
-    for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
-      normVel[loopB] = cellPoints[loopA].velocity[loopB];
-      normFilterVel[loopB] = cellPoints[loopA].auxVector[loopB];
-    }
-    // Normalize
-    MRIUtils::Normalize3DVector(normVel);
-    MRIUtils::Normalize3DVector(normFilterVel);
-    cosAlpha = normVel[0]*normFilterVel[0]+
-               normVel[1]*normFilterVel[1]+
-               normVel[2]*normFilterVel[2];
-    if(cosAlpha>1.0) cosAlpha = 1.0;
-    if(cosAlpha<-1.0) cosAlpha = -1.0;
-    currentAlpha = acos(cosAlpha);
-    AvAngleError = AvAngleError + currentAlpha;
-  }
-  // Eval Average Values
-  if (totalCellPoints>0){
-    AvNormError = (AvNormError/totalCellPoints);
-    AvAngleError = (AvAngleError/totalCellPoints);
-  }else{
-    AvNormError = -1.0;
-    AvAngleError = -1.0;
-  }
-}
 
 // ===================
 // GET DIFFERENCE NORM

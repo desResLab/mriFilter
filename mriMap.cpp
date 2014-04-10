@@ -138,6 +138,19 @@ void MRIStructuredScan::MapIndexToCoords(int index, int* intCoords){
   intCoords[0] = CurrentIndex;
 }
 
+// Map To Cells Coords
+void MRIStructuredScan::MapIndexToAuxNodeCoords(int index, int* intCoords){
+  int CurrentIndex = index;
+  int totalX = cellTotals[0] + 1;
+  int totalY = cellTotals[1] + 1;
+  intCoords[2] = (int)(CurrentIndex/(totalX*totalY));
+  CurrentIndex = (CurrentIndex-intCoords[2]*totalX*totalY);
+  intCoords[1] = (int)(CurrentIndex/totalX);
+  CurrentIndex = CurrentIndex-intCoords[1]*totalX;
+  intCoords[0] = CurrentIndex;
+}
+
+
 // Map From Cells Coords
 int MRIStructuredScan::MapCoordsToIndex(int i, int j, int k){
 	// C++ INDEXES ZERO BASED
@@ -221,7 +234,7 @@ int MRIStructuredScan::GetAdjacentFace(int globalNodeNumber /*Already Ordered Gl
   double currentZCoord = cellPoints[globalNodeNumber].position[2]-domainSizeMin[2];
   
 	// Find The Node Number in The Current Plane
-  int ZCompleteLevels = MRIUtils::round(currentZCoord/cellLength[2]);
+  int ZCompleteLevels = MRIUtils::FindHowMany(currentZCoord,cellLengths[2]);
   int localNodeNumber = globalNodeNumber-ZCompleteLevels*cellTotals[0]*cellTotals[1];
 
   // Find The Adjacent face in the Current Plane
@@ -244,24 +257,6 @@ int MRIStructuredScan::GetAdjacentFace(int globalNodeNumber /*Already Ordered Gl
                            (cellTotals[0]+1)*cellTotals[1]);
   }
 }
-
-// Get Local Adjacent Plane
-/*void GetLocalStarFaces(int starNum, int cellsX, int cellsY,
-                       int &bottomFace, int &topFace, int &leftFace, int &rightFace){
-  // Find Local Face Number
-  bottomFace = (((int)(starNum)/(int)(cellsX+1))-1)*(2*cellsX+1) + ((starNum) % (cellsX+1)) + cellsX + 1;
-  topFace    = (((int)(starNum)/(int)(cellsX+1)))  *(2*cellsX+1) + ((starNum) % (cellsX+1)) + cellsX + 1;
-  leftFace   = (((int)(starNum)/(int)(cellsX+1)))  *(2*cellsX+1) + ((starNum) % (cellsX+1));
-  rightFace  = leftFace+1;
-
-  // Set To Zero the Null Faces
-  int iCoord = ((int)(starNum)/(int)(cellsX+1));
-  int jCoord = (     (starNum)%     (cellsX+1));
-  if(iCoord == 0) bottomFace = -1;
-  if(iCoord == cellsY) topFace = -1;
-  if(jCoord == 0) leftFace = -1;
-  if(jCoord == cellsX) rightFace = -1;
-}*/
 
 // ================================
 // GET VORTEXES ASSOCIATED TO CELLS
@@ -307,7 +302,29 @@ void MRIStructuredScan::MapCoordsToPosition(int* coords, bool addMeshMinima, dou
       pos[loopA] += 0.5*(cellLengths[loopA][loopB-1] + cellLengths[loopA][loopB]);
     }
   }
+  if(addMeshMinima){
+    for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+      pos[loopA] += domainSizeMin[loopA];
+    }
+  }
 }
+
+// ========================================
+// MAP AUXILIARY INTEGER COORDS TO POSITION
+// ========================================
+void MRIStructuredScan::MapAuxCoordsToPosition(int* auxCoords, double* pos){
+  // Loop on the three dimensions
+  for(int loopA=0;loopA<3;loopA++){
+    pos[loopA] = 0.0;
+    for(int loopB=0;loopB<auxCoords[loopA];loopB++){
+      pos[loopA] += cellLengths[loopA][loopB];
+    }
+  }
+  for(int loopA=0;loopA<3;loopA++){
+    pos[loopA] = pos[loopA] + domainSizeMin[loopA] - 0.5*cellLengths[loopA][0];
+  }
+}
+
 
 // ===================================
 // CHECK IF STRUCTURED MESH IS UNIFORM
