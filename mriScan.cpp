@@ -64,7 +64,7 @@ MRIScan::MRIScan(const MRIScan &copyScan){
 // =================================
 void MRIScan::UpdateVelocities(){
   maxVelModule = 0.0;
-    MRIReal currentNorm = 0.0;
+  MRIReal currentNorm = 0.0;
   // Update Velocities
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     // Assign Filtered Vectors
@@ -73,7 +73,9 @@ void MRIScan::UpdateVelocities(){
     cellPoints[loopA].velocity[2] = cellPoints[loopA].auxVector[2];
     // Get New Norm
     currentNorm = MRIUtils::Do3DEucNorm(cellPoints[loopA].auxVector);
-    if(currentNorm>maxVelModule) maxVelModule = currentNorm;
+    if(currentNorm>maxVelModule){
+      maxVelModule = currentNorm;
+    }
   }
 }
 

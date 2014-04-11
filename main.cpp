@@ -37,6 +37,9 @@ void ConvertTECPLOToVTK(std::string inFileName,std::string outfileName){
   // Read from Raw Binary File
   MyMRIScan->ReadPltFile(inFileName,true);
 
+  WriteSchMessage(std::string("ECCOLO\n"));
+  WriteSchMessage(std::to_string(MyMRIScan->cellPoints[300].velocity[1]) + std::string("\n"));
+
   // Export to VTK
   MyMRIScan->ExportToVTK(outfileName.c_str());
   //MyMRIScan->ExportToTECPLOT(outfileName.c_str(),true);
@@ -207,7 +210,8 @@ void ProcessSingleScan(std::string inFileName,std::string outfileName,double itT
   //MyMRISequence->ComputeRelativePressure(false);
 
   // EXPORT FILE
-  MyMRISequence->ExportToTECPLOT(outfileName);
+  //MyMRISequence->ExportToTECPLOT(outfileName);
+  MyMRISequence->ExportToVTK(outfileName);
 }
 
 // =============================

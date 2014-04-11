@@ -128,7 +128,7 @@ inline void Normalize3DVector(double* v){
     }
   }
 }
-inline void Normalize3DVector(std::vector<double> v){
+inline void Normalize3DVector(std::vector<double> &v){
   double norm = Do3DEucNorm(v);
   if(norm>kMathZero){
     for(int LoopA=0;LoopA<kNumberOfDimensions;LoopA++)
@@ -633,8 +633,13 @@ inline void SortIntArray(std::vector<int> &faceIds){
   }
 }
 
+// ===================================
 // CHECK THAT TWO VECTORS ARE THE SAME
+// ===================================
 inline bool isSameIntVector(std::vector<int> first, std::vector<int> second){
+  // SORT THE TWO VECTORS FIRST
+  std::sort(first.begin(),first.end());
+  std::sort(second.begin(),second.end());
   bool res = true;
   if((first.size() == 0)||(second.size() == 0)){
     return false;
@@ -648,13 +653,15 @@ inline bool isSameIntVector(std::vector<int> first, std::vector<int> second){
   return res;
 }
 
+// =======================
 // FIND HOW MANY INTERVALS
+// =======================
 inline int FindHowMany(double distance, std::vector<double> lengths){
   bool found = false;
   int count = 0;
   double currDist = 0.0;
   while (!found){
-    found = ((distance-currDist) > -kMathZero);
+    found = ((currDist + 1.0e-4) > distance);
     if(!found){
       currDist += lengths[count];
       count++;

@@ -114,6 +114,7 @@ class MRIStructuredScan: public MRIScan{
     // FACES
     void buildFaceConnections();
     void buildFaceAreasAndNormals();
+    void getExternalFaceNormal(int cellID, int localFaceID, double* extNormal);
     // EDGES
     void buildEdgeConnections();
     int  addToEdgeConnections(std::vector<std::vector<mriEdge*>> &AuxFirstNodeEdgeList, std::vector<int> edgeIds);
@@ -145,9 +146,9 @@ class MRIStructuredScan: public MRIScan{
     void RebuildFromFaceFluxes(double* faceFluxes);
 
     // Reorder Cells    
-    void ReorderCells(int* Perm);
+    void ReorderCells(std::vector<int> Perm);
     // Get Global Permutation
-    void GetGlobalPermutation(int* &GlobalPerm);
+    void GetGlobalPermutation(std::vector<int> &GlobalPerm);
     // REORDER GLOBAL SCAN
     void ReorderScan();
     // MAPPING FUNCTIONS

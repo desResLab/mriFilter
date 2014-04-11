@@ -88,7 +88,7 @@ class MRIScan{
 
     // FILTERING
     void ApplyMedianFilter(int qtyID,int maxIt);
-    void ApplyThresholding(MRIThresholdCriteria thresholdCriteria);
+    void ApplyThresholding(MRIThresholdCriteria* thresholdCriteria);
     void ApplySmoothingFilter();
     void ApplyGaussianNoise(double stDev);
 
@@ -121,7 +121,6 @@ class MRIScan{
     virtual void WriteExpansionFile(std::string fileName){throw MRIException("Error: Not Implemented!");}
 
     // MODEL MANIPULATION
-    virtual void ApplyThresholding(MRIThresholdCriteria* thresholdCriteria){throw MRIException("Error: Not Implemented!");}
     virtual void Crop(double* limitBox){throw MRIException("Error: Not Implemented!");}
     virtual void ScaleVelocities(double factor){throw MRIException("Error: Not Implemented!");}
     virtual void ScalePositions(double factor){throw MRIException("Error: Not Implemented!");}

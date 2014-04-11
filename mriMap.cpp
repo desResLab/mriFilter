@@ -189,7 +189,7 @@ int MRIStructuredScan::GetCellNumber(MRIReal* coords){
 }
 
 // Compute Global Permutation
-void MRIStructuredScan::GetGlobalPermutation(int* &GlobalPerm){
+void MRIStructuredScan::GetGlobalPermutation(std::vector<int> &GlobalPerm){
   MRIReal Norm = 0.0;
   MRIReal VelNorm = 0.0;
   int invalidCount = 0;
@@ -198,12 +198,14 @@ void MRIStructuredScan::GetGlobalPermutation(int* &GlobalPerm){
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     Norm = MRIUtils::Do3DEucNorm(cellPoints[loopA].position);
     VelNorm = MRIUtils::Do3DEucNorm(cellPoints[loopA].velocity);
-    if (Norm<kMathZero) invalidCount++;
+    if (Norm<kMathZero){
+      invalidCount++;
+    }
     if ((Norm<kMathZero)&&(VelNorm<kMathZero)&&(invalidCount>1)){
-      GlobalPerm[loopA] = -1;
+      GlobalPerm.push_back(-1);
       NumberOfZeroNorms++;
     }else{
-      GlobalPerm[loopA] = GetCellNumber(cellPoints[loopA].position);
+      GlobalPerm.push_back(GetCellNumber(cellPoints[loopA].position));
     }
   }
 }

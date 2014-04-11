@@ -163,15 +163,13 @@ void WriteIOLog(std::string LogFileName, std::string MsgsString)
 void MRIStructuredScan::ReorderScan(){
   // Determine The Direct and Inverse Permutations
   WriteSchMessage(std::string("Computing Permutation..."));
-  int* DirectPerm = new int[totalCellPoints];
+  std::vector<int> DirectPerm;
   GetGlobalPermutation(DirectPerm);
   WriteSchMessage(std::string("Done.\n"));
   // Reorder Cells
   WriteSchMessage(std::string("Reordering Cells..."));
   ReorderCells(DirectPerm);
   WriteSchMessage(std::string("Done.\n"));
-  // Deallocate
-  delete [] DirectPerm;
 }
 
 // =======================
@@ -364,17 +362,21 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
 
   // Resize CellLenghts: UNIFORM CASE
   cellLengths.resize(3);
-  for(int loopA=0;loopA<3;loopA++){
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
     cellLengths[loopA].resize(cellTotals[loopA]);
-    for(int loopB=0;loopB<cellTotals[loopA];loopB++){
-      cellLengths[loopA][loopB] = fabs(domainSizeMax[loopA]-domainSizeMin[loopA])/(cellTotals[loopA]-1);
+    if(cellTotals[loopA] == 1){
+      cellLengths[loopA][0] = 1.0;
+    }else{
+      for(int loopB=0;loopB<cellTotals[loopA];loopB++){
+        cellLengths[loopA][loopB] = fabs(domainSizeMax[loopA]-domainSizeMin[loopA])/(cellTotals[loopA]-1);
+      }
     }
   }
   
   // Finished Reading File
   WriteSchMessage(std::string("File reading completed.\n"));
 
-  // Close File}
+  // Close File
   PltFile.close();
 
   // REORDER CELLS
@@ -383,13 +385,16 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
   }
 
   // CREATING TOPOLOGY
-  WriteSchMessage(std::string("Creating Topology...\n"));
+  WriteSchMessage(std::string("\n"));
+  WriteSchMessage(std::string("---------------------\n"));
+  WriteSchMessage(std::string(" Creating Topology...\n"));
+  WriteSchMessage(std::string("---------------------\n"));
   CreateTopology();
 
   // WRITE STATISTICS
   std::string CurrentStats = WriteStatistics();
   WriteSchMessage(CurrentStats);
-};
+}
 
 // ================
 // EXPORT TO LSDYNA
@@ -1375,6 +1380,7 @@ void MRIStructuredScan::ExportToVTK(std::string fileName){
     fprintf(outFile,"%e ",currXCoord);
     currXCoord += 0.5*(cellLengths[0][loopA-1] + cellLengths[0][loopA]);
   }
+  fprintf(outFile,"%e\n",currXCoord);
 
   // Export Y Coordinates
   fprintf(outFile,"Y_COORDINATES %d double\n",(int)cellLengths[1].size());
@@ -1383,6 +1389,7 @@ void MRIStructuredScan::ExportToVTK(std::string fileName){
     fprintf(outFile,"%e ",currYCoord);
     currYCoord += 0.5*(cellLengths[1][loopA-1] + cellLengths[1][loopA]);
   }
+  fprintf(outFile,"%e\n",currYCoord);
 
   // Export Z Coordinates
   fprintf(outFile,"Z_COORDINATES %d double\n",(int)cellLengths[2].size());
@@ -1391,6 +1398,7 @@ void MRIStructuredScan::ExportToVTK(std::string fileName){
     fprintf(outFile,"%e ",currZCoord);
     currZCoord += 0.5*(cellLengths[2][loopA-1] + cellLengths[2][loopA]);
   }
+  fprintf(outFile,"%e\n",currZCoord);
 
   // Export Point quantities
   fprintf(outFile,"POINT_DATA %d\n",totalCellPoints);
@@ -2016,6 +2024,8 @@ void MRIStructuredScan::buildCellConnections(){
     int zOffset = 0;
     int yOffset = 0;
     int xOffset = 0;
+    int node1,node2,node3,node4;
+    int node5,node6,node7,node8;
     // Find Integer Coords
     MapIndexToCoords(loopA,intCoords);
     // Get The Nodes
@@ -2026,23 +2036,31 @@ void MRIStructuredScan::buildCellConnections(){
     yOffset = intCoords[1] * (cellTotals[0]+1);
     xOffset = intCoords[0];
     // Add Node 1
-    cellConnections[loopA].push_back(zOffset + yOffset + xOffset);
+    node1 = (zOffset + yOffset + xOffset);
+    cellConnections[loopA].push_back(node1);
     // Add Node 2
-    cellConnections[loopA].push_back(zOffset + yOffset + xOffset + 1);
+    node2 = (zOffset + yOffset + xOffset + 1);
+    cellConnections[loopA].push_back(node2);
     // Add Node 3
-    cellConnections[loopA].push_back(zOffset + yOffset + xOffset + cellTotals[0] -1);
+    node3 = (zOffset + yOffset + xOffset + cellTotals[0] + 1);
+    cellConnections[loopA].push_back(node3);
     // Add Node 4
-    cellConnections[loopA].push_back(zOffset + yOffset + xOffset + cellTotals[0]);
+    node4 = (zOffset + yOffset + xOffset + cellTotals[0] + 2);
+    cellConnections[loopA].push_back(node4);
     // Change zOffset
     zOffset += (cellTotals[0]+1)*(cellTotals[1]+1);
     // Add Node 5
-    cellConnections[loopA].push_back(zOffset + yOffset + xOffset);
+    node5 = (zOffset + yOffset + xOffset);
+    cellConnections[loopA].push_back(node5);
     // Add Node 6
-    cellConnections[loopA].push_back(zOffset + yOffset + xOffset + 1);
+    node6 = (zOffset + yOffset + xOffset + 1);
+    cellConnections[loopA].push_back(node6);
     // Add Node 7
-    cellConnections[loopA].push_back(zOffset + yOffset + xOffset + cellTotals[0] -1);
+    node7 = (zOffset + yOffset + xOffset + cellTotals[0] + 1);
+    cellConnections[loopA].push_back(node7);
     // Add Node 8
-    cellConnections[loopA].push_back(zOffset + yOffset + xOffset + cellTotals[0]);
+    node8 = (zOffset + yOffset + xOffset + cellTotals[0] + 2);
+    cellConnections[loopA].push_back(node8);
   }
 }
 
@@ -2055,40 +2073,74 @@ void getFaceConnections(int faceID, std::vector<int> cellConnections, std::vecto
     case 0:
       faceIds.push_back(cellConnections[0]);
       faceIds.push_back(cellConnections[1]);
-      faceIds.push_back(cellConnections[2]);
       faceIds.push_back(cellConnections[3]);
+      faceIds.push_back(cellConnections[2]);
       break;
     case 1:
       faceIds.push_back(cellConnections[4]);
-      faceIds.push_back(cellConnections[5]);
       faceIds.push_back(cellConnections[6]);
       faceIds.push_back(cellConnections[7]);
+      faceIds.push_back(cellConnections[5]);
       break;
     case 2:
       faceIds.push_back(cellConnections[0]);
+      faceIds.push_back(cellConnections[2]);
+      faceIds.push_back(cellConnections[6]);
       faceIds.push_back(cellConnections[4]);
-      faceIds.push_back(cellConnections[7]);
-      faceIds.push_back(cellConnections[3]);
       break;
     case 3:
       faceIds.push_back(cellConnections[1]);
       faceIds.push_back(cellConnections[5]);
-      faceIds.push_back(cellConnections[6]);
-      faceIds.push_back(cellConnections[2]);
+      faceIds.push_back(cellConnections[7]);
+      faceIds.push_back(cellConnections[3]);
       break;
     case 4:
       faceIds.push_back(cellConnections[0]);
-      faceIds.push_back(cellConnections[1]);
-      faceIds.push_back(cellConnections[5]);
       faceIds.push_back(cellConnections[4]);
+      faceIds.push_back(cellConnections[5]);
+      faceIds.push_back(cellConnections[1]);
       break;
     case 5:
-      faceIds.push_back(cellConnections[3]);
       faceIds.push_back(cellConnections[2]);
-      faceIds.push_back(cellConnections[6]);
+      faceIds.push_back(cellConnections[3]);
       faceIds.push_back(cellConnections[7]);
+      faceIds.push_back(cellConnections[6]);
       break;
   }
+}
+
+// ================================
+// GET CELL EXTERNAL NORMAL AT FACE
+// ================================
+void MRIStructuredScan::getExternalFaceNormal(int cellID, int localFaceID, double* extNormal){
+  // Get Face Nodes
+  std::vector<int> faceIds;
+  getFaceConnections(localFaceID,cellConnections[cellID],faceIds);
+
+  int node1Coords[3] = {0};
+  int node2Coords[3] = {0};
+  int node3Coords[3] = {0};
+  // Get the integer coordinates for the first three nodes
+  MapIndexToAuxNodeCoords(faceIds[0],node1Coords);
+  MapIndexToAuxNodeCoords(faceIds[1],node2Coords);
+  MapIndexToAuxNodeCoords(faceIds[2],node3Coords);
+  // Get the positions for the first three nodes
+  double node1Pos[3] = {0.0};
+  double node2Pos[3] = {0.0};
+  double node3Pos[3] = {0.0};
+  MapAuxCoordsToPosition(node1Coords,node1Pos);
+  MapAuxCoordsToPosition(node2Coords,node2Pos);
+  MapAuxCoordsToPosition(node3Coords,node3Pos);
+  // Get the difference
+  double diff1[3] = {0.0};
+  double diff2[3] = {0.0};
+  for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
+    diff1[loopB] = node2Pos[loopB] - node1Pos[loopB];
+    diff2[loopB] = node3Pos[loopB] - node2Pos[loopB];
+  }
+  // Get the normal
+  MRIUtils::Do3DExternalProduct(diff1,diff2,extNormal);
+  MRIUtils::Normalize3DVector(extNormal);
 }
 
 // ====================================
@@ -2111,7 +2163,7 @@ void getEdgeConnections(int EdgeID, std::vector<int> faceConnections, std::vecto
         break;
       case 3:
         edgeIds.push_back(faceConnections[3]);
-        edgeIds.push_back(faceConnections[4]);
+        edgeIds.push_back(faceConnections[0]);
         break;
     }
 }
@@ -2122,7 +2174,7 @@ void getEdgeConnections(int EdgeID, std::vector<int> faceConnections, std::vecto
 int MRIStructuredScan::addToFaceConnections(std::vector<std::vector<mriFace* >> &AuxFirstNodeFaceList, std::vector<int> faceIds){
   mriFace* newFace;
   // Get first node in connectivity
-  int firstConnectivityNode = faceIds[0];
+  int firstConnectivityNode = *min_element(std::begin(faceIds), std::end(faceIds));
   // Try to find with the first node list
   bool found = false;
   int count = 0;
@@ -2156,7 +2208,7 @@ int MRIStructuredScan::addToFaceConnections(std::vector<std::vector<mriFace* >> 
 int MRIStructuredScan::addToEdgeConnections(std::vector<std::vector<mriEdge*>> &AuxFirstNodeEdgeList, std::vector<int> edgeIds){
   mriEdge* newEdge;
   // Get first node in connectivity
-  int firstConnectivityNode = edgeIds[0];
+  int firstConnectivityNode = *min_element(std::begin(edgeIds), std::end(edgeIds));
   // Find it in First Node List
   bool found = false;
   int count = 0;
@@ -2197,8 +2249,6 @@ void MRIStructuredScan::buildFaceConnections(){
     for(int loopB=0;loopB<k3DNeighbors;loopB++){
       // Get Face Connections
       getFaceConnections(loopB,cellConnections[loopA],faceIds);
-      // Sort Face Connections
-      MRIUtils::SortIntArray(faceIds);
       // Add to Face Connections
       currFace = addToFaceConnections(AuxFirstNodeFaceList,faceIds);
       // Add to Cell Faces
@@ -2218,10 +2268,11 @@ void MRIStructuredScan::buildEdgeConnections(){
   AuxFirstNodeEdgeList.resize(getTotalAuxNodes());
   for(int loopA=0;loopA<faceConnections.size();loopA++){
     for(int loopB=0;loopB<4;loopB++){
+      //if((loopA % 500) == 0){
+      //  WriteSchMessage(std::string("Count: ") + std::to_string(loopA) + std::string("\n"));
+      //}
       // Get Face Connections
       getEdgeConnections(loopB,faceConnections[loopA],edgeIds);
-      // Sort Face Connections
-      std::sort(edgeIds.begin(),edgeIds.end());
       // Add to Face Connections
       currEdge = addToEdgeConnections(AuxFirstNodeEdgeList,edgeIds);
       // Add to Face Edges
@@ -2253,8 +2304,9 @@ double MRIStructuredScan::getEdgeFaceVortexCoeff(int edgeID, int faceID){
   MRIUtils::Do3DExternalProduct(edgeDirVector,edgeFaceVector,resVec);
   MRIUtils::Normalize3DVector(resVec);
   // Get Sign
+  res = 0.0;
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
-    res = res + resVec[loopA]/fabs(resVec[loopA]);
+    res = res + resVec[loopA] * faceNormal[faceID][loopA];
   }
   return round(res);
 }
@@ -2295,7 +2347,6 @@ void MRIStructuredScan::getEdgeToFaceDirection(int edgeID, int faceID, std::vect
   // Declare
   double ec[3] = {0.0};
   double fc[3] = {0.0};
-  edgeFaceVector.resize(3);
 
   // Get Edge Center
   getEdgeCenter(edgeID,ec);
@@ -2439,7 +2490,7 @@ void MRIStructuredScan::buildFaceAreasAndNormals(){
     double diff2[3] = {0.0};
     for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
       diff1[loopB] = node2Pos[loopB] - node1Pos[loopB];
-      diff2[loopB] = node3Pos[loopB] - node1Pos[loopB];
+      diff2[loopB] = node3Pos[loopB] - node2Pos[loopB];
     }
     double d1 = MRIUtils::Do3DEucNorm(diff1);
     double d2 = MRIUtils::Do3DEucNorm(diff2);
@@ -2447,6 +2498,7 @@ void MRIStructuredScan::buildFaceAreasAndNormals(){
     faceArea[loopA] = d1 * d2;
     // Get the normal
     MRIUtils::Do3DExternalProduct(diff1,diff2,currNormal);
+    MRIUtils::Normalize3DVector(currNormal);
     faceNormal[loopA].push_back(currNormal[0]);
     faceNormal[loopA].push_back(currNormal[1]);
     faceNormal[loopA].push_back(currNormal[2]);
