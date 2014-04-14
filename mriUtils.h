@@ -11,6 +11,7 @@
 #include <vector>
 // String Utilities
 #include <boost/algorithm/string.hpp>
+#include <regex>
 
 #include "mriConstants.h"
 #include "mriCoordItem.h"
@@ -620,8 +621,8 @@ inline void SortIntArray(std::vector<int> &faceIds){
   int firstIdx = 0;
   int secondIdx = 0;
   int temp = 0;
-  for(int loopA=0;loopA<faceIds.size()-1;loopA++){
-    for(int loopB=loopA+1;loopB<faceIds.size();loopB++){
+  for(size_t loopA=0;loopA<faceIds.size()-1;loopA++){
+    for(size_t loopB=loopA+1;loopB<faceIds.size();loopB++){
       firstIdx = faceIds[loopA];
       secondIdx = faceIds[loopB];
       if(firstIdx>secondIdx){
@@ -647,7 +648,7 @@ inline bool isSameIntVector(std::vector<int> first, std::vector<int> second){
   if(first.size()!=second.size()){
     return false;
   }
-  for(int loopA=0;loopA<first.size();loopA++){
+  for(size_t loopA=0;loopA<first.size();loopA++){
     res = res && (first[loopA] == second[loopA]);
   }
   return res;
@@ -668,6 +669,14 @@ inline int FindHowMany(double distance, std::vector<double> lengths){
     }
   }
   return count;
+}
+
+// =========================
+// FIND IF A STRING IS FLOAT
+// =========================
+inline int isFloat(std::string currString){
+  std::regex e("\\s*[+-]?([0-9]+\\.[0-9]*([Ee][+-]?[0-9]+)?|\\.[0-9]+([Ee][+-]?[0-9]+)?|[0-9]+[Ee][+-]?[0-9]+)");
+  return std::regex_match(currString,e);
 }
 
 

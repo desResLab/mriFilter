@@ -15,6 +15,23 @@
 #include "mriException.h"
 #include "schMessages.h"
 
+// ===================
+// TYPES FOR PLT FILES
+// ===================
+enum pltFileTypes{
+  pltUNIFORM,
+  pltSTRUCTURED
+};
+
+struct PLTOptionRecord{
+  int i = 0;
+  int j = 0;
+  int k = 0;
+  int N = 0;
+  int E = 0;
+  pltFileTypes type;
+};
+
 // ================
 // COPY CONSTRUCTOR
 // ================
@@ -155,7 +172,7 @@ void WriteIOLog(std::string LogFileName, std::string MsgsString)
   fprintf(outFile,"%s\n",MsgsString.c_str());
 	// Close Output file
 	fclose(outFile);	
-};
+}
 
 // =============
 // REORDER CELLS
@@ -172,6 +189,32 @@ void MRIStructuredScan::ReorderScan(){
   WriteSchMessage(std::string("Done.\n"));
 }
 
+// ====================================
+// READS HEADER AND ASSIGNS PLT OPTIONS
+// ====================================
+void assignPLTOptions(std::vector<std::string> tokens, PLTOptionRecord &pltOptions){
+  for(size_t loopA=0;loopA<tokens.size();loopA++){
+    if(tokens[loopA] == "I"){
+      pltOptions.type = pltUNIFORM;
+      pltOptions.i = atoi(tokens[loopA+1].c_str());
+    }else if(tokens[loopA] == "J"){
+      pltOptions.type = pltUNIFORM;
+      pltOptions.j = atoi(tokens[loopA+1].c_str());
+    }else if(tokens[loopA] == "K"){
+      pltOptions.type = pltUNIFORM;
+      pltOptions.k = atoi(tokens[loopA+1].c_str());
+    }else if(tokens[loopA] == "N"){
+      pltOptions.type = pltSTRUCTURED;
+      pltOptions.N = atoi(tokens[loopA+1].c_str());
+    }else if(tokens[loopA] == "E"){
+      pltOptions.type = pltSTRUCTURED;
+      pltOptions.E = atoi(tokens[loopA+1].c_str());
+    }else if(tokens[loopA] == "FEBLOCK"){
+      pltOptions.type = pltSTRUCTURED;
+    }
+  }
+}
+
 // =======================
 // READ SCAN FROM PLT FILE
 // =======================
@@ -179,6 +222,9 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
   // Init Line Count
   int lineCount = 0;
   totalCellPoints = 0;
+
+  // Initialize Plt Option Record
+  PLTOptionRecord pltOptions;
 
   // Init Domain Limits
   domainSizeMin[0] =  std::numeric_limits<double>::max();
@@ -199,10 +245,25 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
   maxVelModule = 0.0;
 
   // Read The Number Of Lines
+  std::vector<std::string> tokenizedString;
+  bool foundheader = false;
+  bool areAllFloats = false;
+  int headerCount = 0;
   WriteSchMessage(std::string("Computing input file size..."));
   int totalLinesInFile = 0;
   std::string Buffer;
   while (std::getline(PltFile,Buffer)){
+    if(!foundheader){
+      boost::split(tokenizedString, Buffer, boost::is_any_of(" ,"), boost::token_compress_on);
+      areAllFloats = true;
+      assignPLTOptions(tokenizedString, pltOptions);
+      for(size_t loopA=0;loopA<tokenizedString.size();loopA++){
+        areAllFloats = (areAllFloats && (MRIUtils::isFloat(tokenizedString[loopA])));
+      }
+      foundheader = areAllFloats;
+      headerCount++;
+    }
+    // Increase cell and line number
     totalCellPoints++;
     totalLinesInFile++;
   }
@@ -216,8 +277,8 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
   MRICell myCellPoint;
 
   // Skip Comments
-  std::string* PltFileHeader = new std::string[kHeaderCommentsLines];
-  for(int loopA=0;loopA<kHeaderCommentsLines;loopA++)	  
+  std::string* PltFileHeader = new std::string[headerCount];
+  for(int loopA=0;loopA<headerCount;loopA++)
   {
     std::getline(PltFile,Buffer);
     PltFileHeader[loopA] = Buffer;
@@ -240,11 +301,14 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
   std::vector<double> YCoords;
   std::vector<double> ZCoords;
   
-  
   // Read All Lines
   int LocalCount = 0;
   int precentProgress = 0;
   int percentCounted = 0;
+  int valueCounter = 0;
+  int neededValues = 7;
+  double* LocalVal = new double[neededValues];
+  double* TempVal = new double[neededValues];
   
   // Reading Input File Message
   WriteSchMessage(std::string("Reading input file...\n"));
@@ -261,33 +325,45 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
     // Tokenize Line
     std::vector<std::string> ResultArray = MRIUtils::ExctractSubStringFromBufferMS(Buffer);
     // Store Local Structure
-	try
-    {
-      if(ResultArray.size() != 7){
-        throw new MRIException("");
+	try{
+      // Set Continue
+      Continue = true;
+      // Check Ratio between ResultArray.size, valueCounter, neededValues
+      if(ResultArray.size()+valueCounter<=neededValues){
+        // Read the whole Result Array
+        for(int loopA=0;loopA<ResultArray.size();loopA++){
+          LocalVal[loopA] = atof(ResultArray[loopA].c_str());
+        }
+        Continue = false;
+      }else{
+        // Read part of the result array
+        for(int loopA=0;loopA<neededValues-valueCounter;loopA++){
+          LocalVal[loopA] = atof(ResultArray[loopA].c_str());
+        }
+        // Put the rest in temporary array
+        for(int loopA=0;loopA<ResultArray.size()-(neededValues-valueCounter);loopA++){
+          TempVal[loopA] = atof(ResultArray[loopA].c_str());
+        }
+        Continue = true;
+        // Coords
+        LocalXCoord = LocalVal[0];
+        LocalYCoord = LocalVal[1];
+        LocalZCoord = LocalVal[2];
+        // Concentration
+        LocalConc = LocalVal[3];
+        // Velocity
+        LocalXVel = LocalVal[4];
+        LocalYVel = LocalVal[5];
+        LocalZVel = LocalVal[6];
       }
-      // Coords
-      LocalXCoord = atof(ResultArray[0].c_str());
-      LocalYCoord = atof(ResultArray[1].c_str());
-      LocalZCoord = atof(ResultArray[2].c_str());
-      // Concentration
-      //LocalConc = atof(ResultArray[13].c_str());
-      LocalConc = atof(ResultArray[3].c_str());
-      // Velocity
-      LocalXVel = atof(ResultArray[4].c_str());
-      LocalYVel = atof(ResultArray[5].c_str());
-      LocalZVel = atof(ResultArray[6].c_str());
-      //LocalXVel = atof(ResultArray[10].c_str());
-      //LocalYVel = atof(ResultArray[11].c_str());
-      //LocalZVel = atof(ResultArray[12].c_str());
+      // Update valueCounter
+      valueCounter = ((ResultArray.size() + valueCounter) % neededValues);
       // Check Module
       CurrentModule = sqrt((LocalXVel*LocalXVel)+(LocalYVel*LocalYVel)+(LocalZVel*LocalZVel));
-      if (CurrentModule>1000.0) throw 20;
-      // Set Continue
-      Continue = true;		
-    }
-      catch (...)
-    {
+      if (CurrentModule>1000.0){
+        throw 20;
+      }
+    }catch (...){
       //Set Continue
       Continue = false;
       std::string outString = "WARNING[*] Error Reading Line: "+MRIUtils::IntToStr(lineCount)+"; Line Skipped.\n";
@@ -2177,7 +2253,7 @@ int MRIStructuredScan::addToFaceConnections(std::vector<std::vector<mriFace* >> 
   int firstConnectivityNode = *min_element(std::begin(faceIds), std::end(faceIds));
   // Try to find with the first node list
   bool found = false;
-  int count = 0;
+  size_t count = 0;
   while((!found)&&(count<AuxFirstNodeFaceList[firstConnectivityNode].size())){
     found = MRIUtils::isSameIntVector(faceIds,AuxFirstNodeFaceList[firstConnectivityNode][count]->connections);
     // Update
@@ -2191,7 +2267,7 @@ int MRIStructuredScan::addToFaceConnections(std::vector<std::vector<mriFace* >> 
     // Add to AuxFirstNodeFaceList
     newFace = new mriFace;
     newFace->number = faceConnections.size()-1;
-    for(int loopA=0;loopA<faceIds.size();loopA++){
+    for(size_t loopA=0;loopA<faceIds.size();loopA++){
       newFace->connections.push_back(faceIds[loopA]);
     }
     AuxFirstNodeFaceList[firstConnectivityNode].push_back(newFace);
@@ -2211,7 +2287,7 @@ int MRIStructuredScan::addToEdgeConnections(std::vector<std::vector<mriEdge*>> &
   int firstConnectivityNode = *min_element(std::begin(edgeIds), std::end(edgeIds));
   // Find it in First Node List
   bool found = false;
-  int count = 0;
+  size_t count = 0;
   while((!found)&&(count<AuxFirstNodeEdgeList[firstConnectivityNode].size())){
     found = MRIUtils::isSameIntVector(edgeIds,AuxFirstNodeEdgeList[firstConnectivityNode][count]->connections);
     // Update
@@ -2225,7 +2301,7 @@ int MRIStructuredScan::addToEdgeConnections(std::vector<std::vector<mriEdge*>> &
     // Add to AuxFirstNodeEdgeList
     newEdge = new mriEdge;
     newEdge->number = edgeConnections.size()-1;
-    for(int loopA=0;loopA<edgeIds.size();loopA++){
+    for(size_t loopA=0;loopA<edgeIds.size();loopA++){
       newEdge->connections.push_back(edgeIds[loopA]);
     }
     AuxFirstNodeEdgeList[firstConnectivityNode].push_back(newEdge);
@@ -2266,7 +2342,7 @@ void MRIStructuredScan::buildEdgeConnections(){
   int currEdge = 0;
   faceEdges.resize(faceConnections.size());
   AuxFirstNodeEdgeList.resize(getTotalAuxNodes());
-  for(int loopA=0;loopA<faceConnections.size();loopA++){
+  for(size_t loopA=0;loopA<faceConnections.size();loopA++){
     for(int loopB=0;loopB<4;loopB++){
       //if((loopA % 500) == 0){
       //  WriteSchMessage(std::string("Count: ") + std::to_string(loopA) + std::string("\n"));
@@ -2281,8 +2357,8 @@ void MRIStructuredScan::buildEdgeConnections(){
   }
   // Build edgeFaces
   edgeFaces.resize(edgeConnections.size());
-  for(int loopA=0;loopA<faceConnections.size();loopA++){
-    for(int loopB=0;loopB<faceEdges[loopA].size();loopB++){
+  for(size_t loopA=0;loopA<faceConnections.size();loopA++){
+    for(size_t loopB=0;loopB<faceEdges[loopA].size();loopB++){
       currEdge = faceEdges[loopA][loopB];
       edgeFaces[currEdge].push_back(loopA);
     }
@@ -2405,7 +2481,7 @@ void MRIStructuredScan::getFaceCenter(int faceID, double* fc){
     fc[loopA] = 0.0;
   }
 
-  for(int loopA=0;loopA<faceConnections[faceID].size();loopA++){
+  for(size_t loopA=0;loopA<faceConnections[faceID].size();loopA++){
     currNode = faceConnections[faceID][loopA];
     getAuxNodeCoordinates(currNode,pos);
     for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
@@ -2470,7 +2546,7 @@ void MRIStructuredScan::buildFaceAreasAndNormals(){
   faceArea.resize(faceConnections.size());
   faceNormal.resize(faceConnections.size());
   double currNormal[3] = {0.0};
-  for(int loopA=0;loopA<faceConnections.size();loopA++){
+  for(size_t loopA=0;loopA<faceConnections.size();loopA++){
     int node1Coords[3] = {0};
     int node2Coords[3] = {0};
     int node3Coords[3] = {0};
