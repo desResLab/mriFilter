@@ -91,6 +91,27 @@
   typedef const int MRIPlane;
   typedef boost::variate_generator<boost::mt19937, boost::normal_distribution<> > stdRndGenerator;
 
+  // Run Modes
+  const int rmEVALSEQUENCEPRESSURE          = 0;
+  const int rmEVALPRESSUREFROMSIGNATUREFLOW = 1;
+  const int rmPROCESSSINGLESCAN             = 2;
+  const int rmPLTTOVTK                      = 3;
+  const int rmEVALSCANSTATISTICS            = 4;
+  const int rmCOMUTESCANMATRICES            = 5;
+  const int rmPERFORMRANDOMTEST             = 6;
+  const int rmCROPANDCOMPUTEVOLUME          = 7;
+  const int rmSTREAMLINETEST1               = 8;
+  const int rmSTREAMLINETEST2               = 9;
+  const int rmPRINTTHRESHOLDINGTOVTK        = 10;
+  const int rmEVALREYNOLDSSTRESSES          = 11;
+  const int rmSHOWFACEFLUXPATTERS           = 12;
+  const int rmBUILDFROMCOEFFICIENTS         = 13;
+  const int rmEVALPRESSURE                  = 14;
+  const int rmEVALCONCGRADIENT              = 15;
+  const int rmEVALVORTEXCRITERIA            = 16;
+  const int rmWRITESPATIALEXPANSION         = 17;
 
+  // Export File Formats
+  const int efTECPLOT = 0;
   
 #endif // MRICONST_H

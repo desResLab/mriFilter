@@ -545,7 +545,7 @@ void TEST03_EvalReynoldsStresses(std::string inFileName){
 // ===========================================
 // EVAL REYNOLDS STRESSES FROM EXPANSION FILES
 // ===========================================
-void EvalPressureFromExpansion(std::string inFileName,std::string outFileName,bool exportTECPLOT){
+void EvalPressureFromExpansion(mriProgramOptions* options){
 
   // SET PARAMETERS
   bool applyThreshold = true;
@@ -558,7 +558,7 @@ void EvalPressureFromExpansion(std::string inFileName,std::string outFileName,bo
   // ADD FILE TO SEQUENCE
   MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
   //MyMRIScan->ReadFromExpansionFile(inFileName,applyThreshold,thresholdRatio);
-  MyMRIScan->ReadPltFile(inFileName,true);
+  MyMRIScan->ReadPltFile(options->inputFileName,true);
   MyMRISequence->AddScan(MyMRIScan);
   // APPLY MEDIAN FILTER TO VELOCITIES
   //MyMRISequence->GetScan(0)->ApplyMedianFilter(kQtyVelocityX,1);
@@ -588,12 +588,12 @@ void EvalPressureFromExpansion(std::string inFileName,std::string outFileName,bo
   // EVAL RELATIVE PRESSURE
   MyMRISequence->ComputeRelativePressure(doPressureSmoothing);
 
-  if(exportTECPLOT){
+  if(options->exportFormat == efTECPLOT){
     // WRITE OUTPUT FILES TO TECPLOT
-    MyMRISequence->ExportToTECPLOT(outFileName);
+    MyMRISequence->ExportToTECPLOT(options->outputFileName);
   }else{
     // WRITE OUTPUT FILES TO VTK
-    MyMRISequence->ExportToVTK(outFileName);
+    MyMRISequence->ExportToVTK(options->outputFileName);
   }
 }
 
@@ -971,208 +971,117 @@ int main(int argc, char **argv){
         break;
       case rmEVALPRESSUREFROMSIGNATUREFLOW:
         // Eval Pressure for signature Flow Cases
-        EvalPressureFromSignatureFlow(inFileName,outfileName);
+        EvalPressureFromSignatureFlow(options->inputFileName,options->outputFileName);
         break;
       case rmPROCESSSINGLESCAN:
+      {
         // Get Parameters
         double itTol = atof(argv[4]);
         int maxIt = atoi(argv[5]);
         std::string thresholdTypeString(argv[6]);
         double thresholdValue = atof(argv[7]);
-
-        // PROCESS SINGLE SCAN
-        ProcessSingleScan(options->inputFileName,options->outputfileName,itTol,maxIt,thresholdTypeString,thresholdValue);
+        // Process Single Scan
+        ProcessSingleScan(options->inputFileName,
+                          options->outputFileName,
+                          options->itTol,
+                          options->maxIt,
+                          options->thresholdType,
+                          options->thresholdValue);
+        break;
+      }
       case rmPLTTOVTK:
+      {
         // Convert to VTK
         ConvertTECPLOToVTK(options->inputFileName,options->outputFileName);
         break;
+      }
       case rmEVALSCANSTATISTICS:
-        // Get File Name
-        std::string firstFileName(argv[2]);
-        std::string secondFileName(argv[3]);
-        std::string statFileName(argv[4]);
-
+      {
         // COMPUTE SCAN STATISTICS
-        ComputeScanStatistics(firstFileName,secondFileName,statFileName);
+        ComputeScanStatistics(options->inputFileName,
+                              options->outputFileName,
+                              options->statFileName);
+        break;
+      }
       case rmCOMUTESCANMATRICES:
         // COMPUTE SCAN MATRICES
         ComputeScanMatrices();
+        break;
       case rmPERFORMRANDOMTEST:
         // PERFORM RANDOM TEST
         PerformRandomTest();
+        break;
       case rmCROPANDCOMPUTEVOLUME:
         // CROP AND REDUCE VOL FILE
-        CropAndComputeVol(inFileName,outfileName);
+        CropAndComputeVol(options->inputFileName,options->outputFileName);
+        break;
       case rmSTREAMLINETEST1:
+      {
         // GET FILE NAME
         int intValue = atoi(argv[2]);
         // PERFORM STREAMLINE TEST 1
-        PerformStreamlineTest1(intValue,options->inputFileName,options->outputFileName);
+        PerformStreamlineTest1(intValue,
+                               options->inputFileName,
+                               options->outputFileName);
+        break;
+      }
       case rmSTREAMLINETEST2:
         // PERFORM STREAMLINE TEST 2
         PerformStreamlineTest2(options->inputFileName,options->outputFileName);
+        break;
       case rmPRINTTHRESHOLDINGTOVTK:
         // Test Expansion Coefficients
         // TEST_ExpansionCoefficients(inFileName);
-        TEST02_PrintThresholdingToVTK(inFileName);
+        TEST02_PrintThresholdingToVTK(options->inputFileName);
+        break;
       case rmEVALREYNOLDSSTRESSES:
         // Test Expansion Coefficients
         TEST03_EvalReynoldsStresses(options->inputFileName);
+        break;
       case rmSHOWFACEFLUXPATTERS:
-
-      // GET FILE NAMES
-      std::string inFileName(argv[2]);
-      std::string outfileName(argv[3]);
-
-      // READ FACE FLUXES FROM FILE AND EXPORT TO VTK
-      ShowFaceFluxPatterns(inFileName,outfileName);
-
-    }else if (firstOption == "-buildFromCoeffs"){
-
-      // GET FILE NAMES
-      std::string coeffFileName(argv[2]);
-      std::string plotOut(argv[3]);
-      double threshold = atof(argv[4]);
-
-      // READ FROM COEFFICIENT FILE AND EXPORT TO PLT
-      BuildFromCoeffs(coeffFileName,plotOut,true,kSoftThreshold,threshold);
-
-    }else if (firstOption == "-evalPressure"){
-
-      // GET FILE NAMES
-      std::string inFileName(argv[2]);
-      std::string outFileName(argv[3]);
-      int saveAsPLTInt = atoi(argv[4]);
-      bool saveAsPLT = (saveAsPLTInt == 0);
-
-      // EVAL PRESSURES FROM EXPANSION COFFICIENTS
-      EvalPressureFromExpansion(inFileName,outFileName,saveAsPLT);
-
-    }else if (firstOption == "-evalConcGrad"){
-
-      // GET FILE NAMES
-      std::string inFileName(argv[2]);
-      std::string outFileName(argv[3]);
-
-      // EVAL PRESSURES FROM EXPANSION COFFICIENTS
-      EvalConcentrationGradient(inFileName,outFileName);
-
-    }else if (firstOption == "-vortexCrit"){
-
-        // GET FILE NAMES
-        std::string inFileName(argv[2]);
-        std::string outFileName(argv[3]);
-
-        // EVAL PRESSURES FROM EXPANSION COFFICIENTS
-        EvalVortexCriteria(inFileName,outFileName);
-
-    }else if (firstOption == "-writeSpatialExpansion"){
-        // GET FILE NAMES
-        std::string inFileName(argv[2]);
-        std::string outFileName(argv[3]);
-
-        // EVAL Spatial Expansion Coefficients Distribution
-        WriteSpatialExpansion(inFileName,outFileName);
-
-    }else if (firstOption == "-scaleModel"){
-
-      // GET FILE NAMES
-      std::string inFileName(argv[2]);
-      std::string outFileName(argv[3]);
-
-      // Create New Sequence
-      MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
-
-      // Add File to Sequence
-      MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
-      MyMRIScan->ReadPltFile(inFileName, true);
-      //MyMRIScan->ScalePositions(0.0058);
-      //MyMRIScan->ScaleVelocities(0.5);
-      MyMRISequence->AddScan(MyMRIScan);
-
-      double limitBox[6] = {0.0};
-      // JET SPERIMENTALE
-      //limitBox[0] = 0.0;
-      //limitBox[1] = 0.18;
-      //limitBox[2] = 0.0213;
-      //limitBox[3] = 0.0668;
-      //limitBox[4] = 0.00642;
-      //limitBox[5] = 0.0499;
-      // LUNG - UPPER PART
-      //limitBox[0] = -0.025;
-      //limitBox[1] = 0.0872;
-      //limitBox[2] = -0.0268;
-      //limitBox[3] = 0.0434;
-      //limitBox[4] = -0.055;
-      //limitBox[5] = 0.0546;
-      // LUNG - TRACHEA
-      //limitBox[0] = 0.0942;
-      //limitBox[1] = 0.185;
-      //limitBox[2] = -0.00924;
-      //limitBox[3] = 0.0294;
-      //limitBox[4] = 0.0188;
-      //limitBox[5] = 0.0504;
-      // LUNG 2 - TRACHEA
-      limitBox[0] = -0.0124;
-      limitBox[1] = 0.112;
-      limitBox[2] = -0.0177;
-      limitBox[3] = 0.0259;
-      limitBox[4] = -0.00371;
-      limitBox[5] = 0.0539;
-
-      // ====
-      // CROP
-      // ====
-      MyMRISequence->Crop(limitBox);
-
-      // EXPORT FILE
-      MyMRISequence->ExportToTECPLOT(outFileName);
-      //MyMRISequence->ExportToVTK(outFileName);
-
-    }else{
-
-      // INVALID SWITCH
-      std::string currMsgs("Error: Invalid Switch. Terminate.\n");
-      WriteSchMessage(currMsgs);
-      return (1);
-    }
-
-    // COMPLETED!
-    std::string currMsgs("\nOperation Completed!\n");
-    WriteSchMessage(currMsgs);
-    return (0);
-
-
-
-
-        case rmSIMPLEMAP:
-          val = simpleMapMode(options);
-          break;
-        case rmEXTRACTMESHQUALITY:
-          val = exctractMeshQualityDistributions(options);
-          break;
-        case rmMATCHFACELIST:
-          val = findFaceMatchList(options);
-          break;
-        case rmMESHSKINTOCVPRE:
-          val = meshVTKSkinToCVPre(options);
-          break;
-        case rmCOMPUTEMODELEXPECTATIONS:
-          val = computeModelExpectations(options);
-          break;
+        // READ FACE FLUXES FROM FILE AND EXPORT TO VTK
+        ShowFaceFluxPatterns(options->inputFileName,options->outputFileName);
+        break;
+      case rmBUILDFROMCOEFFICIENTS:
+      {
+        // Get File Names
+        std::string plotOut(argv[3]);
+        double threshold = atof(argv[4]);
+        // READ FROM COEFFICIENT FILE AND EXPORT TO PLT
+        BuildFromCoeffs(options->inputFileName,plotOut,true,kSoftThreshold,threshold);
+        break;
       }
-    }catch (std::exception& ex){
-      femUtils::WriteMessage(std::string(ex.what()));
-      femUtils::WriteMessage(std::string("\n"));
-      femUtils::WriteMessage(std::string("Program Terminated.\n"));
-      return -1;
+      case rmEVALPRESSURE:
+        // EVAL PRESSURES FROM EXPANSION COFFICIENTS
+        EvalPressureFromExpansion(options);
+        break;
+      case rmEVALCONCGRADIENT:
+        // Eval Concetrantion Gradient
+        EvalConcentrationGradient(options->inputFileName,options->outputFileName);
+        break;
+      case rmEVALVORTEXCRITERIA:
+        // Eval Vortex Criterion
+        EvalVortexCriteria(options->inputFileName,options->outputFileName);
+        break;
+      case rmWRITESPATIALEXPANSION:
+        // EVAL Spatial Expansion Coefficients Distribution
+        WriteSpatialExpansion(options->inputFileName,options->outputFileName);
+        break;
+      default:
+        // Invalid Switch
+        std::string currMsgs("Error: Invalid Switch. Terminate.\n");
+        WriteSchMessage(currMsgs);
+        return (1);
+        break;
     }
-    femUtils::WriteMessage(std::string("\n"));
-    femUtils::WriteMessage(std::string("Program Completed.\n"));
-    return val;
-
-
-
-
-};
+  }catch (std::exception& ex){
+    WriteSchMessage(std::string(ex.what()));
+    WriteSchMessage(std::string("\n"));
+    WriteSchMessage(std::string("Program Terminated.\n"));
+    return -1;
+  }
+  WriteSchMessage(std::string("\n"));
+  WriteSchMessage(std::string("Program Completed.\n"));
+  return val;
+}
 

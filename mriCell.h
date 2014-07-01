@@ -14,8 +14,8 @@ class MRICell
     MRIReal pressGrad[3];
     MRIReal relPressure;
     // Constructor and Destructor
-	  MRICell();
-	  ~MRICell();
+    MRICell();
+    ~MRICell();
     // Member Functions
     double getQuantity(int qtyID);
     void setQuantity(int qtyID, double value);
