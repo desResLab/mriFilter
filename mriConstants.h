@@ -110,6 +110,7 @@
   const int rmEVALCONCGRADIENT              = 15;
   const int rmEVALVORTEXCRITERIA            = 16;
   const int rmWRITESPATIALEXPANSION         = 17;
+  const int rmSOLVEPOISSON                  = 18;
 
   // Export File Formats
   const int efTECPLOT = 0;

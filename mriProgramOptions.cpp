@@ -1,4 +1,5 @@
 #include "mriProgramOptions.h"
+#include "mriConstants.h"
 
 #include <stdlib.h>
 #include <getopt.h>
@@ -29,6 +30,7 @@ int mriProgramOptions::getCommadLineOptions(int argc, char **argv){
       {"gradient",  required_argument, 0, 13},
       {"vortex",    required_argument, 0, 14},
       {"writexp",   required_argument, 0, 15},
+      {"test",      no_argument,       0, 16},
       {0, 0, 0, 0}
     };
 
@@ -79,17 +81,20 @@ int mriProgramOptions::getCommadLineOptions(int argc, char **argv){
       case '?':
         /* getopt_long already printed an error message. */
         break;
+      case 16:
+        runMode = rmSOLVEPOISSON;
+        break;
       default:
         abort ();
       }
     }
     /* Print any remaining command line arguments (not options). */
-    if (optind < argc){
+    /*if (optind < argc){
       printf ("non-option ARGV-elements: ");
       while (optind < argc){
         printf ("%s ", argv[optind++]);
       }
       putchar ('\n');
-    }
-    exit(0);
+    }*/
+  return 0;
 }

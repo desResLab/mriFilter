@@ -94,7 +94,6 @@ void MRIScan::ExportNodesToFile(std::string fileName){
     fclose(outFile);
 }
 
-
 // ===================
 // GET DIFFERENCE NORM
 // ===================

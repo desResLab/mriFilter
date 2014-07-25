@@ -8,6 +8,8 @@
 #include "mriConstants.h"
 #include "mriProgramOptions.h"
 #include "schMessages.h"
+#include "mpi.h"
+#include "mriCommunicator.h"
 
 #include <boost/random.hpp>
 
@@ -45,6 +47,14 @@ void ConvertTECPLOToVTK(std::string inFileName,std::string outfileName){
   MyMRIScan->ExportToVTK(outfileName.c_str());
   //MyMRIScan->ExportToTECPLOT(outfileName.c_str(),true);
 
+}
+
+// ======================
+// SOLVE POISSON EQUATION
+// ======================
+void SolvePoissonEquation(mriCommunicator* comm){
+  MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
+  MyMRIScan->SolvePoissonEquation(comm);
 }
 
 
@@ -949,12 +959,25 @@ void WriteSpatialExpansion(std::string expFileName,std::string outFileName){
 // MAIN PROGRAM
 // ============
 int main(int argc, char **argv){
+
+  // Init MRI Communicator
+  mriCommunicator* comm = new mriCommunicator();
+
+  // Initialize MPI
+  MPI::Init();
+  int rank; int nproc;
+  comm->mpiComm = MPI_COMM_WORLD;
+  MPI_Comm_rank(comm->mpiComm, &comm->currProc);
+  MPI_Comm_size(comm->mpiComm, &comm->totProc);
+
   //  Declare
   int val = 0;
-  mriProgramOptions* options;
+  mriProgramOptions* options = new mriProgramOptions();
 
-  // WRITE PROGRAM HEADER
-  WriteHeader();
+  // WRITE PROGRAM HEADER - ONLY MASTER NODE
+  if(comm->currProc == 0){
+    WriteHeader();
+  }
 
   // Get Commandline Options
   int res = options->getCommadLineOptions(argc,argv);
@@ -1067,6 +1090,10 @@ int main(int argc, char **argv){
         // EVAL Spatial Expansion Coefficients Distribution
         WriteSpatialExpansion(options->inputFileName,options->outputFileName);
         break;
+      case rmSOLVEPOISSON:
+        // Solve Poisson Equation to Compute the pressures
+        SolvePoissonEquation(comm);
+        break;
       default:
         // Invalid Switch
         std::string currMsgs("Error: Invalid Switch. Terminate.\n");
@@ -1082,6 +1109,8 @@ int main(int argc, char **argv){
   }
   WriteSchMessage(std::string("\n"));
   WriteSchMessage(std::string("Program Completed.\n"));
+  // Finalize MPI
+  MPI::Finalize();
   return val;
 }
 

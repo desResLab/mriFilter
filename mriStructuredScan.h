@@ -17,6 +17,7 @@
 #include "mriImagedata.h"
 #include "mriExpansion.h"
 #include "mriOptions.h"
+#include "mriCommunicator.h"
 
 // RELATIVE POSITION BETWEEN EDGE AND FACE
 enum EdgeFacePositionType{ptTop,ptBottom,ptLeft,ptRight};
@@ -151,6 +152,7 @@ class MRIStructuredScan: public MRIScan{
     void GetGlobalPermutation(std::vector<int> &GlobalPerm);
     // REORDER GLOBAL SCAN
     void ReorderScan();
+
     // MAPPING FUNCTIONS
     // Get Cell Number From Coords
     int  GetCellNumber(MRIReal* coords);
@@ -163,10 +165,12 @@ class MRIStructuredScan: public MRIScan{
     // Get Unit Vector From Current Cell To Face Centre
     void GetGlobalCoords(int DimNumber, int SliceNumber, double FaceCoord1, double FaceCoord2, double* &globalCoords);
     int  FaceLocaltoGlobal(int LocalFace,int DimNumber,int SliceNumber);
+
     // Sequential Index to Integer Coords
     void MapIndexToCoords(int index, int* intCoords);
     void MapIndexToAuxNodeCoords(int index, int* intCoords);
     int  MapCoordsToIndex(int i, int j, int k);
+
     // Map Integer Coords to Position
     void MapCoordsToPosition(int* coords, bool addMeshMinima, double* pos);
     void MapAuxCoordsToPosition(int* auxCoords, double* pos);
@@ -222,6 +226,7 @@ class MRIStructuredScan: public MRIScan{
     int  GetCellFromStack(std::vector<int> &cellStack, bool* visitedCell, bool* isBoundaryCell, bool &finished, bool& secondStage);
     int  GetNextStartingCell(int currentCell, bool* visitedCell, bool* isBoundaryCell, bool &finished, int &bookmark);
     virtual int EvalCentralCell();
+    int SolvePoissonEquation(mriCommunicator* comm);
 
     // REYNOLDS STRESS COMPUTATION    
     void EvalReynoldsStressGradient(int currentCell, double** ReynoldsStressGradient);
@@ -283,6 +288,8 @@ class MRIStructuredScan: public MRIScan{
 
    // COMPARISON BETWEEN SCANS
    double GetDiffNorm(MRIStructuredScan* otherScan);
+
+   void buildMetisConnectivities(int *eptr,int *eind);
 };
 
 #endif // MRIUNSTRUCTUREDSCAN_H

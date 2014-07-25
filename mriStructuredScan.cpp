@@ -2599,3 +2599,41 @@ void MRIStructuredScan::CreateTopology(){
   buildEdgeConnections();
   WriteSchMessage(std::string("Topology Creation Finished...\n"));
 }
+
+// ===================================
+// BUILD TOPOLOGY VECTORS FOR PARMETIS
+// ===================================
+void MRIStructuredScan::buildMetisConnectivities(int *eptr,int *eind){
+  int currNode = 0;
+  // Allocate the pointer
+  eptr = new int(cellConnections.size());
+
+  // Initialize Counter
+  int count = 0;
+  // Loop through the cells
+  for(int loopA=0;loopA<cellConnections.size();loopA++){
+    // Assign the pointer
+    eptr[loopA] = count;
+    for(int loopB=0;loopB<cellConnections[loopA].size();loopB++){
+      // Increment Counter
+      count++;
+    }
+  }
+  // Initialize the Connectivities
+  eind = new int(count);
+
+  // Loop through the cells
+  count = 0;
+  for(int loopA=0;loopA<cellConnections.size();loopA++){
+    for(int loopB=0;loopB<cellConnections[loopA].size();loopB++){
+      // Get Current Node Number
+      currNode = cellConnections[loopA][loopB];
+      // Increment Counter
+      count++;
+      // Assign Node
+      eind[count] = currNode;
+    }
+  }
+}
+
+
