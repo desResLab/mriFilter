@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 3.0.0, 2014-07-16T23:13:00. -->
+<!-- Written by QtCreator 3.0.0, 2014-12-27T10:34:32. -->
 <qtcreator>
  <data>
   <variable>ProjectExplorer.Project.ActiveTarget</variable>
@@ -150,7 +150,7 @@
      <value type="int">14</value>
     </valuelist>
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguation.Title">mpFilterApp</value>
-    <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.Arguments">--test</value>
+    <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.Arguments">--testMPI</value>
     <value type="bool" key="CMakeProjectManager.CMakeRunConfiguration.UseTerminal">false</value>
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory"></value>
     <value type="int" key="PE.EnvironmentAspect.Base">2</value>

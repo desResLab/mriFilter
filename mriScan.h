@@ -1,5 +1,6 @@
 #ifndef MRISCAN_H
 #define MRISCAN_H
+
 #include <stdio.h>
 #include <string>
 #include <vector>

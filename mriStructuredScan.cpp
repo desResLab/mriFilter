@@ -133,7 +133,9 @@ std::ifstream::pos_type GetFileSize(const char* filename)
 // Get Statistic String
 std::string MRIStructuredScan::WriteStatistics(){
 
-  std::string myresult = "FILE STATISTICS -------------------------\n";
+  std::string myresult = "\n";
+  myresult += "--------------------------------\n";
+  myresult += "FILE STATISTICS\n";
   myresult += "--------------------------------\n";
   myresult += "Total Number Of Cells Read: "+MRIUtils::IntToStr(totalCellPoints)+"\n";
   myresult += "--------------------------------\n";
@@ -158,6 +160,8 @@ std::string MRIStructuredScan::WriteStatistics(){
   myresult += "Maximum Z: "+MRIUtils::FloatToStr(domainSizeMax[2])+"\n";
   myresult += "--------------------------------\n";
   myresult += "Maximum Velocity Module: "+MRIUtils::FloatToStr(maxVelModule)+"\n";
+  myresult += "--------------------------------\n";
+  myresult += "\n";
   // Return String
   return myresult;
 }
@@ -236,6 +240,7 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
 
   // Assign File
   std::ifstream PltFile;
+  WriteSchMessage(std::string("Open File: ") + PltFileName + std::string("\n"));
   PltFile.open(PltFileName.c_str());
 
   // Init
@@ -253,6 +258,7 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
   int totalLinesInFile = 0;
   std::string Buffer;
   while (std::getline(PltFile,Buffer)){
+    printf("%s\n",Buffer.c_str());
     if(!foundheader){
       boost::split(tokenizedString, Buffer, boost::is_any_of(" ,"), boost::token_compress_on);
       areAllFloats = true;
@@ -278,8 +284,7 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
 
   // Skip Comments
   std::string* PltFileHeader = new std::string[headerCount];
-  for(int loopA=0;loopA<headerCount;loopA++)
-  {
+  for(int loopA=0;loopA<headerCount;loopA++){
     std::getline(PltFile,Buffer);
     PltFileHeader[loopA] = Buffer;
     lineCount++;
@@ -470,6 +475,7 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
   // WRITE STATISTICS
   std::string CurrentStats = WriteStatistics();
   WriteSchMessage(CurrentStats);
+
 }
 
 // ================

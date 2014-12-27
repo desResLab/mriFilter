@@ -52,7 +52,7 @@ void ConvertTECPLOToVTK(std::string inFileName,std::string outfileName){
 // ======================
 // SOLVE POISSON EQUATION
 // ======================
-void SolvePoissonEquation(mriCommunicator* comm){
+void SolvePoissonEquation(MRICommunicator* comm){
   MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
   MyMRIScan->SolvePoissonEquation(comm);
 }
@@ -61,7 +61,7 @@ void SolvePoissonEquation(mriCommunicator* comm){
 // =====================================
 // PROCESS SEQUENCE TO PRODUCE PRESSURES
 // =====================================
-void EvalSequencePressure(std::string inFileName, std::string outfileName){
+void EvalSequencePressure(std::string inFileName, std::string outfileName, MRICommunicator* comm){
 
   // Create New Sequence
   MRISequence* MyMRISequence = new MRISequence(true/*Cyclic Sequence*/);
@@ -80,12 +80,12 @@ void EvalSequencePressure(std::string inFileName, std::string outfileName){
   MyMRISequence->ApplyThresholding(options->thresholdCriteria);
 
   // APPLY FULL FILTER
-  MyMRISequence->ApplySMPFilter(options);
+  MyMRISequence->ApplySMPFilter(options,comm);
 
   // Apply Boundary Condition Filter to all scans
   options->useBCFilter = true;
   // APPLY FILTER
-  MyMRISequence->ApplySMPFilter(options);
+  MyMRISequence->ApplySMPFilter(options,comm);
 
   // Apply Final Threshold
   MyMRISequence->ApplyThresholding(options->thresholdCriteria);
@@ -170,21 +170,30 @@ void EvalPressureFromSignatureFlow(std::string inFileName,std::string outfileNam
 // ===================
 // PROCESS SINGLE SCAN
 // ===================
-void ProcessSingleScan(std::string inFileName,std::string outfileName,double itTol, int maxIt, std::string thresholdTypeString,double thresholdValue){
+void ProcessSingleScan(std::string inFileName,std::string outfileName,
+                       double itTol, int maxIt, std::string thresholdTypeString,double thresholdValue,
+                       MRICommunicator* comm){
 
-  // Create New Sequence
+  // Create New Sequence - Everyone
   MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
 
-  // Add File to Sequence
+  // Create New Scan - Everyone
   MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
-  MyMRIScan->ReadPltFile(inFileName, true);
-  MyMRISequence->AddScan(MyMRIScan);
 
-  // Echo Inserted Parameters
-  WriteSchMessage(std::string("--------------------------------------------\n"));
-  WriteSchMessage(std::string("MP Iteration tolerance Value: ")+MRIUtils::FloatToStr(itTol)+"\n");
-  WriteSchMessage(std::string("Threshold Value             : ")+MRIUtils::FloatToStr(thresholdValue)+"\n");
-  WriteSchMessage(std::string("--------------------------------------------\n"));
+  // Master Processor reads file
+  if(comm->currProc == 0){
+    // Read Measurement Grid
+    MyMRIScan->ReadPltFile(inFileName, true);
+
+    // Echo Inserted Parameters
+    WriteSchMessage(std::string("--------------------------------------------\n"));
+    WriteSchMessage(std::string("MP Iteration tolerance Value: ")+MRIUtils::FloatToStr(itTol)+"\n");
+    WriteSchMessage(std::string("Threshold Value             : ")+MRIUtils::FloatToStr(thresholdValue)+"\n");
+    WriteSchMessage(std::string("--------------------------------------------\n"));
+  }
+
+  // Add New Scan - Empty for everyone except Master Process
+  MyMRISequence->AddScan(MyMRIScan);
 
   // SET OPTIONS AND THRESHOLD
   MRIOptions* options = new MRIOptions(itTol,maxIt);
@@ -199,11 +208,11 @@ void ProcessSingleScan(std::string inFileName,std::string outfileName,double itT
   options->thresholdCriteria = new MRIThresholdCriteria(kCriterionABSLessThen,thresholdType,thresholdValue);
 
   // APPLY FULL FILTER
-  MyMRISequence->ApplySMPFilter(options);
+  MyMRISequence->ApplySMPFilter(options,comm);
 
   // APPLY BOUNDARY CONDITION FILTER
   options->useBCFilter = true;
-  MyMRISequence->ApplySMPFilter(options);
+  MyMRISequence->ApplySMPFilter(options,comm);
 
   // SAVE EXPANSION TO FILE
   MyMRISequence->GetScan(0)->WriteExpansionFile(std::string("ExpansionFile.dat"));
@@ -373,7 +382,7 @@ void ShowFaceFluxPatterns(std::string faceFluxFileName, std::string outFileName)
 // ===========================
 // Test Expansion Coefficients
 // ===========================
-void TEST_ExpansionCoefficients(std::string inFileName){
+void TEST_ExpansionCoefficients(std::string inFileName, MRICommunicator* comm){
 
   // Create New Sequence
   MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
@@ -398,7 +407,7 @@ void TEST_ExpansionCoefficients(std::string inFileName){
   MRIThresholdCriteria criteria(kCriterionLessThen,thresholdType,thresholdValue);
 
   // APPLY FULL FILTER
-  MyMRISequence->ApplySMPFilter(options);
+  MyMRISequence->ApplySMPFilter(options,comm);
 
   // GET FIRST SCAN
   MRIScan* firstMRIScan = new MRIScan(0.0);
@@ -438,7 +447,7 @@ void TEST_ExpansionCoefficients(std::string inFileName){
 // ==================
 // PRINT THRESHOLDING
 // ==================
-void TEST02_PrintThresholdingToVTK(std::string inFileName){
+void TEST02_PrintThresholdingToVTK(std::string inFileName, MRICommunicator* comm){
 
   // Create New Sequence
   MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
@@ -464,7 +473,7 @@ void TEST02_PrintThresholdingToVTK(std::string inFileName){
   MRIThresholdCriteria criteria(kCriterionLessThen,thresholdType,thresholdValue);
 
   // APPLY FULL FILTER
-  MyMRISequence->ApplySMPFilter(options);
+  MyMRISequence->ApplySMPFilter(options,comm);
 
   // APPLY SUCCESSIVE THRESHOLD
   for(int loopA=0;loopA<5;loopA++){
@@ -490,7 +499,7 @@ void TEST02_PrintThresholdingToVTK(std::string inFileName){
 // ======================
 // EVAL REYNOLDS STRESSES
 // ======================
-void TEST03_EvalReynoldsStresses(std::string inFileName){
+void TEST03_EvalReynoldsStresses(std::string inFileName, MRICommunicator* comm){
 
   // CREATE NEW SEQUENCES
   MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
@@ -516,7 +525,7 @@ void TEST03_EvalReynoldsStresses(std::string inFileName){
   options->thresholdCriteria = new MRIThresholdCriteria(kCriterionLessThen,thresholdType,thresholdValue);
 
   // APPLY FULL FILTER
-  MyMRISequence->ApplySMPFilter(options);
+  MyMRISequence->ApplySMPFilter(options,comm);
 
   WriteSchMessage("Filter Applied!\n");
 
@@ -639,7 +648,7 @@ void EvalConcentrationGradient(std::string inFileName,std::string outFileName){
 // ===================
 // PERFORM RANDOM TEST
 // ===================
-void PerformRandomTest(){
+void PerformRandomTest(MRICommunicator* comm){
   // Set parameters
   int numberMC = 500;
   // SET OPTIONS AND THRESHOLD
@@ -670,7 +679,7 @@ void PerformRandomTest(){
     MyMRIScan->ExportVelocitiesToFile("InputVelocities.dat",true);
 
     // Filter Velocities - NO GLOBAL ATOMS
-    MyMRIScan->applySMPFilter(options);
+    MyMRIScan->applySMPFilter(options,comm);
     MyMRIScan->UpdateVelocities();
 
     // Write Resultant Velocities
@@ -685,7 +694,7 @@ void PerformRandomTest(){
 // ================================
 // CROP DICOM AND EVALUATE PRESSURE
 // ================================
-void CropAndComputeVol(std::string inFileName,std::string outfileName){
+void CropAndComputeVol(std::string inFileName,std::string outfileName, MRICommunicator* comm){
   // ================
   // ANALYZE SEQUENCE
   // ================
@@ -736,14 +745,14 @@ void CropAndComputeVol(std::string inFileName,std::string outfileName){
   // -----------------
   // APPLY FULL FILTER
   // -----------------
-  MyMRISequence->ApplySMPFilter(options);
+  MyMRISequence->ApplySMPFilter(options,comm);
 
   // --------------------------------------------
   // Apply Boundary Condition Filter to all scans
   // --------------------------------------------
   options->useBCFilter = true;
   // APPLY FILTER
-  MyMRISequence->ApplySMPFilter(options);
+  MyMRISequence->ApplySMPFilter(options,comm);
 
   // ---------------------
   // Apply Final Threshold
@@ -961,7 +970,7 @@ void WriteSpatialExpansion(std::string expFileName,std::string outFileName){
 int main(int argc, char **argv){
 
   // Init MRI Communicator
-  mriCommunicator* comm = new mriCommunicator();
+  MRICommunicator* comm = new MRICommunicator();
 
   // Initialize MPI
   MPI::Init();
@@ -990,7 +999,7 @@ int main(int argc, char **argv){
     switch(options->runMode){
       case rmEVALSEQUENCEPRESSURE:
         // Eval Pressure From Velocity Sequence
-        EvalSequencePressure(options->inputFileName,options->outputFileName);
+        EvalSequencePressure(options->inputFileName,options->outputFileName,comm);
         break;
       case rmEVALPRESSUREFROMSIGNATUREFLOW:
         // Eval Pressure for signature Flow Cases
@@ -998,18 +1007,14 @@ int main(int argc, char **argv){
         break;
       case rmPROCESSSINGLESCAN:
       {
-        // Get Parameters
-        double itTol = atof(argv[4]);
-        int maxIt = atoi(argv[5]);
-        std::string thresholdTypeString(argv[6]);
-        double thresholdValue = atof(argv[7]);
         // Process Single Scan
         ProcessSingleScan(options->inputFileName,
                           options->outputFileName,
                           options->itTol,
                           options->maxIt,
                           options->thresholdType,
-                          options->thresholdValue);
+                          options->thresholdValue,
+                          comm);
         break;
       }
       case rmPLTTOVTK:
@@ -1032,11 +1037,11 @@ int main(int argc, char **argv){
         break;
       case rmPERFORMRANDOMTEST:
         // PERFORM RANDOM TEST
-        PerformRandomTest();
+        PerformRandomTest(comm);
         break;
       case rmCROPANDCOMPUTEVOLUME:
         // CROP AND REDUCE VOL FILE
-        CropAndComputeVol(options->inputFileName,options->outputFileName);
+        CropAndComputeVol(options->inputFileName,options->outputFileName,comm);
         break;
       case rmSTREAMLINETEST1:
       {
@@ -1055,11 +1060,11 @@ int main(int argc, char **argv){
       case rmPRINTTHRESHOLDINGTOVTK:
         // Test Expansion Coefficients
         // TEST_ExpansionCoefficients(inFileName);
-        TEST02_PrintThresholdingToVTK(options->inputFileName);
+        TEST02_PrintThresholdingToVTK(options->inputFileName,comm);
         break;
       case rmEVALREYNOLDSSTRESSES:
         // Test Expansion Coefficients
-        TEST03_EvalReynoldsStresses(options->inputFileName);
+        TEST03_EvalReynoldsStresses(options->inputFileName,comm);
         break;
       case rmSHOWFACEFLUXPATTERS:
         // READ FACE FLUXES FROM FILE AND EXPORT TO VTK

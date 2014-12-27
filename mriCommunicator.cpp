@@ -1,4 +1,4 @@
 #include "mriCommunicator.h"
 
-mriCommunicator::mriCommunicator(){
+MRICommunicator::MRICommunicator(){
 }

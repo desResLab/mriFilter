@@ -9,6 +9,7 @@
 #include "mriException.h"
 #include "mriExpansion.h"
 #include "schMessages.h"
+#include "mriUtils.h"
 
 // ===================
 // PRINT FASE ID INDEX
@@ -538,7 +539,7 @@ void MRIStructuredScan::AssembleResidualVector(bool useBCFilter, MRIThresholdCri
 // =================
 // PHYSICS FILTERING
 // =================
-void MRIStructuredScan::applySMPFilter(MRIOptions* options){
+void MRIStructuredScan::applySMPFilter(MRIOptions* options, MRICommunicator* comm){
   // Initialization
   int totalFaces = 0;
   double* resVec = nullptr;
@@ -547,6 +548,7 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options){
   std::vector<double> facesCoeffs;
   double corrCoeff = 0.0;
   int totalStarFaces = 0;
+  int mpiError = 0;
   double maxDivergence = 0.0;
   double maxNormError = 0.0;
   double maxAngleError = 0.0;
@@ -557,11 +559,21 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options){
   double twoNorm = 0.0;
   double relTwoNorm = 0.0;
   
-  // Assemble Face Flux Vectors
-  AssembleResidualVector(options->useBCFilter,options->thresholdCriteria,totalFaces,resVec,filteredVec,resNorm);
-  
+  // Only Master Process Assembles Residual Vector and Distribute it across the network
+  if(comm->currProc == 0){
+    // Assemble Face Flux Vectors
+    AssembleResidualVector(options->useBCFilter,options->thresholdCriteria,totalFaces,resVec,filteredVec,resNorm);
+
+    // Distribute it across the network
+    mpiError = MPI_Bcast(&resVec,totalFaces, MPI_REAL,0,comm->mpiComm);
+    MRIUtils::checkMpiError(mpiError);
+  }
+
   // Print Residual Vector
-  //PrintResidualVector("resVectorFile.txt",totalFaces,resVec);
+  PrintResidualVector(std::string("resVectorFile_"+std::to_string(comm->currProc)+".txt").c_str(),totalFaces,resVec);
+
+  printf("Ciao!");
+  exit(1);
 
   // Initial Residual
   WriteSchMessage("\n");

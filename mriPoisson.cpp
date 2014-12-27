@@ -10,7 +10,7 @@ using namespace std;
 // ===========================================
 // SOLVE POISSON EQUATION WITH FINITE ELEMENTS
 // ===========================================
-int MRIStructuredScan::SolvePoissonEquation(mriCommunicator* comm){
+int MRIStructuredScan::SolvePoissonEquation(MRICommunicator* comm){
 
   WriteSchMessage(std::string("Sono Dentro Poisson\n"));
 
@@ -61,7 +61,7 @@ int MRIStructuredScan::SolvePoissonEquation(mriCommunicator* comm){
 
 
     // Build the vectors needed for partioning
-    buildMetisConnectivities(elmdist,eptr,eind);
+    //buildMetisConnectivities(elmdist,eptr,eind);
   }
 
   // Partition Problem

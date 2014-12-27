@@ -189,7 +189,7 @@ void MRISequence::ExportToVTK(std::string outfileName){
 }
 
 // PHYSICS FILTERING FOR ALL SCANS
-void MRISequence::ApplySMPFilter(MRIOptions* options){
+void MRISequence::ApplySMPFilter(MRIOptions* options, MRICommunicator* comm){
   // Export All Data
   WriteSchMessage("\n");
   for(int loopA=0;loopA<totalScans;loopA++){

@@ -182,7 +182,7 @@ class MRIStructuredScan: public MRIScan{
     // MP FILTER
     // =========
     int    GetTotalBasisNumber();
-    virtual void   applySMPFilter(MRIOptions* options);
+    virtual void   applySMPFilter(MRIOptions* options,MRICommunicator* comm);
     virtual void   AssembleResidualVector(bool useBCFilter, MRIThresholdCriteria* thresholdCriteria, int &totalFaces, double* &ResVec, double* &filteredVec, double &resNorm);
     virtual void   AssembleConstantPattern(int currentDim, int &totalConstantFaces, std::vector<int> &facesID, std::vector<double> &facesCoeffs);
     virtual void   AssembleStarShape(int vortexNumber, int &totalFaces,std::vector<int> &facesID,std::vector<double> &facesCoeffs);
@@ -226,7 +226,7 @@ class MRIStructuredScan: public MRIScan{
     int  GetCellFromStack(std::vector<int> &cellStack, bool* visitedCell, bool* isBoundaryCell, bool &finished, bool& secondStage);
     int  GetNextStartingCell(int currentCell, bool* visitedCell, bool* isBoundaryCell, bool &finished, int &bookmark);
     virtual int EvalCentralCell();
-    int SolvePoissonEquation(mriCommunicator* comm);
+    int SolvePoissonEquation(MRICommunicator* comm);
 
     // REYNOLDS STRESS COMPUTATION    
     void EvalReynoldsStressGradient(int currentCell, double** ReynoldsStressGradient);

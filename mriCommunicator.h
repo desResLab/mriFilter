@@ -1,7 +1,7 @@
 #ifndef MRICOMMUNICATOR_H
 #define MRICOMMUNICATOR_H
 
-class mriCommunicator{
+class MRICommunicator{
 public:
   // Main Communicator
   int mpiComm;
@@ -9,7 +9,7 @@ public:
   int currProc;
   int totProc;
   // Constructor
-  mriCommunicator();
+  MRICommunicator();
 };
 
 #endif // MRICOMMUNICATOR_H

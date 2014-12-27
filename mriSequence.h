@@ -2,6 +2,7 @@
 #define MRISEQUENCE_H
 
 #include "mriScan.h"
+#include "mriCommunicator.h"
 
 class MRISequence
 {
@@ -34,7 +35,7 @@ class MRISequence
     void ExportToVTK(std::string outfileName);
     
     // DIV FREE Filtering
-    void ApplySMPFilter(MRIOptions* options);
+    void ApplySMPFilter(MRIOptions* options, MRICommunicator* comm);
     
     // APPLY THRESHOLDING 
     void ApplyThresholding(MRIThresholdCriteria* thresholdCriteria);

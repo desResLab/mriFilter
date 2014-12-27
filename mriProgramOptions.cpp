@@ -31,6 +31,7 @@ int mriProgramOptions::getCommadLineOptions(int argc, char **argv){
       {"vortex",    required_argument, 0, 14},
       {"writexp",   required_argument, 0, 15},
       {"test",      no_argument,       0, 16},
+      {"testMPI",   no_argument,       0, 17},
       {0, 0, 0, 0}
     };
 
@@ -83,6 +84,15 @@ int mriProgramOptions::getCommadLineOptions(int argc, char **argv){
         break;
       case 16:
         runMode = rmSOLVEPOISSON;
+        break;
+      case 17:
+        runMode = rmPROCESSSINGLESCAN;
+        inputFileName = std::string("CubeDNS_Orig.plt");
+        outputFileName = std::string("CubeDNS_Orig.out");
+        itTol = 1.0e-3;
+        maxIt = 2;
+        thresholdType = std::string("conc");
+        thresholdValue = 1.0;
         break;
       default:
         abort ();
