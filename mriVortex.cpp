@@ -1,4 +1,4 @@
-#include "mriScan.h"
+#include "mriStructuredScan.h"
 #include "mriUtils.h"
 #include "mriException.h"
 
@@ -9,7 +9,7 @@
 // ===========================================
 // EVAL DECOMPOSITION OF THE VELOCITY GRADIENT
 // ===========================================
-void MRIScan::EvalCellVelocityGradientDecomposition(int currentCell, double** deformation, double** rotation, double** firstDerivs){
+void MRIStructuredScan::EvalCellVelocityGradientDecomposition(int currentCell, double** deformation, double** rotation, double** firstDerivs){
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
     for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
       deformation[loopA][loopB] = 0.5*(firstDerivs[loopA][loopB] + firstDerivs[loopB][loopA]);
@@ -21,7 +21,7 @@ void MRIScan::EvalCellVelocityGradientDecomposition(int currentCell, double** de
 // ================
 // EVAL Q CRITERION
 // ================
-double MRIScan::EvalCellQCriterion(int currentCell, double** deformation, double** rotation){
+double MRIStructuredScan::EvalCellQCriterion(int currentCell, double** deformation, double** rotation){
   double traceDEF = 0.0;
   double traceROT = 0.0;
   double opResultDEF = 0.0;
@@ -48,7 +48,7 @@ double MRIScan::EvalCellQCriterion(int currentCell, double** deformation, double
 // =======================
 // EVAL LAMBDA-2 CRITERION
 // =======================
-double MRIScan::EvalCellL2Criterion(int currentCell, double** deformation, double** rotation){
+double MRIStructuredScan::EvalCellL2Criterion(int currentCell, double** deformation, double** rotation){
   double mat[3][3];
   double eig[3];
   double opResultDEF = 0.0;
@@ -73,7 +73,7 @@ double MRIScan::EvalCellL2Criterion(int currentCell, double** deformation, doubl
 // ====================
 // EVAL DELTA CRITERION
 // ====================
-double MRIScan::EvalCellDeltaCriterion(int currentCell, double** deformation, double** rotation, double** velGradient){
+double MRIStructuredScan::EvalCellDeltaCriterion(int currentCell, double** deformation, double** rotation, double** velGradient){
   double qVal = EvalCellQCriterion(currentCell,deformation,rotation);
   double detVelGrad = (velGradient[0][0] * (velGradient[1][1] * velGradient[2][2] - velGradient[2][1] * velGradient[1][2])
                       -velGradient[1][0] * (velGradient[0][1] * velGradient[2][2] - velGradient[2][1] * velGradient[0][2])
@@ -84,7 +84,7 @@ double MRIScan::EvalCellDeltaCriterion(int currentCell, double** deformation, do
 // ====================
 // EVAL DELTA CRITERION
 // ====================
-double MRIScan::EvalCellVortexCriteria(int currentCell,int criteriaType, double** deformation, double** rotation, double** velGradient){
+double MRIStructuredScan::EvalCellVortexCriteria(int currentCell,int criteriaType, double** deformation, double** rotation, double** velGradient){
   double critRes = 0.0;
   // Vortex Criterion
   switch(criteriaType){
@@ -108,7 +108,7 @@ double MRIScan::EvalCellVortexCriteria(int currentCell,int criteriaType, double*
 // =============================
 // EVALUATION OF VORTEX CRITERIA
 // =============================
-void MRIScan::EvalVortexCriteria(){
+void MRIStructuredScan::EvalVortexCriteria(){
   // Velocity Gradient and Hessian
   // First and Second Derivatives
   double** deformation = new double*[kNumberOfDimensions];
@@ -121,15 +121,23 @@ void MRIScan::EvalVortexCriteria(){
     deformation[loopA] = new double[kNumberOfDimensions];
     rotation[loopA] = new double[kNumberOfDimensions];
   }
+  // Create three new outputs
+  MRIOutput out1("QCriterion",1);
+  MRIOutput out2("L2Criterion",1);
+  MRIOutput out3("DeltaCriterion",1);
   // Loop on cells
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     EvalSpaceDerivs(loopA,firstDerivs,secondDerivs);
     EvalCellVelocityGradientDecomposition(loopA,deformation,rotation,firstDerivs);
     // Store Criteria
-    cellPoints[loopA].auxVector[0] = EvalCellVortexCriteria(loopA,kVortexQ,deformation,rotation,firstDerivs);
-    cellPoints[loopA].auxVector[1] = EvalCellVortexCriteria(loopA,kVortexL2,deformation,rotation,firstDerivs);
-    cellPoints[loopA].auxVector[2] = EvalCellVortexCriteria(loopA,kVortexDelta,deformation,rotation,firstDerivs);
+    out1.values.push_back(EvalCellVortexCriteria(loopA,kVortexQ,deformation,rotation,firstDerivs));
+    out2.values.push_back(EvalCellVortexCriteria(loopA,kVortexL2,deformation,rotation,firstDerivs));
+    out3.values.push_back(EvalCellVortexCriteria(loopA,kVortexDelta,deformation,rotation,firstDerivs));
   }
+  // Add output quantities
+  outputs.push_back(out1);
+  outputs.push_back(out2);
+  outputs.push_back(out3);
   // Deallocate
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
     delete [] firstDerivs[loopA];
@@ -153,7 +161,7 @@ void ComputeVorticity(double** firstDerivs,double* auxVector){
 // ==============
 // EVAL VORTICITY
 // ==============
-void MRIScan::EvalVorticity(){
+void MRIStructuredScan::EvalVorticity(){
   // Allocate derivatives
   double** firstDerivs = new double*[kNumberOfDimensions];
   double** secondDerivs = new double*[kNumberOfDimensions];
@@ -161,12 +169,19 @@ void MRIScan::EvalVorticity(){
     firstDerivs[loopA] = new double[kNumberOfDimensions];
     secondDerivs[loopA] = new double[kNumberOfDimensions];
   }
+  double vort[3];
+  MRIOutput out1("Vorticity",3);
   // Loop on cells
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     EvalSpaceDerivs(loopA,firstDerivs,secondDerivs);
     // Store Criteria
-    ComputeVorticity(firstDerivs,cellPoints[loopA].auxVector);
+    ComputeVorticity(firstDerivs,vort);
+    out1.values.push_back(vort[0]);
+    out1.values.push_back(vort[1]);
+    out1.values.push_back(vort[2]);
   }
+  // Add output quantities
+  outputs.push_back(out1);
   // Deallocate
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
     delete [] firstDerivs[loopA];
@@ -179,23 +194,31 @@ void MRIScan::EvalVorticity(){
 // ==============
 // EVAL ENSTROPHY
 // ==============
-void MRIScan::EvalEnstrophy(){
-  // Allocate derivatives
-  double vec[3];
+void MRIStructuredScan::EvalEnstrophy(){
+  // Allocate derivatives  
   double** firstDerivs = new double*[kNumberOfDimensions];
   double** secondDerivs = new double*[kNumberOfDimensions];
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
     firstDerivs[loopA] = new double[kNumberOfDimensions];
     secondDerivs[loopA] = new double[kNumberOfDimensions];
   }
+  double vec[3];
+  double value = 0.0;
+  MRIOutput out1("Enstrophy",1);
   // Loop on cells
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     EvalSpaceDerivs(loopA,firstDerivs,secondDerivs);
     // Store Criteria
     ComputeVorticity(firstDerivs,vec);
     // Square Modulus
-    cellPoints[loopA].auxVector[0] = vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2];
+    out1.values.push_back(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]);
+    // Compute Sum
+    value += vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2];
   }
+  // Add output quantities
+  outputs.push_back(out1);
+  // Print
+  printf("Total Enstrophy: %e\n",value);
   // Deallocate
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
     delete [] firstDerivs[loopA];

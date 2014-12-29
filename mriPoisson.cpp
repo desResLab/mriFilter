@@ -1,12 +1,13 @@
 #include <iostream>
 #include "mriStructuredScan.h"
 #include "mpi.h"
-#include "parmetis.h"
+#include "metis.h"
 #include "schMessages.h"
 #include "mriCommunicator.h"
 
 using namespace std;
 
+/*
 // ===========================================
 // SOLVE POISSON EQUATION WITH FINITE ELEMENTS
 // ===========================================
@@ -286,3 +287,4 @@ int test(){
   return 0;
 
 }
+*/

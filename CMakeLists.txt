@@ -37,5 +37,5 @@ add_definitions("-g -Wall -m64 -v -O0 -std=c++0x -fbounds-check -Wno-unused-vari
 
 add_executable(${PROJECT_NAME} ${SRC_LIST})
 #
-target_link_libraries(mpFilterApp ${Boost_LIBRARIES} ${MPI_LIBRARIES} ${METIS_LIBRARIES} parmetis)
+target_link_libraries(mpFilterApp ${Boost_LIBRARIES} ${MPI_LIBRARIES} ${METIS_LIBRARIES} metis)
 

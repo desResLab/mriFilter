@@ -33,12 +33,22 @@ class MRISequence
     void ExportToTECPLOT(std::string outfileName);
     void ExportToVOL(std::string outfileName);
     void ExportToVTK(std::string outfileName);
+    void WriteExpansionFile(string fileName);
+
+    // SAVE QUANTITIES TO OUTPUTS
+    void saveVelocity();
     
     // DIV FREE Filtering
-    void ApplySMPFilter(MRIOptions* options, MRICommunicator* comm);
+    void ApplySMPFilter(MRIOptions* options, bool isBC, MRICommunicator* comm);
     
     // APPLY THRESHOLDING 
     void ApplyThresholding(MRIThresholdCriteria* thresholdCriteria);
+
+    // EVAL VORTEX CRITERIA
+    void EvalVortexCriteria();
+    void EvalVorticity();
+    void EvalEnstrophy();
+    void EvalSMPVortexCriteria();
     
     // PRESSURE COMPUTATION
     void ComputePressureGradients();

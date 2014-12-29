@@ -15,22 +15,37 @@
 #include "mriException.h"
 #include "schMessages.h"
 
-// ===================
-// TYPES FOR PLT FILES
-// ===================
-enum pltFileTypes{
-  pltUNIFORM,
-  pltSTRUCTURED
-};
+using namespace std;
 
-struct PLTOptionRecord{
-  int i = 0;
-  int j = 0;
-  int k = 0;
-  int N = 0;
-  int E = 0;
-  pltFileTypes type;
-};
+// ==============================================
+// READS TOKENIZED STRING AND ASSIGNS PLT OPTIONS
+// ==============================================
+void assignVTKOptions(std::vector<std::string> tokens, vtkStructuredPointsOptionRecord &vtkOptions){
+  for(size_t loopA=0;loopA<tokens.size();loopA++){
+    if(tokens[loopA] == "ASCII"){
+      vtkOptions.isASCII = true;
+      vtkOptions.isDefined[0] = true;
+    }else if(tokens[loopA].find("STRUCTURED") != string::npos){
+      vtkOptions.isValidDataset = true;
+      vtkOptions.isDefined[1] = true;
+    }else if(tokens[loopA] == "DIMENSIONS"){
+      vtkOptions.dimensions[0] = atoi(tokens[loopA+1].c_str());
+      vtkOptions.dimensions[1] = atoi(tokens[loopA+2].c_str());
+      vtkOptions.dimensions[2] = atoi(tokens[loopA+3].c_str());
+      vtkOptions.isDefined[2] = true;
+    }else if(tokens[loopA] == "ORIGIN"){
+      vtkOptions.origin[0] = atof(tokens[loopA+1].c_str());
+      vtkOptions.origin[1] = atof(tokens[loopA+2].c_str());
+      vtkOptions.origin[2] = atof(tokens[loopA+3].c_str());
+      vtkOptions.isDefined[3] = true;
+    }else if(tokens[loopA] == "SPACING"){
+      vtkOptions.spacing[0] = atof(tokens[loopA+1].c_str());
+      vtkOptions.spacing[1] = atof(tokens[loopA+2].c_str());
+      vtkOptions.spacing[2] = atof(tokens[loopA+3].c_str());
+      vtkOptions.isDefined[4] = true;
+    }
+  }
+}
 
 // ================
 // COPY CONSTRUCTOR
@@ -258,7 +273,6 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
   int totalLinesInFile = 0;
   std::string Buffer;
   while (std::getline(PltFile,Buffer)){
-    printf("%s\n",Buffer.c_str());
     if(!foundheader){
       boost::split(tokenizedString, Buffer, boost::is_any_of(" ,"), boost::token_compress_on);
       areAllFloats = true;
@@ -428,7 +442,7 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
 
   // Complete To Full Grid: Set To Zero
   totalCellPoints = TotalXCoords * TotalYCoords * TotalZCoords;
-  
+
   // Set a Zero mtCellPoint
   myCellPoint.position[0] = 0.0;
   myCellPoint.position[1] = 0.0;
@@ -453,7 +467,7 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
       }
     }
   }
-  
+
   // Finished Reading File
   WriteSchMessage(std::string("File reading completed.\n"));
 
@@ -461,9 +475,9 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
   PltFile.close();
 
   // REORDER CELLS
-  if (DoReorderCells){
-    ReorderScan();
-  }
+  //if (DoReorderCells){
+  //  ReorderScan();
+  //}
 
   // CREATING TOPOLOGY
   WriteSchMessage(std::string("\n"));
@@ -974,9 +988,9 @@ void MRIStructuredScan::ExportToVOL(std::string FileName){
   delete [] VolData.Voxels;
 };
 
-// ------------------------
+// ========================
 // Get Local Adjacent Plane
-// ------------------------
+// ========================
 void MRIStructuredScan::GetLocalStarFaces(int StarNum, int CellsX, int CellsY, int &BottomFace, int &TopFace, int &LeftFace, int &RightFace)
 {
   // Find Local Face Number
@@ -1542,14 +1556,36 @@ void MRIStructuredScan::ExportToVTK(std::string fileName){
     }
   }
 
+  // Print outputs
+  for(int loopA=0;loopA<outputs.size();loopA++){
+    // Print Header
+    if(outputs[loopA].totComponents == 1){
+      fprintf(outFile,string("SCALARS " + outputs[loopA].name + " float 1\n").c_str());
+      fprintf(outFile,"LOOKUP_TABLE default\n");
+      for (int loopB=0;loopB<totalCellPoints;loopB++){
+        fprintf(outFile,"%e\n",outputs[loopA].values[loopB]);
+      }
+    }else{
+      int count = 0;
+      fprintf(outFile,string("VECTORS " + outputs[loopA].name + " float\n").c_str());
+      for (int loopB=0;loopB<totalCellPoints;loopB++){
+        for(int loopC=0;loopC<3;loopC++){
+          fprintf(outFile,"%e ",outputs[loopA].values[count]);
+          count++;
+        }
+        fprintf(outFile,"\n");
+      }
+    }
+  }
+
   // Print Vortex Criteria
-  if (printAux){
+  /*if (printAux){
     fprintf(outFile,"VECTORS VortexCrit float\n");
     // Print pressure Gradient
     for (int loopA=0;loopA<totalCellPoints;loopA++){
       fprintf(outFile,"%e %e %e\n",cellPoints[loopA].auxVector[0],cellPoints[loopA].auxVector[1],cellPoints[loopA].auxVector[2]);
     }
-  }
+  }*/
 
 
   // Close File
@@ -1976,7 +2012,9 @@ void MRIStructuredScan::EvalSMPVortexCriteria(MRIExpansion* exp){
   int idx2 = 0;
   int idx3 = 0;
   int idx4 = 0;
+  MRIOutput out1("SMPVortexCriterion",3);
   double avVortexIndex = 0.0;
+  double totalIntensity = 0.0;
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     // Loop on the dimensions
     for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
@@ -1984,10 +2022,19 @@ void MRIStructuredScan::EvalSMPVortexCriteria(MRIExpansion* exp){
       getNeighborVortexes(loopA,loopB,idx1,idx2,idx3,idx4);
       // Average the values
       avVortexIndex = 0.25*(exp->vortexCoeff[idx1] + exp->vortexCoeff[idx2] + exp->vortexCoeff[idx3] + exp->vortexCoeff[idx4]);
+      // Get total Intensity
+      totalIntensity += (exp->vortexCoeff[idx1]*exp->vortexCoeff[idx1] +
+                         exp->vortexCoeff[idx2]*exp->vortexCoeff[idx2] +
+                         exp->vortexCoeff[idx3]*exp->vortexCoeff[idx3] +
+                         exp->vortexCoeff[idx4]*exp->vortexCoeff[idx4]);
       // Assign To cell
-      cellPoints[loopA].auxVector[loopB] = avVortexIndex;
+      out1.values.push_back(avVortexIndex);
     }
   }
+  // Add output quantities
+  outputs.push_back(out1);
+  // Printout
+  printf("Total SMP Intensities: %e\n",totalIntensity);
 }
 
 // ===============================================
@@ -2642,4 +2689,225 @@ void MRIStructuredScan::buildMetisConnectivities(int *eptr,int *eind){
   }
 }
 
+// ============================================
+// Create Grid from VTK Structured Scan Options
+// ============================================
+void MRIStructuredScan::CreateGridFromVTKStructuredPoints(vtkStructuredPointsOptionRecord opts){
+  // Assign cell totals
+  cellTotals[0] = opts.dimensions[0];
+  cellTotals[1] = opts.dimensions[1];
+  cellTotals[2] = opts.dimensions[2];
+  // Assign total number of cells
+  totalCellPoints = cellTotals[0] * cellTotals[1] * cellTotals[2];
+  // Assign Cell spacing
+  cellLengths.resize(3);
+  cellLengths[0].resize(cellTotals[0]);
+  cellLengths[1].resize(cellTotals[1]);
+  cellLengths[2].resize(cellTotals[2]);
+  for(int loopA=0;loopA<cellTotals[0];loopA++){
+    cellLengths[0][loopA] = opts.spacing[0];
+  }
+  for(int loopA=0;loopA<cellTotals[1];loopA++){
+    cellLengths[1][loopA] = opts.spacing[1];
+  }
+  for(int loopA=0;loopA<cellTotals[2];loopA++){
+    cellLengths[2][loopA] = opts.spacing[2];
+  }
+  // Set domain size
+  // Min
+  domainSizeMin[0] = opts.origin[0];
+  domainSizeMin[1] = opts.origin[1];
+  domainSizeMin[2] = opts.origin[2];
+  // Max
+  domainSizeMax[0] = opts.origin[0] + (opts.dimensions[0]-1) * opts.spacing[0];
+  domainSizeMax[1] = opts.origin[1] + (opts.dimensions[1]-1) * opts.spacing[1];
+  domainSizeMax[2] = opts.origin[2] + (opts.dimensions[2]-1) * opts.spacing[2];
+  // Allocate the cells
+  cellPoints.resize(totalCellPoints);
+  MRICell currentCell;
+  // Fill the position vectors
+  double locCoordX = opts.origin[0];
+  double locCoordY = opts.origin[1];
+  double locCoordZ = opts.origin[2];
+  for(int loopA=0;loopA<cellTotals[2];loopA++){
+    for(int loopB=0;loopB<cellTotals[1];loopB++){
+      for(int loopC=0;loopC<cellTotals[0];loopC++){
+        // Set Cell positions
+        currentCell.position[0] = locCoordX;
+        currentCell.position[1] = locCoordY;
+        currentCell.position[2] = locCoordZ;
+        cellPoints.push_back(currentCell);
+        locCoordX += opts.spacing[0];
+      }
+      locCoordY += opts.spacing[1];
+    }
+    locCoordZ += opts.spacing[2];
+  }
+}
 
+// Print VTK OPTIONS
+void printVTKOptions(vtkStructuredPointsOptionRecord opts){
+  printf("\n");
+  if(opts.isASCII){
+    printf("ASCII FILE FORMAT\n");
+  }else{
+    printf("BINARY FILE FORMAT\n");
+  }
+  if(opts.isValidDataset){
+    printf("STRUCTURED POINTS\n");
+  }else{
+    printf("OTHER VTK FORMAT\n");
+  }
+  printf("GRID SIZE: %d %d %d\n",opts.dimensions[0],opts.dimensions[1],opts.dimensions[2]);
+  printf("GRID ORIGIN: %e %e %e\n",opts.origin[0],opts.origin[1],opts.origin[2]);
+  printf("GRID SPACING: %e %e %e\n",opts.spacing[0],opts.spacing[1],opts.spacing[2]);
+  printf("\n");
+}
+
+
+// ==========================
+// READ VTK STRUCTURED POINTS
+// ==========================
+void MRIStructuredScan::ReadVTKStructuredPoints(std::string vtkFileName, bool DoReorderCells){
+  // Init Line Count
+  int lineCount = 0;
+  totalCellPoints = 0;
+
+  // Assign File
+  std::ifstream vtkFile;
+  WriteSchMessage(std::string("Open File: ") + vtkFileName + std::string("\n"));
+  vtkFile.open(vtkFileName.c_str());
+
+  // Declare and create vtkOption Vector
+  vtkStructuredPointsOptionRecord vtkOptions;
+  for(int loopA=0;loopA<vtkOptions.numDefined;loopA++){
+    vtkOptions.isDefined[loopA] = false;
+  }
+
+  // Read Through and look for options
+  std::vector<std::string> tokenizedString;
+  bool foundAllOptions = false;
+  int headerCount = 0;
+  WriteSchMessage(std::string("Computing input file size..."));
+  int totalLinesInFile = 0;
+  std::string Buffer;
+  while (std::getline(vtkFile,Buffer)){
+    if(!foundAllOptions){
+      boost::split(tokenizedString, Buffer, boost::is_any_of(" ,"), boost::token_compress_on);
+      // Check if you find options
+      assignVTKOptions(tokenizedString, vtkOptions);
+      // Check if all options were found
+      foundAllOptions = true;
+      for(size_t loopA=0;loopA<vtkOptions.numDefined;loopA++){
+        foundAllOptions = (foundAllOptions && (vtkOptions.isDefined[loopA]));
+      }
+      headerCount++;
+    }
+    // Increase cell and line number
+    totalCellPoints++;
+    totalLinesInFile++;
+  }
+
+  // Done: Computing Input File Size
+  WriteSchMessage(std::string("Done.\n"));
+
+  // Check if all properties were defined
+  bool fileOK = true;
+  for(int loopA=0;loopA<vtkOptions.numDefined;loopA++){
+    fileOK = fileOK && vtkOptions.isDefined[loopA];
+    if(!fileOK){
+      printf("ERROR: DEFINITION %d\n",loopA);
+    }
+  }
+  if(!fileOK){
+    WriteSchMessage(std::string("ERROR: Invalid VTK File format.\n"));
+    WriteSchMessage(std::string("\n"));
+    exit(1);
+  }
+
+  // Print VTK OPTIONS
+  printVTKOptions(vtkOptions);
+
+  // Creating Grid Geometry from Options
+  WriteSchMessage(std::string("Creating Grid Geometry ..."));
+  CreateGridFromVTKStructuredPoints(vtkOptions);
+  WriteSchMessage(std::string("Done.\n"));
+
+  // Reset File
+  vtkFile.clear();
+  vtkFile.seekg(0, std::ios::beg);
+
+  // Skip Comments
+  for(int loopA=0;loopA<headerCount;loopA++){
+    std::getline(vtkFile,Buffer);
+    lineCount++;
+  }
+
+  // Read All Lines
+  int LocalCount = 0;
+  int precentProgress = 0;
+  int percentCounted = 0;
+  double currModulus = 0.0;
+
+  // Reading Input File Message
+  WriteSchMessage(std::string("Reading input file...\n"));
+  std::getline(vtkFile,Buffer);
+
+  while (std::getline(vtkFile,Buffer)){
+
+    // Read Line
+    lineCount++;
+
+    // Write Progress
+    precentProgress = (int)(((double)lineCount/(double)totalLinesInFile)*100);
+    if (((precentProgress % 10) == 0)&&((precentProgress / 10) != percentCounted)){
+      percentCounted = (precentProgress / 10);
+      WriteSchMessage(std::string("Reading..." + to_string(precentProgress) + "\n"));
+    }
+
+    // Tokenize Line
+    boost::trim(Buffer);
+    boost::split(tokenizedString, Buffer, boost::is_any_of(" ,"), boost::token_compress_on);
+
+    // Store Local Structure
+    try{
+      cellPoints[LocalCount].velocity[0] = atof(tokenizedString[0].c_str());
+      cellPoints[LocalCount].velocity[1] = atof(tokenizedString[1].c_str());
+      cellPoints[LocalCount].velocity[2] = atof(tokenizedString[2].c_str());
+      currModulus = sqrt((cellPoints[LocalCount].velocity[0]*cellPoints[LocalCount].velocity[0]) +
+                         (cellPoints[LocalCount].velocity[1]*cellPoints[LocalCount].velocity[1]) +
+                         (cellPoints[LocalCount].velocity[2]*cellPoints[LocalCount].velocity[2]));
+      if(currModulus > maxVelModule){
+        maxVelModule = currModulus;
+      }
+      // Update Local count
+      LocalCount++;
+    }catch (...){
+      std::string outString = "WARNING[*] Error Reading Line: "+to_string(lineCount)+"; Line Skipped.\n";
+      printf("%s",outString.c_str());
+    }
+  }
+
+  // Finished Reading File
+  WriteSchMessage(std::string("File reading completed.\n"));
+
+  // Close File
+  vtkFile.close();
+
+  // REORDER CELLS
+  if (DoReorderCells){
+    ReorderScan();
+  }
+
+  // CREATING TOPOLOGY
+  WriteSchMessage(std::string("\n"));
+  WriteSchMessage(std::string("---------------------\n"));
+  WriteSchMessage(std::string(" Creating Topology...\n"));
+  WriteSchMessage(std::string("---------------------\n"));
+  CreateTopology();
+
+  // WRITE STATISTICS
+  std::string CurrentStats = WriteStatistics();
+  WriteSchMessage(CurrentStats);
+
+}

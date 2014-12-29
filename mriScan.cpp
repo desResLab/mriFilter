@@ -199,3 +199,22 @@ void MRIScan::ComputeQuantityGradient(int qtyID){
     cellPoints[loopA].setQuantity(kQtyPressGradientZ,gradient[2]);
   }
 }
+
+// ==========================
+// SAVE QUANTITIES TO OUTPUTS
+// ==========================
+void MRIScan::saveVelocity(){
+  MRIOutput out1("Original_Velocity",3);
+  double totalVel = 0.0;
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    out1.values.push_back(cellPoints[loopA].velocity[0]);
+    out1.values.push_back(cellPoints[loopA].velocity[1]);
+    out1.values.push_back(cellPoints[loopA].velocity[2]);
+    totalVel += (cellPoints[loopA].velocity[0]*cellPoints[loopA].velocity[0] +
+                 cellPoints[loopA].velocity[1]*cellPoints[loopA].velocity[1] +
+                 cellPoints[loopA].velocity[2]*cellPoints[loopA].velocity[2]);
+  }
+  // Add output quantities
+  outputs.push_back(out1);
+  printf("Velocity Energy: %e\n",totalVel);
+}

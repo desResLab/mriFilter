@@ -539,7 +539,7 @@ void MRIStructuredScan::AssembleResidualVector(bool useBCFilter, MRIThresholdCri
 // =================
 // PHYSICS FILTERING
 // =================
-void MRIStructuredScan::applySMPFilter(MRIOptions* options, MRICommunicator* comm){
+void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommunicator* comm){
   // Initialization
   int totalFaces = 0;
   double* resVec = nullptr;
@@ -560,24 +560,21 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, MRICommunicator* com
   double relTwoNorm = 0.0;
   
   // Only Master Process Assembles Residual Vector and Distribute it across the network
-  if(comm->currProc == 0){
+  //if(comm->currProc == 0){
     // Assemble Face Flux Vectors
-    AssembleResidualVector(options->useBCFilter,options->thresholdCriteria,totalFaces,resVec,filteredVec,resNorm);
+    AssembleResidualVector(isBC,options->thresholdCriteria,totalFaces,resVec,filteredVec,resNorm);
 
     // Distribute it across the network
-    mpiError = MPI_Bcast(&resVec,totalFaces, MPI_REAL,0,comm->mpiComm);
-    MRIUtils::checkMpiError(mpiError);
-  }
+    //mpiError = MPI_Bcast(&resVec,totalFaces, MPI_REAL,0,comm->mpiComm);
+    //MRIUtils::checkMpiError(mpiError);
+  //}
 
   // Print Residual Vector
   PrintResidualVector(std::string("resVectorFile_"+std::to_string(comm->currProc)+".txt").c_str(),totalFaces,resVec);
 
-  printf("Ciao!");
-  exit(1);
-
   // Initial Residual
   WriteSchMessage("\n");
-  if (options->useBCFilter){
+  if (isBC){
     WriteSchMessage("FILTER ALGORITHM - BC - Step: "+MRIUtils::FloatToStr(scanTime)+" ---------------------------\n");
   }else{
     WriteSchMessage("FILTER ALGORITHM - FULL - Step "+MRIUtils::FloatToStr(scanTime)+" ---------------------------\n");
@@ -591,7 +588,7 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, MRICommunicator* com
   // Initialize Expansion
   MRIExpansion* bcExpansion = NULL;
   int totalVortexes = EvalTotalVortex();
-  if(!options->useBCFilter){
+  if(!isBC){
     expansion = new MRIExpansion(totalVortexes);
   }else{
     bcExpansion = new MRIExpansion(totalVortexes);
@@ -605,11 +602,11 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, MRICommunicator* com
   // TEMPORARY!!!
   bool stopIterations = false;
   // Set Tolerance
-  double itTol = options->tolerance;
+  double itTol = options->itTol;
   // Initialize Component Count
   int componentCount = 0;
   // Start Filter Loop
-  while((!converged)&&(itCount<options->maxIterations)&&(!stopIterations)){
+  while((!converged)&&(itCount<options->maxIt)&&(!stopIterations)){
 
     // Update Iteration Count
     itCount++;
@@ -626,7 +623,7 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, MRICommunicator* com
         corrCoeff = EvalCorrelationCoefficient(resVec,totalStarFaces,facesID,facesCoeffs);
         // Store Correlation coefficient in Expansion
         // sistemare per BCFilter !!!
-        if(!options->useBCFilter){
+        if(!isBC){
           expansion->constantFluxCoeff[loopB] += corrCoeff;
         }else{
           bcExpansion->constantFluxCoeff[loopB] += corrCoeff;
@@ -647,7 +644,7 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, MRICommunicator* com
       corrCoeff = EvalCorrelationCoefficient(resVec,totalStarFaces,facesID,facesCoeffs);
       //corrCoeff = 1.0;
       // Store Correlation coefficient in Expansion
-      if(!options->useBCFilter){
+      if(!isBC){
         expansion->vortexCoeff[componentCount] += corrCoeff;
       }else{
         bcExpansion->vortexCoeff[componentCount] += corrCoeff;
@@ -657,7 +654,7 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, MRICommunicator* com
     }
 
     // Eval Two-Norm of the Coefficient Vector
-    if(!options->useBCFilter){
+    if(!isBC){
       twoNorm = expansion->Get2Norm(false);
     }else{
       twoNorm = bcExpansion->Get2Norm(false);
@@ -714,7 +711,7 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, MRICommunicator* com
   WriteSchMessage("Max Divergence: " + MRIUtils::FloatToStr(maxDivergence) + "\n");
 
   // Make Diffence between Coefficient Expansions
-  if(options->useBCFilter){
+  if(isBC){
     for(int loopA=0;loopA<3;loopA++){
       expansion->constantFluxCoeff[loopA] -= bcExpansion->constantFluxCoeff[loopA];
     }
@@ -724,7 +721,7 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, MRICommunicator* com
   }
 
   // Recover Velocities from Face Fluxes
-  RecoverCellVelocitiesRT0(options->useBCFilter,filteredVec);
+  RecoverCellVelocitiesRT0(isBC,filteredVec);
 
   // WRITE CPU TIME AND NUMBER OF ITERATIONS
   float totalCPUTime = float( clock () - begin_time ) /  CLOCKS_PER_SEC;

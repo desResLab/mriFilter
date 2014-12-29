@@ -33,8 +33,37 @@ namespace MRIUtils{
 // WRITE PROGRAM HELP
 // ==================
 inline void WriteProgramHelp(){
-   printf("MRIApp v0.0.4 - Daniele Schiavazzi - 2012\n");
-   printf("usage MRIApp [options] [files]||[sequence]\n");
+   printf("\n");
+   printf("usage mpFilterApp [options]\n");
+   printf("Options\n");
+   printf("-i --input       Set input file name\n");
+   printf("-o --output      Set output file name\n");
+   printf("-c --command     Set command file name\n");
+   printf("--filter         Apply SMP filter\n");
+   printf("--bcfilter       Apply SMP BC filter\n");
+   printf("--iterationTol   Set Iteration tolerance (default: 1.0e-3)\n");
+   printf("--maxIterations  Set maximum number of iteration (default: 2000)\n");
+   printf("--thresholdQty   Set threshold quantity\n");
+   printf("                 -1 = No Threshold\n");
+   printf("                  0 = X Coordinate\n");
+   printf("                  1 = Y Coordinate\n");
+   printf("                  2 = Z Coordinate\n");
+   printf("                  3 = Concentration\n");
+   printf("                  4 = X Velocity\n");
+   printf("                  5 = Y Velocity\n");
+   printf("                  6 = Z Velocity\n");
+   printf("--thresholdType   Set threshold type\n");
+   printf("                 -1 = Less than\n");
+   printf("                  0 = Greater than\n");
+   printf("                  1 = ABS Less than\n");
+   printf("                  2 = ABS Greater than\n");
+   printf("--iformat        Set input file format\n");
+   printf("                  0 = TECPLOT File Format\n");
+   printf("                  1 = VTK File Format\n");
+   printf("--oformat        Set output file format\n");
+   printf("                  0 = TECPLOT File Format\n");
+   printf("                  1 = VTK File Format\n");
+   printf("\n");
 }
 
 // ==================

@@ -23,32 +23,37 @@ double MRIScan::EvalAverageVelocityMod(){
 // APPLY THRESHOLDING
 void MRIScan::ApplyThresholding(MRIThresholdCriteria* thresholdCriteria){
   WriteSchMessage(std::string("\n"));
-  WriteSchMessage(std::string("APPLYING THRESHOLD - Step : "+MRIUtils::FloatToStr(scanTime)+" ---\n"));
+  WriteSchMessage(std::string("APPLYING THRESHOLD - Scan Time : "+MRIUtils::FloatToStr(scanTime)+" ---\n"));
   // Init Number Of Filtered
   int numberOfFiltered = 0;
   // Apply Threshold
   double currentValue = 0.0;
+  // If No Quantity then return
+  if(thresholdCriteria->thresholdQty == kNoQuantity){
+    return;
+  }
+  // Loop through the cells
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     switch(thresholdCriteria->thresholdQty){
-      case 0: 
+      case kQtyPositionX:
         currentValue = cellPoints[loopA].position[0];
         break;
-      case 1: 
+      case kQtyPositionY:
         currentValue = cellPoints[loopA].position[1];
         break;
-      case 2: 
+      case kQtyPositionZ:
         currentValue = cellPoints[loopA].position[2];
         break;
-      case 3: 
+      case kQtyConcentration:
         currentValue = cellPoints[loopA].concentration;
         break;
-      case 4: 
+      case kQtyVelocityX:
         currentValue = cellPoints[loopA].velocity[0];
         break;
-      case 5: 
+      case kQtyVelocityY:
         currentValue = cellPoints[loopA].velocity[1];
         break;
-      case 6: 
+      case kQtyVelocityZ:
         currentValue = cellPoints[loopA].velocity[2];
         break;
     }

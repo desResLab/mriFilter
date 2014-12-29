@@ -27,6 +27,7 @@
   const int kfacePlusZ =  4;
   const int kfaceMinusZ = 5;
   // Quantities
+  const int kNoQuantity =  -1;
   const int kQtyPositionX =  0;
   const int kQtyPositionY =  1;
   const int kQtyPositionZ =  2;
@@ -45,11 +46,6 @@
   const int kdirY = 1;
   const int kdirZ = 2;
   const int kdirT = 3;
-  // Threshold Criteria
-  const int kCriterionLessThen = 0;
-  const int kCriterionGreaterThen = 1;
-  const int kCriterionABSLessThen = 2;
-  const int kCriterionABSGreaterThen = 3;
   // Records From Vol Data
   const int kVolAnatomy = 0;
   const int kVolVelocityX = 1;
@@ -90,29 +86,5 @@
   typedef const int MRISamples;
   typedef const int MRIPlane;
   typedef boost::variate_generator<boost::mt19937, boost::normal_distribution<> > stdRndGenerator;
-
-  // Run Modes
-  const int rmEVALSEQUENCEPRESSURE          = 0;
-  const int rmEVALPRESSUREFROMSIGNATUREFLOW = 1;
-  const int rmPROCESSSINGLESCAN             = 2;
-  const int rmPLTTOVTK                      = 3;
-  const int rmEVALSCANSTATISTICS            = 4;
-  const int rmCOMUTESCANMATRICES            = 5;
-  const int rmPERFORMRANDOMTEST             = 6;
-  const int rmCROPANDCOMPUTEVOLUME          = 7;
-  const int rmSTREAMLINETEST1               = 8;
-  const int rmSTREAMLINETEST2               = 9;
-  const int rmPRINTTHRESHOLDINGTOVTK        = 10;
-  const int rmEVALREYNOLDSSTRESSES          = 11;
-  const int rmSHOWFACEFLUXPATTERS           = 12;
-  const int rmBUILDFROMCOEFFICIENTS         = 13;
-  const int rmEVALPRESSURE                  = 14;
-  const int rmEVALCONCGRADIENT              = 15;
-  const int rmEVALVORTEXCRITERIA            = 16;
-  const int rmWRITESPATIALEXPANSION         = 17;
-  const int rmSOLVEPOISSON                  = 18;
-
-  // Export File Formats
-  const int efTECPLOT = 0;
   
 #endif // MRICONST_H

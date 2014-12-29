@@ -1,6 +1,12 @@
 #ifndef MRITHRESHOLDCRITERIA_H
 #define MRITHRESHOLDCRITERIA_H
 
+// Threshold Criteria
+const int kCriterionLessThen = 0;
+const int kCriterionGreaterThen = 1;
+const int kCriterionABSLessThen = 2;
+const int kCriterionABSGreaterThen = 3;
+
 class MRIThresholdCriteria
 {
 public:

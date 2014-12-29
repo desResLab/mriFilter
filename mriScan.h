@@ -12,11 +12,15 @@
 #include "mriStreamline.h"
 #include "mriStreamlineOptions.h"
 #include "mriThresholdCriteria.h"
+#include "mriCommunicator.h"
 #include "mriConstants.h"
 #include "mriImagedata.h"
 #include "mriExpansion.h"
 #include "mriException.h"
 #include "mriOptions.h"
+#include "mriOutput.h"
+
+using namespace std;
 
 // =====================================================
 // MAIN CLASS FOR BOTH UNSTRUCTURED AND STRUCTURED SCANS
@@ -39,7 +43,9 @@ class MRIScan{
     double maxVelModule;
     // Velocities And Concentrations for all Measure Points
     int totalCellPoints;
-    std::vector<MRICell> cellPoints;
+    vector<MRICell> cellPoints;
+    // Output Quantities
+    vector<MRIOutput> outputs;
     // Utility Functions
     bool hasPressureGradient;
     bool hasRelativePressure;
@@ -73,6 +79,9 @@ class MRIScan{
     int  findFirstNotVisite(int cellTotal, bool* visitedCell, std::vector<int> cellStack);
     void GetUnitVector(int CurrentCell, double* GlobalFaceCoords, double* &myVect);
 
+    // SAVE QUANTITIES TO OUTPUTS
+    void saveVelocity();
+
     // SAMPLING
     void SampleVelocities(MRISamplingOptions SamplingOptions);
 
@@ -94,21 +103,21 @@ class MRIScan{
     void ApplyGaussianNoise(double stDev);
 
     // SMP FILTER
-    virtual void applySMPFilter(MRIOptions* options){};
-    virtual void RecoverGlobalErrorEstimates(double& AvNormError, double& AvAngleError){};
+    virtual void applySMPFilter(MRIOptions* options, bool isBC, MRICommunicator* comm){}
+    virtual void RecoverGlobalErrorEstimates(double& AvNormError, double& AvAngleError){}
 
     // RECONSTRUCT FROM EXPANSION
     void ReconstructFromExpansion();
 
     // TENSORS AND VORTEX CRITERIA
-    void   EvalCellVelocityGradientDecomposition(int currentCell, double** deformation, double** rotation, double** firstDerivs);
-    double EvalCellQCriterion(int currentCell, double** deformation, double** rotation);
-    double EvalCellL2Criterion(int currentCell, double** deformation, double** rotation);
-    double EvalCellDeltaCriterion(int currentCell, double** deformation, double** rotation, double** velGradient);
-    double EvalCellVortexCriteria(int currentCell,int criteriaType, double** deformation, double** rotation, double** velGradient);
-    void   EvalVortexCriteria();
-    void   EvalVorticity();
-    void   EvalEnstrophy();
+    virtual void   EvalCellVelocityGradientDecomposition(int currentCell, double** deformation, double** rotation, double** firstDerivs){throw MRIException("Error: Not Implemented!");}
+    virtual double EvalCellQCriterion(int currentCell, double** deformation, double** rotation){throw MRIException("Error: Not Implemented!");}
+    virtual double EvalCellL2Criterion(int currentCell, double** deformation, double** rotation){throw MRIException("Error: Not Implemented!");}
+    virtual double EvalCellDeltaCriterion(int currentCell, double** deformation, double** rotation, double** velGradient){throw MRIException("Error: Not Implemented!");}
+    virtual double EvalCellVortexCriteria(int currentCell,int criteriaType, double** deformation, double** rotation, double** velGradient){throw MRIException("Error: Not Implemented!");}
+    virtual void   EvalVortexCriteria(){throw MRIException("Error: Not Implemented!");}
+    virtual void   EvalVorticity(){throw MRIException("Error: Not Implemented!");}
+    virtual void   EvalEnstrophy(){throw MRIException("Error: Not Implemented!");}
 
     // =================
     // VIRTUAL FUNCTIONS
@@ -154,7 +163,7 @@ class MRIScan{
     virtual void   RecoverCellVelocitiesRT0(bool useBCFilter, double* filteredVec){throw MRIException("Error: Not Implemented!");}
 
     // TENSOR AND VORTEX
-    void EvalSMPVortexCriteria(MRIExpansion* exp){throw MRIException("Error: Not Implemented!");}
+    virtual void EvalSMPVortexCriteria(MRIExpansion* exp){throw MRIException("Error: Not Implemented!");}
 };
 
 #endif // MRISCAN_H

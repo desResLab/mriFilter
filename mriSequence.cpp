@@ -1,4 +1,5 @@
 #include <fstream>
+#include <string>
 #include <cmath>
 #include <mriUtils.h>
 #include <mriConstants.h>
@@ -182,23 +183,39 @@ void MRISequence::ExportToVOL(std::string outfileName){
 // EXPORT TO SEQUENCE OF VTK FILES
 void MRISequence::ExportToVTK(std::string outfileName){
   // Export All Data
+  string outputName;
+  int index = 0;
   WriteSchMessage("\n");
   for(int loopA=0;loopA<totalScans;loopA++){
-    sequence[loopA]->ExportToVTK(outfileName+"_Step"+MRIUtils::IntToStr(loopA));
+    outputName = outfileName;
+    index = outputName.size();
+    outputName.insert(index-4,string("_Step" + to_string(loopA)).c_str());
+    sequence[loopA]->ExportToVTK(outputName);
   }
 }
 
 // PHYSICS FILTERING FOR ALL SCANS
-void MRISequence::ApplySMPFilter(MRIOptions* options, MRICommunicator* comm){
+void MRISequence::ApplySMPFilter(MRIOptions* options, bool isBC, MRICommunicator* comm){
   // Export All Data
   WriteSchMessage("\n");
   for(int loopA=0;loopA<totalScans;loopA++){
     // Perform Filter
-    sequence[loopA]->applySMPFilter(options);
+    sequence[loopA]->applySMPFilter(options,isBC,comm);
     // Update Velocities
     sequence[loopA]->UpdateVelocities();
   }
 }
+
+// SAVE INITIAL VELOCITIES
+void MRISequence::saveVelocity(){
+  // Export All Data
+  WriteSchMessage("\n");
+  for(int loopA=0;loopA<totalScans;loopA++){
+    // Perform Filter
+    sequence[loopA]->saveVelocity();
+  }
+}
+
 
 // APPLY THRESHOLDING TO ALL SCANS
 void MRISequence::ApplyThresholding(MRIThresholdCriteria* thresholdCriteria){
@@ -206,6 +223,51 @@ void MRISequence::ApplyThresholding(MRIThresholdCriteria* thresholdCriteria){
   WriteSchMessage("\n");
   for(int loopA=0;loopA<totalScans;loopA++){
     sequence[loopA]->ApplyThresholding(thresholdCriteria);
+  }
+}
+
+// EVAL VORTEX CRITERIA
+void MRISequence::EvalVortexCriteria(){
+  // Export All Data
+  WriteSchMessage("\n");
+  for(int loopA=0;loopA<totalScans;loopA++){
+    sequence[loopA]->EvalVortexCriteria();
+  }
+}
+
+// EVAL VORTICITY
+void MRISequence::EvalVorticity(){
+  // Export All Data
+  WriteSchMessage("\n");
+  for(int loopA=0;loopA<totalScans;loopA++){
+    sequence[loopA]->EvalVorticity();
+  }
+}
+
+// EVAL ENSTROPHY
+void MRISequence::EvalEnstrophy(){
+  // Export All Data
+  WriteSchMessage("\n");
+  for(int loopA=0;loopA<totalScans;loopA++){
+    sequence[loopA]->EvalEnstrophy();
+  }
+}
+
+// EVAL SMP VORTEX CRITERION
+void MRISequence::EvalSMPVortexCriteria(){
+  // Export All Data
+  WriteSchMessage("\n");
+  for(int loopA=0;loopA<totalScans;loopA++){
+    sequence[loopA]->EvalSMPVortexCriteria(sequence[loopA]->expansion);
+  }
+}
+
+// EVAL EXPANSION FILE
+void MRISequence::WriteExpansionFile(string fileName){
+  // Export All Data
+  WriteSchMessage("\n");
+  for(int loopA=0;loopA<totalScans;loopA++){
+    sequence[loopA]->WriteExpansionFile(fileName);
   }
 }
 

@@ -6,7 +6,7 @@
 #include "mriUtils.h"
 #include "mriStatistics.h"
 #include "mriConstants.h"
-#include "mriProgramOptions.h"
+#include "mriOptions.h"
 #include "schMessages.h"
 #include "mpi.h"
 #include "mriCommunicator.h"
@@ -32,21 +32,20 @@ void ConvertDICOMToVTK(std::string inFileName,std::string outfileName){
 // ============================
 // CONVERT TECPLOT ASCII TO VTK
 // ============================
-void ConvertTECPLOToVTK(std::string inFileName,std::string outfileName){
+void ConvertTECPLOToVTK(MRIOptions* opts){
 
   // Add File to Sequence
   MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
 
   // Read from Raw Binary File
-  MyMRIScan->ReadPltFile(inFileName,true);
+  MyMRIScan->ReadPltFile(opts->inputFileName,true);
 
   WriteSchMessage(std::string("ECCOLO\n"));
   WriteSchMessage(std::to_string(MyMRIScan->cellPoints[300].velocity[1]) + std::string("\n"));
 
   // Export to VTK
-  MyMRIScan->ExportToVTK(outfileName.c_str());
+  MyMRIScan->ExportToVTK(opts->outputFileName);
   //MyMRIScan->ExportToTECPLOT(outfileName.c_str(),true);
-
 }
 
 // ======================
@@ -54,41 +53,35 @@ void ConvertTECPLOToVTK(std::string inFileName,std::string outfileName){
 // ======================
 void SolvePoissonEquation(MRICommunicator* comm){
   MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
-  MyMRIScan->SolvePoissonEquation(comm);
+  //MyMRIScan->SolvePoissonEquation(comm);
 }
 
 
 // =====================================
 // PROCESS SEQUENCE TO PRODUCE PRESSURES
 // =====================================
-void EvalSequencePressure(std::string inFileName, std::string outfileName, MRICommunicator* comm){
+void EvalSequencePressure(MRIOptions* opts, MRICommunicator* comm){
 
   // Create New Sequence
   MRISequence* MyMRISequence = new MRISequence(true/*Cyclic Sequence*/);
 
   // Read From VOL Files
-  MyMRISequence->ReadFromVolSequence(inFileName);
-
-  // Apply MP Filter to all Scan Separately
-  // SET OPTIONS AND THRESHOLD
-  MRIOptions* options = new MRIOptions(1.0e-4,2000);
-  options->useBCFilter = false;
-  options->useConstantPatterns = true;
-  options->thresholdCriteria = new MRIThresholdCriteria(kCriterionLessThen,kQtyConcentration,500.0);
+  MyMRISequence->ReadFromVolSequence(opts->inputFileName);
 
   // PRELIMINARY THRESHOLDING
-  MyMRISequence->ApplyThresholding(options->thresholdCriteria);
+  MyMRISequence->ApplyThresholding(opts->thresholdCriteria);
 
   // APPLY FULL FILTER
-  MyMRISequence->ApplySMPFilter(options,comm);
+  MyMRISequence->ApplySMPFilter(opts,false,comm);
 
   // Apply Boundary Condition Filter to all scans
-  options->useBCFilter = true;
-  // APPLY FILTER
-  MyMRISequence->ApplySMPFilter(options,comm);
+  if(opts->applyBCFilter){
+    // APPLY FILTER
+    MyMRISequence->ApplySMPFilter(opts,true,comm);
+  }
 
   // Apply Final Threshold
-  MyMRISequence->ApplyThresholding(options->thresholdCriteria);
+  MyMRISequence->ApplyThresholding(opts->thresholdCriteria);
 
   // Compute Pressure Gradient
   MyMRISequence->ComputePressureGradients();
@@ -97,13 +90,13 @@ void EvalSequencePressure(std::string inFileName, std::string outfileName, MRICo
   MyMRISequence->ComputeRelativePressure(false);
 
   // Export Sequence To VOL File
-  MyMRISequence->ExportToVOL(outfileName);
+  MyMRISequence->ExportToVOL(opts->outputFileName);
 }
 
 // ====================================
 // PROCESS SIGNATURE FLOW FOR PRESSURES
 // ====================================
-void EvalPressureFromSignatureFlow(std::string inFileName,std::string outfileName){
+void EvalPressureFromSignatureFlow(MRIOptions* opts){
 
   // Set Parameters
   int totalSlides = 1;
@@ -139,12 +132,6 @@ void EvalPressureFromSignatureFlow(std::string inFileName,std::string outfileNam
   // USE DIVERGENCE SMOOTHING FILTER
   //MyMRIScan->ApplySmoothingFilter();
 
-  // SET OPTIONS AND THRESHOLD
-  MRIOptions Options(1.0e-4,2000);
-  bool useBCFilter = false;
-  bool useConstantPatterns = true;
-  MRIThresholdCriteria criteria(kCriterionLessThen,kQtyConcentration,1000.0);
-
   // APPLY FILTER
   //MyMRIScan->PerformPhysicsFiltering(Options,useBCFilter,useConstantPatterns,criteria);
 
@@ -164,75 +151,9 @@ void EvalPressureFromSignatureFlow(std::string inFileName,std::string outfileNam
   // =========================
   // Select the resulting File
   // =========================
-  MyMRISequence->ExportToTECPLOT(outfileName);
+  MyMRISequence->ExportToTECPLOT(opts->outputFileName);
 }
 
-// ===================
-// PROCESS SINGLE SCAN
-// ===================
-void ProcessSingleScan(std::string inFileName,std::string outfileName,
-                       double itTol, int maxIt, std::string thresholdTypeString,double thresholdValue,
-                       MRICommunicator* comm){
-
-  // Create New Sequence - Everyone
-  MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
-
-  // Create New Scan - Everyone
-  MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
-
-  // Master Processor reads file
-  if(comm->currProc == 0){
-    // Read Measurement Grid
-    MyMRIScan->ReadPltFile(inFileName, true);
-
-    // Echo Inserted Parameters
-    WriteSchMessage(std::string("--------------------------------------------\n"));
-    WriteSchMessage(std::string("MP Iteration tolerance Value: ")+MRIUtils::FloatToStr(itTol)+"\n");
-    WriteSchMessage(std::string("Threshold Value             : ")+MRIUtils::FloatToStr(thresholdValue)+"\n");
-    WriteSchMessage(std::string("--------------------------------------------\n"));
-  }
-
-  // Add New Scan - Empty for everyone except Master Process
-  MyMRISequence->AddScan(MyMRIScan);
-
-  // SET OPTIONS AND THRESHOLD
-  MRIOptions* options = new MRIOptions(itTol,maxIt);
-  options->useBCFilter = false;
-  options->useConstantPatterns = true;
-  int thresholdType = 0;
-  if (thresholdTypeString == "conc"){
-    thresholdType = kQtyConcentration;
-  }else{
-    thresholdType = kQtyVelModule;
-  }
-  options->thresholdCriteria = new MRIThresholdCriteria(kCriterionABSLessThen,thresholdType,thresholdValue);
-
-  // APPLY FULL FILTER
-  MyMRISequence->ApplySMPFilter(options,comm);
-
-  // APPLY BOUNDARY CONDITION FILTER
-  options->useBCFilter = true;
-  MyMRISequence->ApplySMPFilter(options,comm);
-
-  // SAVE EXPANSION TO FILE
-  MyMRISequence->GetScan(0)->WriteExpansionFile(std::string("ExpansionFile.dat"));
-
-  // APPLY FINAL THRESHOLD
-  MyMRISequence->ApplyThresholding(options->thresholdCriteria);
-
-  // Evaluate Statistics
-  //MyMRISequence->EvalStatistics();
-
-  // Compute Pressure Gradient
-  //MyMRISequence->ComputePressureGradients();
-
-  // Compute Relative Pressure
-  //MyMRISequence->ComputeRelativePressure(false);
-
-  // EXPORT FILE
-  //MyMRISequence->ExportToTECPLOT(outfileName);
-  MyMRISequence->ExportToVTK(outfileName);
-}
 
 // =============================
 // EVAL STATISTICS BETWEEN SCANS
@@ -382,32 +303,18 @@ void ShowFaceFluxPatterns(std::string faceFluxFileName, std::string outFileName)
 // ===========================
 // Test Expansion Coefficients
 // ===========================
-void TEST_ExpansionCoefficients(std::string inFileName, MRICommunicator* comm){
+void TEST_ExpansionCoefficients(MRIOptions* opts, MRICommunicator* comm){
 
   // Create New Sequence
   MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
 
   // Add File to Sequence
   MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
-  MyMRIScan->ReadPltFile(inFileName, true);
+  MyMRIScan->ReadPltFile(opts->inputFileName, true);
   MyMRISequence->AddScan(MyMRIScan);
 
-  // SET OPTIONS AND THRESHOLD
-  MRIOptions* options = new MRIOptions(1.5e-2,2000);
-  bool useBCFilter = false;
-  bool useConstantPatterns = true;
-  int thresholdType = 0;
-  std::string thresholdTypeString("Conc");
-  double thresholdValue = 0.0;
-  if (thresholdTypeString == "Conc"){
-    thresholdType = kQtyConcentration;
-  }else{
-    thresholdType = kQtyVelModule;
-  }
-  MRIThresholdCriteria criteria(kCriterionLessThen,thresholdType,thresholdValue);
-
   // APPLY FULL FILTER
-  MyMRISequence->ApplySMPFilter(options,comm);
+  MyMRISequence->ApplySMPFilter(opts,false,comm);
 
   // GET FIRST SCAN
   MRIScan* firstMRIScan = new MRIScan(0.0);
@@ -447,7 +354,7 @@ void TEST_ExpansionCoefficients(std::string inFileName, MRICommunicator* comm){
 // ==================
 // PRINT THRESHOLDING
 // ==================
-void TEST02_PrintThresholdingToVTK(std::string inFileName, MRICommunicator* comm){
+void TEST02_PrintThresholdingToVTK(MRIOptions* opts, MRICommunicator* comm){
 
   // Create New Sequence
   MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
@@ -455,25 +362,11 @@ void TEST02_PrintThresholdingToVTK(std::string inFileName, MRICommunicator* comm
 
   // Add File to Sequence
   MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
-  MyMRIScan->ReadPltFile(inFileName, true);
+  MyMRIScan->ReadPltFile(opts->inputFileName, true);
   MyMRISequence->AddScan(MyMRIScan);
 
-  // SET OPTIONS AND THRESHOLD
-  MRIOptions* options = new MRIOptions(1.0e-4,2000);
-  bool useBCFilter = false;
-  bool useConstantPatterns = true;
-  int thresholdType = 0;
-  std::string thresholdTypeString("Conc");
-  double thresholdValue = 0.0;
-  if (thresholdTypeString == "Conc"){
-    thresholdType = kQtyConcentration;
-  }else{
-    thresholdType = kQtyVelModule;
-  }
-  MRIThresholdCriteria criteria(kCriterionLessThen,thresholdType,thresholdValue);
-
   // APPLY FULL FILTER
-  MyMRISequence->ApplySMPFilter(options,comm);
+  MyMRISequence->ApplySMPFilter(opts,false,comm);
 
   // APPLY SUCCESSIVE THRESHOLD
   for(int loopA=0;loopA<5;loopA++){
@@ -499,7 +392,7 @@ void TEST02_PrintThresholdingToVTK(std::string inFileName, MRICommunicator* comm
 // ======================
 // EVAL REYNOLDS STRESSES
 // ======================
-void TEST03_EvalReynoldsStresses(std::string inFileName, MRICommunicator* comm){
+void TEST03_EvalReynoldsStresses(MRIOptions* opts, MRICommunicator* comm){
 
   // CREATE NEW SEQUENCES
   MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
@@ -507,25 +400,11 @@ void TEST03_EvalReynoldsStresses(std::string inFileName, MRICommunicator* comm){
 
   // ADD FILE TO SEQUENCE
   MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
-  MyMRIScan->ReadPltFile(inFileName, true);
+  MyMRIScan->ReadPltFile(opts->inputFileName, true);
   MyMRISequence->AddScan(MyMRIScan);
 
-  // SET OPTIONS AND THRESHOLD
-  MRIOptions* options = new MRIOptions(5.0e-1,2000);
-  options->useBCFilter = false;
-  options->useConstantPatterns = true;
-  int thresholdType = 0;
-  std::string thresholdTypeString("Conc");
-  double thresholdValue = 0.0;
-  if (thresholdTypeString == "Conc"){
-    thresholdType = kQtyConcentration;
-  }else{
-    thresholdType = kQtyVelModule;
-  }
-  options->thresholdCriteria = new MRIThresholdCriteria(kCriterionLessThen,thresholdType,thresholdValue);
-
   // APPLY FULL FILTER
-  MyMRISequence->ApplySMPFilter(options,comm);
+  MyMRISequence->ApplySMPFilter(opts,false,comm);
 
   WriteSchMessage("Filter Applied!\n");
 
@@ -564,7 +443,7 @@ void TEST03_EvalReynoldsStresses(std::string inFileName, MRICommunicator* comm){
 // ===========================================
 // EVAL REYNOLDS STRESSES FROM EXPANSION FILES
 // ===========================================
-void EvalPressureFromExpansion(mriProgramOptions* options){
+void EvalPressureFromExpansion(MRIOptions* options){
 
   // SET PARAMETERS
   bool applyThreshold = true;
@@ -607,7 +486,7 @@ void EvalPressureFromExpansion(mriProgramOptions* options){
   // EVAL RELATIVE PRESSURE
   MyMRISequence->ComputeRelativePressure(doPressureSmoothing);
 
-  if(options->exportFormat == efTECPLOT){
+  if(options->outputFormatType == otFILETECPLOT){
     // WRITE OUTPUT FILES TO TECPLOT
     MyMRISequence->ExportToTECPLOT(options->outputFileName);
   }else{
@@ -619,7 +498,7 @@ void EvalPressureFromExpansion(mriProgramOptions* options){
 // =========================================
 // EVAL PRESSURES FROM EXPANSION COFFICIENTS
 // =========================================
-void EvalConcentrationGradient(std::string inFileName,std::string outFileName){
+void EvalConcentrationGradient(MRIOptions* opts){
 
   // CREATE NEW SEQUENCES
   MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
@@ -628,7 +507,7 @@ void EvalConcentrationGradient(std::string inFileName,std::string outFileName){
 
   // ADD FILE TO SEQUENCE
   MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
-  MyMRIScan->ReadPltFile(inFileName,true);
+  MyMRIScan->ReadPltFile(opts->inputFileName,true);
   MyMRIScan->ScalePositions(0.0058);
   MyMRISequence->AddScan(MyMRIScan);
 
@@ -639,23 +518,16 @@ void EvalConcentrationGradient(std::string inFileName,std::string outFileName){
   MyMRISequence->ComputeRelativePressure(doPressureSmoothing);
 
   // WRITE OUTPUT FILES TO VTK
-  MyMRISequence->ExportToVTK(outFileName);
+  MyMRISequence->ExportToVTK(opts->outputFileName);
 
 }
-
-
 
 // ===================
 // PERFORM RANDOM TEST
 // ===================
-void PerformRandomTest(MRICommunicator* comm){
+void PerformRandomTest(MRIOptions* opts,MRICommunicator* comm){
   // Set parameters
   int numberMC = 500;
-  // SET OPTIONS AND THRESHOLD
-  MRIOptions* options = new MRIOptions(1.0e-10,2000);
-  bool useBCFilter = false;
-  bool useConstantPatterns = true;
-  MRIThresholdCriteria criteria(kCriterionLessThen,kQtyConcentration,1.0);
 
   // Generating Random Numbers
   boost::variate_generator<boost::mt19937, boost::normal_distribution<> > generator(boost::mt19937(time(0)),boost::normal_distribution<>());
@@ -679,7 +551,7 @@ void PerformRandomTest(MRICommunicator* comm){
     MyMRIScan->ExportVelocitiesToFile("InputVelocities.dat",true);
 
     // Filter Velocities - NO GLOBAL ATOMS
-    MyMRIScan->applySMPFilter(options,comm);
+    MyMRIScan->applySMPFilter(opts,false,comm);
     MyMRIScan->UpdateVelocities();
 
     // Write Resultant Velocities
@@ -694,7 +566,7 @@ void PerformRandomTest(MRICommunicator* comm){
 // ================================
 // CROP DICOM AND EVALUATE PRESSURE
 // ================================
-void CropAndComputeVol(std::string inFileName,std::string outfileName, MRICommunicator* comm){
+void CropAndComputeVol(MRIOptions* opts, MRICommunicator* comm){
   // ================
   // ANALYZE SEQUENCE
   // ================
@@ -707,7 +579,7 @@ void CropAndComputeVol(std::string inFileName,std::string outfileName, MRICommun
   // -------------------
   // Read From VOL Files
   // -------------------
-  MyMRISequence->ReadFromVolSequence(inFileName);
+  MyMRISequence->ReadFromVolSequence(opts->inputFileName);
 
   // ----------------
   // Create Limit Box
@@ -731,33 +603,28 @@ void CropAndComputeVol(std::string inFileName,std::string outfileName, MRICommun
   MyMRISequence->ScaleVelocities(0.001);
   MyMRISequence->ScalePositions(0.001);
 
-  // SET OPTIONS AND THRESHOLD
-  MRIOptions* options = new MRIOptions(1.0e-4,2000);
-  options->useBCFilter = false;
-  options->useConstantPatterns = true;
-  options->thresholdCriteria = new MRIThresholdCriteria(kCriterionLessThen,kQtyConcentration,500.0);
-
   // ------------------------
   // PRELIMINARY THRESHOLDING
   // ------------------------
-  MyMRISequence->ApplyThresholding(options->thresholdCriteria);
+  MyMRISequence->ApplyThresholding(opts->thresholdCriteria);
 
   // -----------------
   // APPLY FULL FILTER
   // -----------------
-  MyMRISequence->ApplySMPFilter(options,comm);
+  MyMRISequence->ApplySMPFilter(opts,false,comm);
 
   // --------------------------------------------
   // Apply Boundary Condition Filter to all scans
   // --------------------------------------------
-  options->useBCFilter = true;
-  // APPLY FILTER
-  MyMRISequence->ApplySMPFilter(options,comm);
+  if(opts->applyBCFilter){
+    // APPLY FILTER
+    MyMRISequence->ApplySMPFilter(opts,true,comm);
+  }
 
   // ---------------------
   // Apply Final Threshold
   // ---------------------
-  MyMRISequence->ApplyThresholding(options->thresholdCriteria);
+  MyMRISequence->ApplyThresholding(opts->thresholdCriteria);
 
   // -------------------------
   // Compute Pressure Gradient
@@ -772,7 +639,7 @@ void CropAndComputeVol(std::string inFileName,std::string outfileName, MRICommun
   // ---------------------------
   // Export Sequence To VOL File
   // ---------------------------
-  MyMRISequence->ExportToTECPLOT(outfileName.c_str());
+  MyMRISequence->ExportToTECPLOT(opts->outputFileName);
 }
 
 // =========================
@@ -922,13 +789,13 @@ void BuildFromCoeffs(std::string coeffFileName,std::string plotOut,bool performT
 // ============================
 // EVAL VARIOUS VORTEX CRITERIA
 // ============================
-void EvalVortexCriteria(std::string inFileName,std::string outFileName){
+void EvalVortexCriteria(MRIOptions* opts){
   // CREATE NEW SEQUENCES
   MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
 
   // ADD FILE TO SEQUENCE
   MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
-  MyMRIScan->ReadPltFile(inFileName,true);
+  MyMRIScan->ReadPltFile(opts->inputFileName,true);
   MyMRISequence->AddScan(MyMRIScan);
 
   // EVAL VORTEX CRITERIA
@@ -938,13 +805,13 @@ void EvalVortexCriteria(std::string inFileName,std::string outFileName){
 
 
   // WRITE OUTPUT FILES TO VTK
-  MyMRISequence->ExportToVTK(outFileName);
+  MyMRISequence->ExportToVTK(opts->outputFileName);
 }
 
 // ===========================================
 // WRITE SPATIAL DISTRIBUTIONS OF COEFFICIENTS
 // ===========================================
-void WriteSpatialExpansion(std::string expFileName,std::string outFileName){
+void WriteSpatialExpansion(MRIOptions* opts){
   // CREATE NEW SEQUENCES
   MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
 
@@ -952,7 +819,7 @@ void WriteSpatialExpansion(std::string expFileName,std::string outFileName){
   MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
 
   // READ FROM EXPANSION COEFFICIENTS
-  MyMRIScan->ReadFromExpansionFile(expFileName,false,kSoftThreshold,0.0);
+  MyMRIScan->ReadFromExpansionFile(opts->inputFileName,false,kSoftThreshold,0.0);
 
   // ADD TO SEQUENCE
   MyMRISequence->AddScan(MyMRIScan);
@@ -961,7 +828,109 @@ void WriteSpatialExpansion(std::string expFileName,std::string outFileName){
   MyMRISequence->GetScan(0)->EvalSMPVortexCriteria(MyMRISequence->GetScan(0)->expansion);
 
   // EXPORT TO VTK
-  MyMRISequence->ExportToVTK(outFileName);
+  MyMRISequence->ExportToVTK(opts->outputFileName);
+}
+
+// ===============================
+// RUN APPLICATION IN NORMAL MODEL
+// ===============================
+void runApplication(MRIOptions* opts, MRICommunicator* comm){
+
+  MRISequence* MyMRISequence;
+
+  // MASTER PROCESSOR DOES THE READING
+  if(comm->currProc == 0){
+
+      // INIT SEQUENCE
+      MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
+
+      // LOOP ON THE NUMBER OF SCANS
+      for(int loopA=0;loopA<opts->sequenceFileList.size();loopA++){
+
+        // CREATE NEW SCAN
+        MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
+
+        // CHOOSE INPUT FORMAT
+        if(opts->inputFormatType == itTEMPLATE){
+          // CREATE TEMPLATE
+          //MyMRIScan->CreateSampleCase(kCylindricalVortex,20,50,50,1.0,1.0,1.0,kdirX);
+          //MyMRIScan->CreateSampleCase(kSphericalVortex,60,60,60,0.5,0.5,0.5,kdirX);
+          //MyMRIScan->CreateSampleCase(kToroidalVortex,40,60,80,1.0,1.0,1.0,kdirX);
+          //MyMRIScan->CreateSampleCase(kTransientFlow,40,60,80,0.01,0.01,0.01,0.0,kdirX);
+        }else if(opts->inputFormatType == itEXPANSION){
+          // READ FROM EXPANSION COEFFICIENTS
+          MyMRIScan->ReadFromExpansionFile(opts->sequenceFileList[loopA],opts->thresholdQty,opts->thresholdType,opts->thresholdValue);
+        }else if (opts->inputFormatType == itFILEVTK){
+          // READ FROM FILE
+          MyMRIScan->ReadVTKStructuredPoints(opts->sequenceFileList[loopA], true);
+        }else if (opts->inputFormatType == itFILETECPLOT){
+          // READ FROM FILE
+          MyMRIScan->ReadPltFile(opts->sequenceFileList[loopA], true);
+        }
+
+        // ADD TO SEQUENCE
+        MyMRISequence->AddScan(MyMRIScan);
+      }
+  }
+
+  // SAVE INITIAL VELOCITIES
+  if (opts->saveInitialVel){
+    MyMRISequence->saveVelocity();
+  }
+
+  // APPLY FULL FILTER
+  if (opts->applySMPFilter){
+    MyMRISequence->ApplySMPFilter(opts,false,comm);
+  }
+
+  // APPLY BOUNDARY CONDITION FILTER
+  if (opts->applyBCFilter){
+    MyMRISequence->ApplySMPFilter(opts,true,comm);
+  }
+
+  // APPLY THRESHOLD
+  MyMRISequence->ApplyThresholding(opts->thresholdCriteria);
+
+  // EVAL VORTEX CRITERIA
+  if(opts->evalPopVortexCriteria){
+    MyMRISequence->EvalVortexCriteria();
+    MyMRISequence->EvalVorticity();
+    MyMRISequence->EvalEnstrophy();
+  }
+
+  if(opts->evalSMPVortexCriterion){
+    // SPATIALLY EVALUATE VORTEX COEFFICIENTS
+    MyMRISequence->EvalSMPVortexCriteria();
+
+    // Threshold Vortex Expansion
+    //void ApplyVortexThreshold(int thresholdType, double ratio);
+    // Eval 2-Norm of Coefficient Vector
+    //double Get2Norm(bool onlyVortex);
+
+  }
+
+  if(opts->evalPressure){
+    // Compute Pressure Gradient
+    MyMRISequence->ComputePressureGradients();
+
+    // Compute Relative Pressure
+    MyMRISequence->ComputeRelativePressure(false);
+  }
+
+  // EXPORT FILE
+  if(opts->outputFormatType == itEXPANSION){
+    // SAVE EXPANSION TO FILE
+    MyMRISequence->WriteExpansionFile(std::string("ExpansionFile.dat"));
+  }else if (opts->outputFormatType == itFILEVTK){
+    // READ FROM FILE
+    MyMRISequence->ExportToVTK(opts->outputFileName);
+  }else if (opts->outputFormatType == itFILETECPLOT){
+    // READ FROM FILE
+    MyMRISequence->ExportToTECPLOT(opts->outputFileName);
+  }
+
+
+
 }
 
 // ============
@@ -981,7 +950,7 @@ int main(int argc, char **argv){
 
   //  Declare
   int val = 0;
-  mriProgramOptions* options = new mriProgramOptions();
+  MRIOptions* options = new MRIOptions();
 
   // WRITE PROGRAM HEADER - ONLY MASTER NODE
   if(comm->currProc == 0){
@@ -994,41 +963,47 @@ int main(int argc, char **argv){
     return -1;
   }
 
+  // Finalize options
+  options->finalize();
+
   try{
-    // Normal Model Running
+    // Write Program Help
     switch(options->runMode){
-      case rmEVALSEQUENCEPRESSURE:
-        // Eval Pressure From Velocity Sequence
-        EvalSequencePressure(options->inputFileName,options->outputFileName,comm);
+      case rmHELP:
+        // Write Program Help
+        MRIUtils::WriteProgramHelp();
         break;
-      case rmEVALPRESSUREFROMSIGNATUREFLOW:
-        // Eval Pressure for signature Flow Cases
-        EvalPressureFromSignatureFlow(options->inputFileName,options->outputFileName);
-        break;
-      case rmPROCESSSINGLESCAN:
+      // PREFERRED RUNNING MODE
+      case rmNORMAL:
       {
-        // Process Single Scan
-        ProcessSingleScan(options->inputFileName,
-                          options->outputFileName,
-                          options->itTol,
-                          options->maxIt,
-                          options->thresholdType,
-                          options->thresholdValue,
-                          comm);
+        runApplication(options,comm);
+        break;
+      }
+      case rmEVALSEQUENCEPRESSURE:
+      {
+        // Eval Pressure From Velocity Sequence
+        EvalSequencePressure(options,comm);
+        break;
+      }
+      case rmEVALPRESSUREFROMSIGNATUREFLOW:
+      {
+        // Eval Pressure for signature Flow Cases
+        EvalPressureFromSignatureFlow(options);
         break;
       }
       case rmPLTTOVTK:
       {
         // Convert to VTK
-        ConvertTECPLOToVTK(options->inputFileName,options->outputFileName);
+        ConvertTECPLOToVTK(options);
         break;
       }
       case rmEVALSCANSTATISTICS:
       {
         // COMPUTE SCAN STATISTICS
-        ComputeScanStatistics(options->inputFileName,
-                              options->outputFileName,
-                              options->statFileName);
+        string firstFileName("firstFile.txt");
+        string secondFileName("secondFile.txt");
+        string statFileName("stats");
+        ComputeScanStatistics(firstFileName,secondFileName,statFileName);
         break;
       }
       case rmCOMUTESCANMATRICES:
@@ -1037,46 +1012,56 @@ int main(int argc, char **argv){
         break;
       case rmPERFORMRANDOMTEST:
         // PERFORM RANDOM TEST
-        PerformRandomTest(comm);
+        PerformRandomTest(options,comm);
         break;
       case rmCROPANDCOMPUTEVOLUME:
         // CROP AND REDUCE VOL FILE
-        CropAndComputeVol(options->inputFileName,options->outputFileName,comm);
+        CropAndComputeVol(options,comm);
         break;
       case rmSTREAMLINETEST1:
       {
-        // GET FILE NAME
-        int intValue = atoi(argv[2]);
         // PERFORM STREAMLINE TEST 1
-        PerformStreamlineTest1(intValue,
-                               options->inputFileName,
-                               options->outputFileName);
+        int intValue = 0;
+        string inFileName("inputFile.txt");
+        string outfileName("outputFile.txt");
+        PerformStreamlineTest1(intValue,inFileName,outfileName);
         break;
       }
       case rmSTREAMLINETEST2:
+      {
         // PERFORM STREAMLINE TEST 2
-        PerformStreamlineTest2(options->inputFileName,options->outputFileName);
+        string inFileName("inFile.txt");
+        string outFileName("outFile.txt");
+        PerformStreamlineTest2(inFileName,outFileName);
         break;
+      }
       case rmPRINTTHRESHOLDINGTOVTK:
         // Test Expansion Coefficients
         // TEST_ExpansionCoefficients(inFileName);
-        TEST02_PrintThresholdingToVTK(options->inputFileName,comm);
+        TEST02_PrintThresholdingToVTK(options,comm);
         break;
       case rmEVALREYNOLDSSTRESSES:
         // Test Expansion Coefficients
-        TEST03_EvalReynoldsStresses(options->inputFileName,comm);
+        TEST03_EvalReynoldsStresses(options,comm);
         break;
       case rmSHOWFACEFLUXPATTERS:
+      {
         // READ FACE FLUXES FROM FILE AND EXPORT TO VTK
-        ShowFaceFluxPatterns(options->inputFileName,options->outputFileName);
+        string faceFluxFileName("faceFluxFile.txt");
+        string outFileName("outFileName.txt");
+        ShowFaceFluxPatterns(faceFluxFileName,outFileName);
         break;
+      }
       case rmBUILDFROMCOEFFICIENTS:
       {
         // Get File Names
-        std::string plotOut(argv[3]);
-        double threshold = atof(argv[4]);
+        string coeffFileName("coeffFileName.txt");
+        string plotOut("outputFile.txt");
+        bool performThreshold = false;
+        int thresholdType = 0;
+        double thresholdValue = 0.0;
         // READ FROM COEFFICIENT FILE AND EXPORT TO PLT
-        BuildFromCoeffs(options->inputFileName,plotOut,true,kSoftThreshold,threshold);
+        BuildFromCoeffs(coeffFileName,plotOut,performThreshold,thresholdType,thresholdValue);
         break;
       }
       case rmEVALPRESSURE:
@@ -1085,15 +1070,15 @@ int main(int argc, char **argv){
         break;
       case rmEVALCONCGRADIENT:
         // Eval Concetrantion Gradient
-        EvalConcentrationGradient(options->inputFileName,options->outputFileName);
+        EvalConcentrationGradient(options);
         break;
       case rmEVALVORTEXCRITERIA:
         // Eval Vortex Criterion
-        EvalVortexCriteria(options->inputFileName,options->outputFileName);
+        EvalVortexCriteria(options);
         break;
       case rmWRITESPATIALEXPANSION:
         // EVAL Spatial Expansion Coefficients Distribution
-        WriteSpatialExpansion(options->inputFileName,options->outputFileName);
+        WriteSpatialExpansion(options);
         break;
       case rmSOLVEPOISSON:
         // Solve Poisson Equation to Compute the pressures
@@ -1110,6 +1095,8 @@ int main(int argc, char **argv){
     WriteSchMessage(std::string(ex.what()));
     WriteSchMessage(std::string("\n"));
     WriteSchMessage(std::string("Program Terminated.\n"));
+    // Finalize MPI
+    MPI::Finalize();
     return -1;
   }
   WriteSchMessage(std::string("\n"));

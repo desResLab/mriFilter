@@ -34,10 +34,42 @@ struct mriEdge{
   std::vector<int> connections;
 };
 
+// ===================
+// TYPES FOR PLT FILES
+// ===================
+enum pltFileTypes{
+  pltUNIFORM,
+  pltSTRUCTURED
+};
+
+struct PLTOptionRecord{
+  int i = 0;
+  int j = 0;
+  int k = 0;
+  int N = 0;
+  int E = 0;
+  pltFileTypes type;
+};
+
+// ===================
+// TYPES FOR PLT FILES
+// ===================
+struct vtkStructuredPointsOptionRecord{
+  bool isASCII = false;
+  bool isValidDataset = false;
+  int dimensions[3] = {0};
+  double origin[3];
+  double spacing[3];
+  int numDefined = 5;
+  bool isDefined[5] = {false};
+};
+
 // ========================
 // UNSTRUCTURED GRID LAYOUT
 // ========================
 class MRIStructuredScan: public MRIScan{
+  protected:
+    void CreateGridFromVTKStructuredPoints(vtkStructuredPointsOptionRecord opts);
   public:
     // Cells Totals
     int cellTotals[3];
@@ -71,6 +103,7 @@ class MRIStructuredScan: public MRIScan{
     // ==============
     // READ FUNCTIONS
     // ==============
+    void ReadVTKStructuredPoints(std::string vtkFileName, bool DoReorderCells);
     void ReadPltFile(std::string PltFileName, bool DoReorderCells);
     virtual void ReadScanFromVOLFiles(std::string fileNameAn, std::string fileNameX, std::string fileNameY, std::string fileNameZ);
     void ReadScanFromSingleVOLFile(std::string fileName);
@@ -182,7 +215,7 @@ class MRIStructuredScan: public MRIScan{
     // MP FILTER
     // =========
     int    GetTotalBasisNumber();
-    virtual void   applySMPFilter(MRIOptions* options,MRICommunicator* comm);
+    virtual void   applySMPFilter(MRIOptions* options, bool isBC, MRICommunicator* comm);
     virtual void   AssembleResidualVector(bool useBCFilter, MRIThresholdCriteria* thresholdCriteria, int &totalFaces, double* &ResVec, double* &filteredVec, double &resNorm);
     virtual void   AssembleConstantPattern(int currentDim, int &totalConstantFaces, std::vector<int> &facesID, std::vector<double> &facesCoeffs);
     virtual void   AssembleStarShape(int vortexNumber, int &totalFaces,std::vector<int> &facesID,std::vector<double> &facesCoeffs);
@@ -255,17 +288,15 @@ class MRIStructuredScan: public MRIScan{
     void AssignZeroVelocities();
 
     // VORTEX IDENTIFICATION
-    // With SMP Expansion Coefficients
+    virtual void   EvalCellVelocityGradientDecomposition(int currentCell, double** deformation, double** rotation, double** firstDerivs);
+    virtual double EvalCellQCriterion(int currentCell, double** deformation, double** rotation);
+    virtual double EvalCellL2Criterion(int currentCell, double** deformation, double** rotation);
+    virtual double EvalCellDeltaCriterion(int currentCell, double** deformation, double** rotation, double** velGradient);
+    virtual double EvalCellVortexCriteria(int currentCell,int criteriaType, double** deformation, double** rotation, double** velGradient);
+    virtual void   EvalVortexCriteria();
+    virtual void   EvalVorticity();
+    virtual void   EvalEnstrophy();
     virtual void EvalSMPVortexCriteria(MRIExpansion* exp);
-    // Used Q,L2,Delta Criteria
-    void   EvalVortexCriteria();
-    void   EvalCellVelocityGradientDecomposition(int currentCell, double** deformation, double** rotation, double** firstDerivs);
-    double EvalCellQCriterion(int currentCell, double** deformation, double** rotation);
-    double EvalCellL2Criterion(int currentCell, double** deformation, double** rotation);
-    double EvalCellDeltaCriterion(int currentCell, double** deformation, double** rotation, double** velGradient);
-    double EvalCellVortexCriteria(int currentCell,int criteriaType, double** deformation, double** rotation, double** velGradient);
-    void   EvalVorticity();
-    void   EvalEnstrophy();
 
     // SPATIAL REPRESENTATION OF VORTEX COEFFICIENTS
     double EvalVortexCriteria(MRIExpansion* exp);
