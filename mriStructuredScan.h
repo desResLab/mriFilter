@@ -43,11 +43,11 @@ enum pltFileTypes{
 };
 
 struct PLTOptionRecord{
-  int i = 0;
-  int j = 0;
-  int k = 0;
-  int N = 0;
-  int E = 0;
+  int i;
+  int j;
+  int k;
+  int N;
+  int E;
   pltFileTypes type;
 };
 
@@ -55,13 +55,13 @@ struct PLTOptionRecord{
 // TYPES FOR PLT FILES
 // ===================
 struct vtkStructuredPointsOptionRecord{
-  bool isASCII = false;
-  bool isValidDataset = false;
-  int dimensions[3] = {0};
+  bool isASCII;
+  bool isValidDataset;
+  int dimensions[3];
   double origin[3];
   double spacing[3];
-  int numDefined = 5;
-  bool isDefined[5] = {false};
+  int numDefined;
+  bool isDefined[5];
 };
 
 // ========================

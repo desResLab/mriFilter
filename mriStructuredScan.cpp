@@ -2848,10 +2848,11 @@ void MRIStructuredScan::ReadVTKStructuredPoints(std::string vtkFileName, bool Do
   int precentProgress = 0;
   int percentCounted = 0;
   double currModulus = 0.0;
+  double vx; double vy; double vz;
+  bool keepProcess;
 
   // Reading Input File Message
   WriteSchMessage(std::string("Reading input file...\n"));
-  std::getline(vtkFile,Buffer);
 
   while (std::getline(vtkFile,Buffer)){
 
@@ -2871,21 +2872,31 @@ void MRIStructuredScan::ReadVTKStructuredPoints(std::string vtkFileName, bool Do
 
     // Store Local Structure
     try{
-      cellPoints[LocalCount].velocity[0] = atof(tokenizedString[0].c_str());
-      cellPoints[LocalCount].velocity[1] = atof(tokenizedString[1].c_str());
-      cellPoints[LocalCount].velocity[2] = atof(tokenizedString[2].c_str());
+      vx = atof(tokenizedString[0].c_str());
+      vy = atof(tokenizedString[1].c_str());
+      vz = atof(tokenizedString[2].c_str());
+      // GO ahead
+      keepProcess = true;
+    }catch (...){
+      std::string outString = "WARNING[*] Error Reading Line: "+to_string(lineCount)+"; Line Skipped.\n";
+      printf("%s",outString.c_str());
+      keepProcess = false;
+    }
+
+    if(keepProcess){
+      cellPoints[LocalCount].velocity[0] = vx;
+      cellPoints[LocalCount].velocity[1] = vy;
+      cellPoints[LocalCount].velocity[2] = vz;
       currModulus = sqrt((cellPoints[LocalCount].velocity[0]*cellPoints[LocalCount].velocity[0]) +
                          (cellPoints[LocalCount].velocity[1]*cellPoints[LocalCount].velocity[1]) +
                          (cellPoints[LocalCount].velocity[2]*cellPoints[LocalCount].velocity[2]));
       if(currModulus > maxVelModule){
         maxVelModule = currModulus;
-      }
-      // Update Local count
+      }      
+      // Update Counter
       LocalCount++;
-    }catch (...){
-      std::string outString = "WARNING[*] Error Reading Line: "+to_string(lineCount)+"; Line Skipped.\n";
-      printf("%s",outString.c_str());
     }
+    
   }
 
   // Finished Reading File

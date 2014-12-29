@@ -1,4 +1,4 @@
-project(mpFilterApp)
+PROJECT(mpFilterApp)
 cmake_minimum_required(VERSION 2.6)
 aux_source_directory(. SRC_LIST)
 include_directories(".")
@@ -10,7 +10,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/CMake/")
 find_package(Boost REQUIRED)
 find_package(MPI REQUIRED)
 find_package(METIS REQUIRED)
-find_package(PARMETIS REQUIRED)
+find_package(PARMETIS)
 
 # INCLUDE LIBRARY PATH
 include_directories(${Boost_INCLUDE_DIR})
@@ -18,24 +18,29 @@ include_directories(${MPI_INCLUDE_PATH})
 include_directories(${METIS_INCLUDE_DIR})
 include_directories("/usr/local/lib/")
 
-# CHECK COMPILER
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-  # using Clang
-  message( using Clang )
-elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-  # using GCC
-  message( using GCC )
-elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
-  # using Intel C++
-  message( using Intel C++ )
-elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-  # using Visual Studio C++
-  message( using Visual Studio C++ )
+# SET PLATFORM SPECIFIC OPTIONS
+if(APPLE)
+set(CMAKE_C_COMPILER "/opt/local/bin/gcc")
+set(CMAKE_CXX_COMPILER "/opt/local/bin/g++")
+  message(${MPI_C_FOUND})
+  message(${MPI_CXX_FOUND})
+  message(${MPI_C_COMPILER})
+  message(${MPI_CXX_COMPILER})
+  message(${MPI_INCLUDE_PATH})
+  # INCLUDE DIRECTORIES FOR MPI
+  include_directories("/opt/local/include/mpich-gcc46")
+  link_directories("/opt/local/lib/mpich-gcc46")
 endif()
-#
-add_definitions("-g -Wall -m64 -v -O0 -std=c++0x -fbounds-check -Wno-unused-variable")
 
-add_executable(${PROJECT_NAME} ${SRC_LIST})
-#
-target_link_libraries(mpFilterApp ${Boost_LIBRARIES} ${MPI_LIBRARIES} ${METIS_LIBRARIES} metis)
+# CHECK COMPILER
+message( "USING COMPILER: " ${CMAKE_CXX_COMPILER_ID} )
+
+# SET COMPILER FLAGS
+add_definitions("-g -Wall -m64 -v -O0 -std=c++0x -Wno-unused-variable")
+
+# CREATE EXECUTABLE
+ADD_EXECUTABLE(${PROJECT_NAME} ${SRC_LIST})
+
+# LINK LIBRARIES
+TARGET_LINK_LIBRARIES(mpFilterApp ${Boost_LIBRARIES} ${MPI_LIBRARIES} ${METIS_LIBRARIES})
 

@@ -110,11 +110,11 @@ int MRIOptions::getCommadLineOptions(int argc, char **argv){
         break;
       case 1:
         applySMPFilter = true;
-        printf("SMP Filter Enabled\n",optarg);
+        printf("SMP Filter Enabled\n");
         break;
       case 2:
         applyBCFilter = true;
-        printf("Boundary Filter Enabled\n",optarg);
+        printf("Boundary Filter Enabled\n");
         break;
       case 3:
         itTol = atof(optarg);
