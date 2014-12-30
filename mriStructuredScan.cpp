@@ -2393,6 +2393,7 @@ void MRIStructuredScan::buildEdgeConnections(){
   std::vector<int> edgeIds;
   std::vector<std::vector<mriEdge*>> AuxFirstNodeEdgeList;
   int currEdge = 0;
+  double coeff = 0.0;
   faceEdges.resize(faceConnections.size());
   AuxFirstNodeEdgeList.resize(getTotalAuxNodes());
   for(size_t loopA=0;loopA<faceConnections.size();loopA++){
@@ -2413,7 +2414,13 @@ void MRIStructuredScan::buildEdgeConnections(){
   for(size_t loopA=0;loopA<faceConnections.size();loopA++){
     for(size_t loopB=0;loopB<faceEdges[loopA].size();loopB++){
       currEdge = faceEdges[loopA][loopB];
-      edgeFaces[currEdge].push_back(loopA);
+      // Get Coefficient
+      coeff = getEdgeFaceVortexCoeff(currEdge,loopA);
+      if(coeff>0.0){
+        edgeFaces[currEdge].push_back(loopA+1);
+      }else{
+        edgeFaces[currEdge].push_back(-(loopA+1));
+      }
     }
   }
 }
@@ -2650,7 +2657,7 @@ void MRIStructuredScan::CreateTopology(){
   // Build Edge Connections
   WriteSchMessage(std::string("Build Edge Connections...\n"));
   buildEdgeConnections();
-  WriteSchMessage(std::string("Topology Creation Finished...\n"));
+  WriteSchMessage(std::string("Topology Creation Completed.\n"));
 }
 
 // ===================================
@@ -2764,6 +2771,30 @@ void printVTKOptions(vtkStructuredPointsOptionRecord opts){
   printf("\n");
 }
 
+// INIT OPTIONS
+void InitVTKStructuredPointsOptions(vtkStructuredPointsOptionRecord &opts){
+  opts.isASCII = false;
+  opts.isValidDataset = false;
+  opts.numDefined = 5;
+  // Size
+  opts.dimensions[0] = 0;
+  opts.dimensions[1] = 0;
+  opts.dimensions[2] = 0;
+  // Origin
+  opts.origin[0] = 0.0;
+  opts.origin[1] = 0.0;
+  opts.origin[2] = 0.0;
+  // Spacing
+  opts.spacing[0] = 0.0;
+  opts.spacing[1] = 0.0;
+  opts.spacing[2] = 0.0;
+  // Is Defined
+  for(int loopA=0;loopA<opts.numDefined;loopA++){
+    opts.isDefined[loopA] = false;
+  }
+
+}
+
 
 // ==========================
 // READ VTK STRUCTURED POINTS
@@ -2774,15 +2805,16 @@ void MRIStructuredScan::ReadVTKStructuredPoints(std::string vtkFileName, bool Do
   totalCellPoints = 0;
 
   // Assign File
+  WriteSchMessage(std::string("\n"));
+  WriteSchMessage(std::string("--- READING STRUCTURED POINT FILE\n"));
+  WriteSchMessage(std::string("\n"));
   std::ifstream vtkFile;
   WriteSchMessage(std::string("Open File: ") + vtkFileName + std::string("\n"));
   vtkFile.open(vtkFileName.c_str());
 
-  // Declare and create vtkOption Vector
+  // Create and initialize vtkOption Vector
   vtkStructuredPointsOptionRecord vtkOptions;
-  for(int loopA=0;loopA<vtkOptions.numDefined;loopA++){
-    vtkOptions.isDefined[loopA] = false;
-  }
+  InitVTKStructuredPointsOptions(vtkOptions);
 
   // Read Through and look for options
   std::vector<std::string> tokenizedString;
@@ -2872,6 +2904,9 @@ void MRIStructuredScan::ReadVTKStructuredPoints(std::string vtkFileName, bool Do
 
     // Store Local Structure
     try{
+      if(tokenizedString.size()<3){
+        throw "error";
+      }
       vx = atof(tokenizedString[0].c_str());
       vy = atof(tokenizedString[1].c_str());
       vz = atof(tokenizedString[2].c_str());
@@ -2906,9 +2941,9 @@ void MRIStructuredScan::ReadVTKStructuredPoints(std::string vtkFileName, bool Do
   vtkFile.close();
 
   // REORDER CELLS
-  if (DoReorderCells){
-    ReorderScan();
-  }
+  //if (DoReorderCells){
+  //  ReorderScan();
+  //}
 
   // CREATING TOPOLOGY
   WriteSchMessage(std::string("\n"));
