@@ -300,7 +300,7 @@ void MRIStructuredScan::MapCoordsToPosition(int* coords, bool addMeshMinima, dou
   // Loop on the three dimensions
   for(int loopA=0;loopA<3;loopA++){
     pos[loopA] = 0.0;
-    for(int loopB=1;loopB<coords[loopA];loopB++){
+    for(int loopB=1;loopB<(coords[loopA]+1);loopB++){
       pos[loopA] += 0.5*(cellLengths[loopA][loopB-1] + cellLengths[loopA][loopB]);
     }
   }

@@ -634,7 +634,7 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
     // Update Iteration Count
     itCount++;
 
-    clock_t constPattern_BeginTime = clock();
+    constPattern_BeginTime = clock();
 
     // LOOP ON THE THREE DIRECTIONS
     for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
@@ -658,7 +658,7 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
       }
     }
 
-    clock_t Pattern_TotalTime = float( clock () - constPattern_BeginTime ) /  CLOCKS_PER_SEC;
+    constPattern_TotalTime = float( clock () - constPattern_BeginTime ) /  CLOCKS_PER_SEC;
 
     // Reserve these two
     facesID.resize(10);
@@ -834,6 +834,14 @@ void MRIStructuredScan::RebuildFromExpansion(MRIExpansion* expansion,bool useCon
     }
   }
 
+  // CLEAR
+  facesID.clear();
+  facesCoeffs.clear();
+
+  // RESIZE
+  facesID.resize(10);
+  facesCoeffs.resize(10);
+
   // VORTEX ATOMS
   int componentCount = -1;
   for(int loopB=0;loopB<expansion->totalVortices;loopB++){
@@ -853,7 +861,7 @@ void MRIStructuredScan::RebuildFromExpansion(MRIExpansion* expansion,bool useCon
   RecoverCellVelocitiesRT0(false,faceFluxVec);
 
   // Update Velocities
-  //UpdateVelocities();
+  UpdateVelocities();
 
   // DELETE ARRAY
   delete [] faceFluxVec;

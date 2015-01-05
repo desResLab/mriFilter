@@ -20,6 +20,7 @@ MRIOptions::MRIOptions(){
   thresholdValue = 0.0;
   // Save Initial Velocities
   saveInitialVel = false;
+  saveExpansionCoeffs = false;
   // Apply Filter
   applySMPFilter = false;
   applyBCFilter = false;
@@ -61,6 +62,7 @@ int MRIOptions::getCommadLineOptions(int argc, char **argv){
       {"evalPOPVortex",    no_argument, 0, 12},
       {"evalSMPVortex",    no_argument, 0, 13},
       {"saveInitialVel",    no_argument, 0, 14},
+      {"saveExpansionCoeffs",    no_argument, 0, 15},
 
       {"normal",        no_argument, 0, 22},
       {"writexp",   no_argument, 0, 23},
@@ -163,6 +165,11 @@ int MRIOptions::getCommadLineOptions(int argc, char **argv){
         saveInitialVel = true;
         printf("Saving Initial Velocities To Output\n");
         break;
+      case 15:
+        saveExpansionCoeffs = true;
+        printf("Saving Expansion Coefficients\n");
+        break;
+
       case 22:
         runMode = rmNORMAL;
         // Read Sequence file names

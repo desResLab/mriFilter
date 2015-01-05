@@ -435,6 +435,12 @@ void MRIStructuredScan::CreateSampleCase(MRISamples sampleType,
   cellTotals[0] = sizeX;
   cellTotals[1] = sizeY;
   cellTotals[2] = sizeZ;
+
+  cellLengths.resize(3);
+  cellLengths[0].resize(sizeX);
+  cellLengths[1].resize(sizeY);
+  cellLengths[2].resize(sizeZ);
+
   // Set Cell Lengths
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
     for(int loopB=0;loopB<cellTotals[loopA];loopB++){
@@ -464,7 +470,7 @@ void MRIStructuredScan::CreateSampleCase(MRISamples sampleType,
   // Set Total Cells
   totalCellPoints = sizeX * sizeY * sizeZ;
   // Allocate Cell Values
-  cellPoints.reserve(totalCellPoints);
+  cellPoints.resize(totalCellPoints);
   // Assign Coordinates
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     MapIndexToCoords(loopA,currentCoords);
@@ -483,9 +489,14 @@ void MRIStructuredScan::CreateSampleCase(MRISamples sampleType,
                       (cellPoints[loopA].velocity[2])*(cellPoints[loopA].velocity[2]));
     if(currentMod>maxVelModule) maxVelModule = currentMod;
   }
-  // Write Statistics
+
+  // WRITE STATISTICS
   std::string Msgs = WriteStatistics();
   WriteSchMessage(Msgs);
+
+  // BUILD TOPOLOGY
+  CreateTopology();
+
   // Deallocate
   delete [] currentCoords;
 }

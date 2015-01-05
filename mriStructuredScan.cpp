@@ -1757,9 +1757,9 @@ int MRIStructuredScan::ReadRawImage(std::string FileName, MRIImageData &data){
 // READ EXPANSION FILE
 // ===================
 void ReadExpansionFile(std::string fileName,int* tot,
-                       std::vector<double> lengthX,
-                       std::vector<double> lengthY,
-                       std::vector<double> lengthZ,
+                       std::vector<double> &lengthX,
+                       std::vector<double> &lengthY,
+                       std::vector<double> &lengthZ,
                        double* minlimits,double* maxlimits,MRIExpansion* &exp){
 
   // ASSIGN FILE
@@ -1776,6 +1776,8 @@ void ReadExpansionFile(std::string fileName,int* tot,
   tot[0] = atoi(ResultArray[0].c_str());
   tot[1] = atoi(ResultArray[1].c_str());
   tot[2] = atoi(ResultArray[2].c_str());
+
+  printf("TOTALS %d %d %d\n",tot[0],tot[1],tot[2]);
 
   // GET CELL X LENGTHS
   int lengthCount = 0;
@@ -1881,11 +1883,11 @@ void MRIStructuredScan::ReadFromExpansionFile(std::string fileName,bool applyThr
   }
   // Y
   for(size_t loopA=0;loopA<lengthY.size();loopA++){
-    cellLengths[0].push_back(lengthY[loopA]);
+    cellLengths[1].push_back(lengthY[loopA]);
   }
   // Z
   for(size_t loopA=0;loopA<lengthZ.size();loopA++){
-    cellLengths[0].push_back(lengthZ[loopA]);
+    cellLengths[2].push_back(lengthZ[loopA]);
   }
 
   // DIMENSIONS
@@ -1920,6 +1922,7 @@ void MRIStructuredScan::ReadFromExpansionFile(std::string fileName,bool applyThr
     // ADD IT TO CELL POINTS
     cellPoints.push_back(newCell);
   }
+
   // INITIALIZE POSITIONS
   int intCoords[3] = {0};
   double Pos[3] = {0.0};
@@ -1933,6 +1936,9 @@ void MRIStructuredScan::ReadFromExpansionFile(std::string fileName,bool applyThr
 
   // REORDER MODEL
   ReorderScan();
+
+  // BUILD TOPOLOGY
+  CreateTopology();
 
   // REBUILD SCAN
   //RebuildFromExpansion(expansion,true);

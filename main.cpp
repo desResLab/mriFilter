@@ -853,13 +853,16 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
         // CHOOSE INPUT FORMAT
         if(opts->inputFormatType == itTEMPLATE){
           // CREATE TEMPLATE
-          //MyMRIScan->CreateSampleCase(kCylindricalVortex,20,50,50,1.0,1.0,1.0,kdirX);
-          //MyMRIScan->CreateSampleCase(kSphericalVortex,60,60,60,0.5,0.5,0.5,kdirX);
-          //MyMRIScan->CreateSampleCase(kToroidalVortex,40,60,80,1.0,1.0,1.0,kdirX);
-          //MyMRIScan->CreateSampleCase(kTransientFlow,40,60,80,0.01,0.01,0.01,0.0,kdirX);
+          //MyMRIScan->CreateSampleCase(kCylindricalVortex,20,50,50,1.0,1.0,1.0,0.0,kdirX);
+          MyMRIScan->CreateSampleCase(kSphericalVortex,60,60,60,0.5,0.5,0.5,0.0,kdirX);
+          //MyMRIScan->CreateSampleCase(kToroidalVortex,40,60,80,1.0,1.0,1.0,0.0,kdirX);
+          //MyMRIScan->CreateSampleCase(kTransientFlow,40,60,80,0.01,0.01,0.01,0.0,0.0,kdirX);
         }else if(opts->inputFormatType == itEXPANSION){
           // READ FROM EXPANSION COEFFICIENTS
-          MyMRIScan->ReadFromExpansionFile(opts->sequenceFileList[loopA],opts->thresholdQty,opts->thresholdType,opts->thresholdValue);
+          bool applyThreshold = true;
+          int thresholdType = kHardThresold;
+          double thresholdRatio = 0.5;
+          MyMRIScan->ReadFromExpansionFile(opts->sequenceFileList[loopA],applyThreshold,thresholdType,thresholdRatio);
         }else if (opts->inputFormatType == itFILEVTK){
           // READ FROM FILE
           MyMRIScan->ReadVTKStructuredPoints(opts->sequenceFileList[loopA], true);
@@ -917,19 +920,20 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
     MyMRISequence->ComputeRelativePressure(false);
   }
 
+  // SAVE EXPANSION COEFFICIENTS IF REQUESTED
+  if(opts->saveExpansionCoeffs){
+    MyMRISequence->WriteExpansionFile(std::string(opts->outputFileName + "_expCoeff"));
+  }
+
   // EXPORT FILE
-  if(opts->outputFormatType == itEXPANSION){
-    // SAVE EXPANSION TO FILE
-    MyMRISequence->WriteExpansionFile(std::string("ExpansionFile.dat"));
-  }else if (opts->outputFormatType == itFILEVTK){
+  printf("ECCOLO\n");
+  if(opts->outputFormatType == itFILEVTK){
     // READ FROM FILE
     MyMRISequence->ExportToVTK(opts->outputFileName);
   }else if (opts->outputFormatType == itFILETECPLOT){
     // READ FROM FILE
     MyMRISequence->ExportToTECPLOT(opts->outputFileName);
   }
-
-
 
 }
 
