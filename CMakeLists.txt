@@ -36,7 +36,7 @@ endif()
 message( "USING COMPILER: " ${CMAKE_CXX_COMPILER_ID} )
 
 # SET COMPILER FLAGS
-add_definitions("-g -Wall -m64 -v -O3 -std=c++0x -Wno-unused-variable")
+add_definitions("-g -Wall -m64 -v -O0 -std=c++0x -Wno-unused-variable")
 
 # CREATE EXECUTABLE
 ADD_EXECUTABLE(${PROJECT_NAME} ${SRC_LIST})

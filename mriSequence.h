@@ -33,6 +33,7 @@ class MRISequence
     void ExportToTECPLOT(std::string outfileName);
     void ExportToVOL(std::string outfileName);
     void ExportToVTK(std::string outfileName);
+    void ExportForPOISSON(std::string outfileName);
     void WriteExpansionFile(string fileName);
 
     // SAVE QUANTITIES TO OUTPUTS

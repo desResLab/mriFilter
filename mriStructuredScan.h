@@ -128,6 +128,7 @@ class MRIStructuredScan: public MRIScan{
     void ExportVelocitiesToFile(std::string fileName, bool append);
     virtual void ExportToVTK(std::string fileName);
     virtual void WriteExpansionFile(std::string fileName);
+    virtual void ExportForPOISSON(std::string FileName);
 
     // ========
     // VOL DATA

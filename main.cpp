@@ -926,13 +926,14 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
   }
 
   // EXPORT FILE
-  printf("ECCOLO\n");
   if(opts->outputFormatType == itFILEVTK){
     // READ FROM FILE
     MyMRISequence->ExportToVTK(opts->outputFileName);
   }else if (opts->outputFormatType == itFILETECPLOT){
     // READ FROM FILE
     MyMRISequence->ExportToTECPLOT(opts->outputFileName);
+  }else if (opts->outputFormatType == itPOISSON){
+    MyMRISequence->ExportForPOISSON(opts->outputFileName);
   }
 
 }

@@ -39,6 +39,7 @@ using namespace std;
   // OUTPUT TYPES
   const int otFILEVTK                       = 0;
   const int otFILETECPLOT                   = 1;
+  const int itPOISSON                       = 2;
 
 // CLASS MRIPROGRAMOPTIONS
 class MRIOptions{

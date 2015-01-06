@@ -274,13 +274,15 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
   std::string Buffer;
   while (std::getline(PltFile,Buffer)){
     if(!foundheader){
+      boost::trim(Buffer);
       boost::split(tokenizedString, Buffer, boost::is_any_of(" ,"), boost::token_compress_on);
       areAllFloats = true;
       assignPLTOptions(tokenizedString, pltOptions);
-      for(size_t loopA=0;loopA<tokenizedString.size();loopA++){
-        areAllFloats = (areAllFloats && (MRIUtils::isFloat(tokenizedString[loopA])));
-      }
-      foundheader = areAllFloats;
+      //for(size_t loopA=0;loopA<tokenizedString.size();loopA++){
+      //  areAllFloats = (areAllFloats && (MRIUtils::isFloat(tokenizedString[loopA])));
+      //}
+      //foundheader = areAllFloats;
+      foundheader = headerCount > 100;
       headerCount++;
     }
     // Increase cell and line number
@@ -348,7 +350,7 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
       // Set Continue
       Continue = true;
       // Check Ratio between ResultArray.size, valueCounter, neededValues
-      if(ResultArray.size()+valueCounter<=neededValues){
+      if(ResultArray.size()+valueCounter < neededValues){
         // Read the whole Result Array
         for(int loopA=0;loopA<ResultArray.size();loopA++){
           LocalVal[loopA] = atof(ResultArray[loopA].c_str());
@@ -400,7 +402,6 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
       if (LocalZCoord>domainSizeMax[2]) domainSizeMax[2] = LocalZCoord;
 
       // Update Max Speeds
-      //CurrentModule:=Sqrt(Sqr(LocalXVel)+Sqr(LocalYVel)+Sqr(LocalZVel));
       if (CurrentModule>maxVelModule) {
         maxVelModule = CurrentModule;
       }
@@ -475,9 +476,9 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
   PltFile.close();
 
   // REORDER CELLS
-  //if (DoReorderCells){
-  //  ReorderScan();
-  //}
+  if (DoReorderCells){
+    ReorderScan();
+  }
 
   // CREATING TOPOLOGY
   WriteSchMessage(std::string("\n"));
@@ -2961,5 +2962,77 @@ void MRIStructuredScan::ReadVTKStructuredPoints(std::string vtkFileName, bool Do
   // WRITE STATISTICS
   std::string CurrentStats = WriteStatistics();
   WriteSchMessage(CurrentStats);
+
+}
+
+// ========================
+// EXPORT TO POISSON SOLVER: TO COMPLETE !!!!
+// ========================
+void MRIStructuredScan::ExportForPOISSON(std::string folderName){
+  // Declare
+  FILE* outFile;
+
+  // Set File Names
+  string nodeFileName("poissonNodes.dat");
+  string elementFileName("poissonConnections.dat");
+  string sourceFileName("poissonSources.dat");
+  string diricheletFileName("poissonDirBC.dat");
+  string bcFileName("poissonFluxBC.dat");
+
+  // TOTAL AUX NODES
+  int totAuxNodes = (cellTotals[0]+1)*(cellTotals[1]+1)*(cellTotals[2]+1);
+
+  // SAVE NODE COORDS
+  if(totalCellPoints>0){
+    outFile = fopen(nodeFileName.c_str(),"w");
+    double pos[3];
+    for(int loopA=0;loopA<totAuxNodes;loopA++){
+      getAuxNodeCoordinates(loopA,pos);
+      fprintf(outFile,"%d %e %e %e\n",loopA,pos[0],pos[1],pos[2]);
+    }
+    // Close Output file
+    fclose(outFile);
+
+    // SAVE ELEMENT CONNECTIONS
+    outFile = fopen(elementFileName.c_str(),"w");
+    // Write Header
+    for(int loopA=0;loopA<totalCellPoints;loopA++){
+      fprintf(outFile,"%d ",loopA);
+      for(int loopB=0;loopB<cellConnections[loopA].size();loopB++){
+        fprintf(outFile,"%d ",cellConnections[loopA][loopB]);
+      }
+      fprintf(outFile,"\n");
+    }
+    // Close Output file
+    fclose(outFile);
+  }
+
+  // SAVE ELEMENT SOURCES
+  outFile = fopen(sourceFileName.c_str(),"w");
+  // Write Header
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    fprintf(outFile,"%d %e\n",loopA,1.0);
+  }
+  // Close Output file
+  fclose(outFile);
+
+  // SAVE NEUMANN FLUXES
+  outFile = fopen(bcFileName.c_str(),"w");
+  // Close Output file
+  fclose(outFile);
+
+  // SAVE DIRICHELET CONDITIONS
+  outFile = fopen(diricheletFileName.c_str(),"w");
+  // Write Header
+  double pos[3];
+  for(int loopA=0;loopA<totAuxNodes;loopA++){
+    getAuxNodeCoordinates(loopA,pos);
+    if((fabs(pos[0]-(domainSizeMin[0]-0.5*cellLengths[0][0]))<1.0e-5)||((fabs(pos[0]-(domainSizeMax[0]-0.5*cellLengths[0][0]))<1.0e-5))){
+      fprintf(outFile,"%d %e\n",loopA,5.0);
+    }
+  }
+  // Close Output file
+  fclose(outFile);
+
 
 }

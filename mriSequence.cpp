@@ -180,6 +180,19 @@ void MRISequence::ExportToVOL(std::string outfileName){
   }
 }
 
+void MRISequence::ExportForPOISSON(std::string outfileName){
+  // Export All Data
+  string outputName;
+  int index = 0;
+  WriteSchMessage("\n");
+  for(int loopA=0;loopA<totalScans;loopA++){
+    outputName = outfileName;
+    index = outputName.size();
+    outputName.insert(index-4,string("_Step" + to_string(loopA)).c_str());
+    sequence[loopA]->ExportForPOISSON(outputName);
+  }
+}
+
 // EXPORT TO SEQUENCE OF VTK FILES
 void MRISequence::ExportToVTK(std::string outfileName){
   // Export All Data
@@ -297,6 +310,8 @@ void MRISequence::ScalePositions(double factor){
   }
   WriteSchMessage(std::string("Done.\n"));
 }
+
+
 
 
 
