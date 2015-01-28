@@ -1,6 +1,7 @@
 #include "mriOptions.h"
 #include "mriThresholdCriteria.h"
 #include "mriConstants.h"
+#include "mriUtils.h"
 
 #include <stdlib.h>
 #include <getopt.h>
@@ -41,8 +42,8 @@ MRIOptions::MRIOptions(){
 // =========================
 int MRIOptions::getCommadLineOptions(int argc, char **argv){
   int c;
+  string threshString;
   printf("--- COMMAND OPTIONS ECHO\n");
-  printf("\n");
   while (1){
     static struct option long_options[] =
     { {"input",     required_argument, 0, 'i'},
@@ -63,7 +64,6 @@ int MRIOptions::getCommadLineOptions(int argc, char **argv){
       {"evalSMPVortex",    no_argument, 0, 13},
       {"saveInitialVel",    no_argument, 0, 14},
       {"saveExpansionCoeffs",    no_argument, 0, 15},
-
       {"normal",        no_argument, 0, 22},
       {"writexp",   no_argument, 0, 23},
       {"test",      no_argument, 0, 24},
@@ -128,12 +128,17 @@ int MRIOptions::getCommadLineOptions(int argc, char **argv){
         break;
       case 5:
         thresholdQty = atoi(optarg);
+        threshString = MRIUtils::getThresholdQtyString(thresholdQty);
+        printf("Threshold quantity set: %s\n",threshString.c_str());
         break;
       case 6:
         thresholdType = atoi(optarg);
+        threshString = MRIUtils::getThresholdTypeString(thresholdType);
+        printf("Threshold type set: %s\n",threshString.c_str());
         break;
       case 7:
         thresholdValue = atof(optarg);
+        printf("Threshold value: %f\n",thresholdValue);
         break;
       case 8:
         inputFormatType = atoi(optarg);
@@ -169,7 +174,6 @@ int MRIOptions::getCommadLineOptions(int argc, char **argv){
         saveExpansionCoeffs = true;
         printf("Saving Expansion Coefficients\n");
         break;
-
       case 22:
         runMode = rmNORMAL;
         // Read Sequence file names
@@ -193,6 +197,8 @@ int MRIOptions::getCommadLineOptions(int argc, char **argv){
       }
       putchar ('\n');
     }*/
+  printf("---\n");
+  printf("\n");
   return 0;
 }
 

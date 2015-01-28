@@ -18,9 +18,10 @@
 #include "mriConstants.h"
 #include "mriCoordItem.h"
 #include "mriStreamline.h"
+#include "mriThresholdCriteria.h"
 #include "schMessages.h"
 
-
+using namespace std;
 
 // MRI UTILITIES
 namespace MRIUtils{
@@ -742,6 +743,54 @@ inline void checkMpiError(int mpiError){
   }
 }
 
+// =============================
+// GET THRESHOLD QUANTITY STRING
+// =============================
+inline string getThresholdQtyString(int thresholdQty){
+  switch(thresholdQty){
+    case kQtyPositionX:
+      return string("PositionX");
+      break;
+    case kQtyPositionY:
+      return string("PositionY");
+      break;
+    case kQtyPositionZ:
+      return string("PositionZ");
+      break;
+    case kQtyConcentration:
+      return string("Concentration");
+      break;
+    case kQtyVelocityX:
+      return string("VelocityX");
+      break;
+    case kQtyVelocityY:
+      return string("VelocityY");
+      break;
+    case kQtyVelocityZ:
+      return string("VelocityZ");
+      break;
+  }
+}
+
+// =========================
+// GET THRESHOLD TYPE STRING
+// =========================
+inline string getThresholdTypeString(int thresholdType){
+  switch(thresholdType){
+    case kCriterionLessThen:
+      return string("Set to zero if less than threshold");
+      break;
+    case kCriterionGreaterThen:
+      return string("Set to zero if greater than threshold");
+      break;
+    case kCriterionABSLessThen:
+      return string("Set to zero if ABS less than threshold");
+      break;
+    case kCriterionABSGreaterThen:
+      return string("Set to zero if ABS greater than threshold");
+      break;
+  }
+}
 
 }
 #endif //MRIUTILS_H

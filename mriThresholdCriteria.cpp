@@ -2,9 +2,9 @@
 #include "mriThresholdCriteria.h"
 #include "mriConstants.h"
 
-MRIThresholdCriteria::MRIThresholdCriteria(int type, int qty, double value){
-  thresholdType = type;
+MRIThresholdCriteria::MRIThresholdCriteria(int qty, int type, double value){
   thresholdQty = qty;
+  thresholdType = type;
   thresholdValue = value;
 }
 
