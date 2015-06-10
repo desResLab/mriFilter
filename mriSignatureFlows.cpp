@@ -310,6 +310,37 @@ void MRIStructuredScan::AssignConstantSignature(MRIDirection dir){
   }
 }
 
+// ====================
+// TAYLOR FLOW VORTEX
+// ====================
+void MRIStructuredScan::AssignTaylorVortexSignature(MRIDirection dir){
+  double centrePoint[3] = {0.0};
+  centrePoint[0] = 0.5 * (domainSizeMax[0]+domainSizeMin[0]);
+  centrePoint[1] = 0.5 * (domainSizeMax[1]+domainSizeMin[1]);
+  centrePoint[2] = 0.5 * (domainSizeMax[2]+domainSizeMin[2]);
+  // Loop on cell
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    switch(dir){
+      case kdirX:
+        cellPoints[loopA].velocity[0] = 0.0;
+        cellPoints[loopA].velocity[1] = cellPoints[loopA].position[2]-centrePoint[2];
+        cellPoints[loopA].velocity[2] = -(cellPoints[loopA].position[1]-centrePoint[1]);
+        break;
+      case kdirY:
+        cellPoints[loopA].velocity[0] = cellPoints[loopA].position[2]-centrePoint[2];
+        cellPoints[loopA].velocity[1] = 0.0;
+        cellPoints[loopA].velocity[2] = -(cellPoints[loopA].position[0]-centrePoint[0]);
+        break;
+      case kdirZ:
+        cellPoints[loopA].velocity[0] = cellPoints[loopA].position[1]-centrePoint[1];
+        cellPoints[loopA].velocity[1] = -(cellPoints[loopA].position[0]-centrePoint[0]);
+        cellPoints[loopA].velocity[2] = 0.0;
+        break;
+    }
+  }
+}
+
+
 // SET VELOCITIES TO ZERO
 void MRIStructuredScan::AssignZeroVelocities(){
   for(int loopA=0;loopA<totalCellPoints;loopA++){
@@ -350,10 +381,17 @@ void MRIStructuredScan::AssignRandomStandardGaussianFlow(){
   }
 }
 
-
+// =====================
 // ASSIGN POISEILLE FLOW
+// =====================
 void MRIStructuredScan::AssignPoiseilleSignature(MRIDirection dir){
   double currentVelocity = 0.0;
+  double conc = 0.0;
+  // SET CENTER POINT
+  double centerPoint[3];
+  centerPoint[0] = 0.5*(domainSizeMax[0]+domainSizeMin[0]);
+  centerPoint[1] = 0.5*(domainSizeMax[1]+domainSizeMin[1]);
+  centerPoint[2] = 0.5*(domainSizeMax[2]+domainSizeMin[2]);
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     double currentDistance = 0.0;
     double totalDistance = 0.0;
@@ -364,29 +402,40 @@ void MRIStructuredScan::AssignPoiseilleSignature(MRIDirection dir){
     cellPoints[loopA].concentration = 0.0;
     switch(dir){
       case kdirX:
-        currentDistance = cellPoints[loopA].position[0];
-        totalDistance = domainSizeMax[0]-domainSizeMin[0];
+        currentDistance = sqrt((cellPoints[loopA].position[1] - centerPoint[1])*(cellPoints[loopA].position[1] - centerPoint[1]) +
+                               (cellPoints[loopA].position[2] - centerPoint[2])*(cellPoints[loopA].position[2] - centerPoint[2]));
+        totalDistance = 0.6*min(0.5*(domainSizeMax[1]-domainSizeMin[1]),0.5*(domainSizeMax[2]-domainSizeMin[2]));
         break;
       case kdirY:
-        currentDistance = cellPoints[loopA].position[1];
-        totalDistance = domainSizeMax[1]-domainSizeMin[1];
+        currentDistance = sqrt((cellPoints[loopA].position[0] - centerPoint[0])*(cellPoints[loopA].position[0] - centerPoint[0]) +
+                               (cellPoints[loopA].position[2] - centerPoint[2])*(cellPoints[loopA].position[2] - centerPoint[2]));
+        totalDistance = 0.6*min(0.5*(domainSizeMax[0]-domainSizeMin[0]),0.5*(domainSizeMax[2]-domainSizeMin[2]));
         break;
       case kdirZ:
-        currentDistance = cellPoints[loopA].position[2];
-        totalDistance = domainSizeMax[2]-domainSizeMin[2];
+        currentDistance = sqrt((cellPoints[loopA].position[0] - centerPoint[0])*(cellPoints[loopA].position[0] - centerPoint[0]) +
+                               (cellPoints[loopA].position[1] - centerPoint[1])*(cellPoints[loopA].position[1] - centerPoint[1]));
+        totalDistance = 0.6*min(0.5*(domainSizeMax[0]-domainSizeMin[0]),0.5*(domainSizeMax[1]-domainSizeMin[1]));
         break;
     }
-    currentVelocity = -(4.0/(totalDistance*totalDistance))*(currentDistance*currentDistance)+(4.0/totalDistance)*currentDistance;
+    // Apply a threshold
+    if(currentDistance<totalDistance){
+      currentVelocity = -(4.0/(totalDistance*totalDistance))*(currentDistance*currentDistance)+4.0;
+      conc = 1.0;
+    }else{
+      currentVelocity = 0.0;
+      conc = 1.0e-10;
+    }
     // Assign Velocity
+    cellPoints[loopA].concentration = conc;
     switch(dir){
       case kdirX: 
-        cellPoints[loopA].velocity[1] = currentVelocity;
+        cellPoints[loopA].velocity[0] = currentVelocity;
         break;
       case kdirY: 
-        cellPoints[loopA].velocity[2] = currentVelocity;
+        cellPoints[loopA].velocity[1] = currentVelocity;
         break;
       case kdirZ: 
-        cellPoints[loopA].velocity[0] = currentVelocity;
+        cellPoints[loopA].velocity[2] = currentVelocity;
         break;
     }
   }
@@ -421,6 +470,9 @@ void MRIStructuredScan::AssignVelocitySignature(MRIDirection dir, MRISamples sam
       break;
     case kConstantFlowWithStep:
       AssignConstantFlowWithStep();
+      break;
+    case kTaylorVortex:
+      AssignTaylorVortexSignature(dir);
       break;
   }
 }

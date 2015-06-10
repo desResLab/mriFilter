@@ -853,10 +853,12 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
         // CHOOSE INPUT FORMAT
         if(opts->inputFormatType == itTEMPLATE){
           // CREATE TEMPLATE
+            MyMRIScan->CreateSampleCase(kPoiseilleFlow,15,15,15,1.0,1.0,1.0,0.0,kdirX);
           //MyMRIScan->CreateSampleCase(kCylindricalVortex,20,50,50,1.0,1.0,1.0,0.0,kdirX);
-          MyMRIScan->CreateSampleCase(kSphericalVortex,60,60,60,0.5,0.5,0.5,0.0,kdirX);
+          //MyMRIScan->CreateSampleCase(kSphericalVortex,15,15,15,0.5,0.5,0.5,0.0,kdirX);
           //MyMRIScan->CreateSampleCase(kToroidalVortex,40,60,80,1.0,1.0,1.0,0.0,kdirX);
-          //MyMRIScan->CreateSampleCase(kTransientFlow,40,60,80,0.01,0.01,0.01,0.0,0.0,kdirX);
+          //MyMRIScan->CreateSampleCase(kTransientFlow,20,30,30,0.01,0.01,0.01,0.0,kdirX);
+          //MyMRIScan->CreateSampleCase(kTaylorVortex,10,10,10,1.0,1.0,1.0,0.0,kdirZ);
         }else if(opts->inputFormatType == itEXPANSION){
           // READ FROM EXPANSION COEFFICIENTS
           bool applyThreshold = true;
@@ -925,6 +927,11 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
     MyMRISequence->WriteExpansionFile(std::string(opts->outputFileName + "_expCoeff"));
   }
 
+  // SAVE FILE FOR POISSON COMPUTATION
+  if (opts->exportToPoisson){
+    MyMRISequence->ExportForPOISSON();
+  }
+
   // EXPORT FILE
   if(opts->outputFormatType == itFILEVTK){
     // READ FROM FILE
@@ -932,8 +939,8 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
   }else if (opts->outputFormatType == itFILETECPLOT){
     // READ FROM FILE
     MyMRISequence->ExportToTECPLOT(opts->outputFileName);
-  }else if (opts->outputFormatType == itPOISSON){
-    MyMRISequence->ExportForPOISSON(opts->outputFileName);
+  }else{
+    throw MRIException("ERROR: Invalid output file format.\n");
   }
 
 }
@@ -962,10 +969,27 @@ int main(int argc, char **argv){
     WriteHeader();
   }
 
-  // Get Commandline Options
+  // Read Options from Command Line
   int res = options->getCommadLineOptions(argc,argv);
   if(res != 0){
     return -1;
+  }
+
+  // Read options from command file if required
+  if(options->useCommandFile){
+    int res = options->getOptionsFromCommandFile(options->commandFileName);
+    if(res != 0){
+      return -1;
+    }
+  }
+
+  // Generate Command File if needed
+  if(options->generateCommandFile){
+    int res = options->writeCommandFilePrototype(options->commandFileName);
+    if(res != 0){
+      return -1;
+    }
+    return 0;
   }
 
   // Finalize options

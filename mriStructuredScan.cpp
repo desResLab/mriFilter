@@ -7,7 +7,9 @@
 #include <boost/algorithm/string.hpp>
 
 #include "mriCell.h"
+#include "mriTypes.h"
 #include "mriStructuredScan.h"
+#include "mriThresholdCriteria.h"
 #include "mriUtils.h"
 #include "mriImagedata.h"
 #include "mriConstants.h"
@@ -2396,6 +2398,20 @@ void MRIStructuredScan::buildFaceConnections(){
 // =======================
 // BUILD EDGE CONNECTIVITY
 // =======================
+void MRIStructuredScan::buildFaceCells(){
+  faceCells.resize(faceConnections.size());
+  int currFace = 0;
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    for(int loopB=0;loopB<cellFaces[loopA].size();loopB++){
+      currFace = cellFaces[loopA][loopB];
+      faceCells[currFace].push_back(loopA);
+    }
+  }
+}
+
+// =======================
+// BUILD EDGE CONNECTIVITY
+// =======================
 void MRIStructuredScan::buildEdgeConnections(){
   std::vector<int> edgeIds;
   std::vector<std::vector<mriEdge*>> AuxFirstNodeEdgeList;
@@ -2610,6 +2626,7 @@ void MRIStructuredScan::RecoverGlobalErrorEstimates(double& AvNormError, double&
 // BUILD FACE AREA VECTOR
 // ======================
 void MRIStructuredScan::buildFaceAreasAndNormals(){
+  double prod = 0.0;
   faceArea.resize(faceConnections.size());
   faceNormal.resize(faceConnections.size());
   double currNormal[3] = {0.0};
@@ -2627,13 +2644,15 @@ void MRIStructuredScan::buildFaceAreasAndNormals(){
     double node3Pos[3] = {0.0};
     MapAuxCoordsToPosition(node1Coords,node1Pos);
     MapAuxCoordsToPosition(node2Coords,node2Pos);
-    MapAuxCoordsToPosition(node3Coords,node3Pos);
+    MapAuxCoordsToPosition(node3Coords,node3Pos);   
     // Get the difference
     double diff1[3] = {0.0};
     double diff2[3] = {0.0};
+    double diff3[3] = {0.0};
     for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
       diff1[loopB] = node2Pos[loopB] - node1Pos[loopB];
       diff2[loopB] = node3Pos[loopB] - node2Pos[loopB];
+      diff3[loopB] = node1Pos[loopB] - cellPoints[faceCells[loopA][0]].position[loopB];
     }
     double d1 = MRIUtils::Do3DEucNorm(diff1);
     double d2 = MRIUtils::Do3DEucNorm(diff2);
@@ -2642,6 +2661,18 @@ void MRIStructuredScan::buildFaceAreasAndNormals(){
     // Get the normal
     MRIUtils::Do3DExternalProduct(diff1,diff2,currNormal);
     MRIUtils::Normalize3DVector(currNormal);
+    if(faceCells[loopA].size() == 1){
+      prod = 0.0;
+      for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
+        prod += currNormal[loopB] * diff3[loopB];
+      }
+      if(prod>0.0){
+        printf("FLIPPED!\n");
+        currNormal[0] = - currNormal[0];
+        currNormal[1] = - currNormal[1];
+        currNormal[2] = - currNormal[2];
+      }
+    }
     faceNormal[loopA].push_back(currNormal[0]);
     faceNormal[loopA].push_back(currNormal[1]);
     faceNormal[loopA].push_back(currNormal[2]);
@@ -2658,6 +2689,7 @@ void MRIStructuredScan::CreateTopology(){
   // Build Face Connections
   WriteSchMessage(std::string("Build Face Connection...\n"));
   buildFaceConnections();
+  buildFaceCells();
   // Build Face Area and Face Normal Vector
   WriteSchMessage(std::string("Build Areas and Normals...\n"));
   buildFaceAreasAndNormals();
@@ -2965,22 +2997,48 @@ void MRIStructuredScan::ReadVTKStructuredPoints(std::string vtkFileName, bool Do
 
 }
 
+// ============================
+// GET FACE ID FROM CELL NUMBER
+// ============================
+int MRIStructuredScan::GetCellFaceID(int CellId,int FaceId){
+  int count = 0;
+  bool found = false;
+  while((!found)&&(count<cellFaces[CellId].size())){
+    // Check if found
+    found = (cellFaces[CellId][count] == FaceId);
+    // Update
+    if(!found){
+      count++;
+    }
+  }
+  if(!found){
+    throw MRIException("ERROR: Face not found in MRIStructuredScan::GetCellFaceID.\n");
+  }
+  // Return value
+  return count;
+}
+
 // ========================
-// EXPORT TO POISSON SOLVER: TO COMPLETE !!!!
+// EXPORT TO POISSON SOLVER
 // ========================
-void MRIStructuredScan::ExportForPOISSON(std::string folderName){
+void MRIStructuredScan::ExportForPOISSON(){
   // Declare
   FILE* outFile;
 
   // Set File Names
   string nodeFileName("poissonNodes.dat");
   string elementFileName("poissonConnections.dat");
+  string diffusivityFileName("poissonDiffusivity.dat");
   string sourceFileName("poissonSources.dat");
   string diricheletFileName("poissonDirBC.dat");
   string bcFileName("poissonFluxBC.dat");
 
   // TOTAL AUX NODES
   int totAuxNodes = (cellTotals[0]+1)*(cellTotals[1]+1)*(cellTotals[2]+1);
+
+  // ==================
+  // SAVE MESH TOPOLOGY
+  // ==================
 
   // SAVE NODE COORDS
   if(totalCellPoints>0){
@@ -3007,32 +3065,232 @@ void MRIStructuredScan::ExportForPOISSON(std::string folderName){
     fclose(outFile);
   }
 
-  // SAVE ELEMENT SOURCES
-  outFile = fopen(sourceFileName.c_str(),"w");
-  // Write Header
+  // ==============================
+  // SAVE ANISOTROPIC CONDUCIBILITY
+  // ==============================
+  outFile = fopen(diffusivityFileName.c_str(),"w");
   for(int loopA=0;loopA<totalCellPoints;loopA++){
-    fprintf(outFile,"%d %e\n",loopA,1.0);
+    fprintf(outFile,"%d ",loopA);
+    fprintf(outFile,"%e ",cellPoints[loopA].concentration);
+    fprintf(outFile,"%e ",cellPoints[loopA].concentration*0.05);
+    fprintf(outFile,"%e ",cellPoints[loopA].concentration*0.05);
+    fprintf(outFile,"\n");
+  }
+  fclose(outFile);
+
+  // ================
+  // SAVE SOURCE TERM
+  // ================
+  mriDoubleMat poissonSourceVec;
+  mriDoubleMat poissonViscousTerm;
+  mriDoubleVec temp;
+  mriDoubleVec tempViscous;
+  double currValue = 0.0;
+  double currValueViscous = 0.0;
+  // First and Second Derivatives
+  double** firstDerivs = new double*[kNumberOfDimensions];
+  double** secondDerivs = new double*[kNumberOfDimensions];
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    firstDerivs[loopA] = new double[kNumberOfDimensions];
+    secondDerivs[loopA] = new double[kNumberOfDimensions];
+  }
+
+  // Loop on cells
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    // Eva Spatial Derivatives
+    EvalSpaceDerivs(loopA, firstDerivs, secondDerivs);
+    // Eval the Convective term for the current Cell
+    temp.clear();
+    tempViscous.clear();
+    for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
+      currValue = 0.0;
+      currValueViscous = 0.0;
+      for(int loopC=0;loopC<kNumberOfDimensions;loopC++){
+        // Same velocity component on columns
+        currValue += cellPoints[loopA].velocity[loopC] * firstDerivs[loopC][loopB];
+        currValueViscous += secondDerivs[loopC][loopB];
+
+      }
+      // Add Component
+      temp.push_back(currValue);
+      tempViscous.push_back(4.0e-3 * currValueViscous);
+    }
+    // Add to the global Vector
+    poissonSourceVec.push_back(temp);
+    poissonViscousTerm.push_back(tempViscous);
+  }
+
+  // Convert Cell Vector to Face Vector
+  bool deleteWalls = false;
+  MRIThresholdCriteria* crit = new MRIThresholdCriteria(kCriterionLessThen,kNoQuantity,0.0);
+  mriDoubleVec poissonSourceFaceVec;
+  cellToFace(deleteWalls,crit,poissonSourceVec,poissonSourceFaceVec);
+
+
+  // Eval the integral of the divergence over the cell
+  mriDoubleVec cellDivs;
+  cellDivs = evalCellDivergences(poissonSourceFaceVec);
+
+  // Divide by the volume
+  mriDoubleVec sourcesToApply;
+  double currVol = 0.0;
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    // Evaluate current cell volume
+    currVol = evalCellVolume(loopA);
+    // Store source term
+    sourcesToApply.push_back(-cellDivs[loopA]/currVol);
+  }
+
+  // SAVE ELEMENT SOURCES TO FILE
+  outFile = fopen(sourceFileName.c_str(),"w");
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    fprintf(outFile,"%d %e\n",loopA,sourcesToApply[loopA]);
   }
   // Close Output file
   fclose(outFile);
 
-  // SAVE NEUMANN FLUXES
+  // =====================
+  // SAVE NEUMANN BOUNDARY
+  // =====================
+  int currCell = 0;
+  double currVec[3] = {0.0};
+  double normComp = 0.0;
+  int faceID = 0.0;
+  // Open File
   outFile = fopen(bcFileName.c_str(),"w");
-  // Close Output file
-  fclose(outFile);
-
-  // SAVE DIRICHELET CONDITIONS
-  outFile = fopen(diricheletFileName.c_str(),"w");
-  // Write Header
-  double pos[3];
-  for(int loopA=0;loopA<totAuxNodes;loopA++){
-    getAuxNodeCoordinates(loopA,pos);
-    if((fabs(pos[0]-(domainSizeMin[0]-0.5*cellLengths[0][0]))<1.0e-5)||((fabs(pos[0]-(domainSizeMax[0]-0.5*cellLengths[0][0]))<1.0e-5))){
-      fprintf(outFile,"%d %e\n",loopA,5.0);
+  // Loop on the free faces
+  for(int loopA=0;loopA<faceCells.size();loopA++){
+    // Check if the face is free
+    if(faceCells[loopA].size() == 1){
+      // Get Current element
+      currCell = faceCells[loopA][0];
+      // Get Velocity Component
+      currVec[0] = poissonSourceVec[currCell][0] + poissonViscousTerm[currCell][0];
+      currVec[1] = poissonSourceVec[currCell][1] + poissonViscousTerm[currCell][1];
+      currVec[2] = poissonSourceVec[currCell][2] + poissonViscousTerm[currCell][2];
+      // Get Normal Component
+      normComp = 0.0;
+      for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
+        normComp += currVec[loopB] * faceNormal[loopA][loopB];
+      }
+      // Multiply by the face area
+      currValue = faceArea[loopA] * normComp;
+      // Print Line
+      if(fabs(currValue) > 0.0){
+        fprintf(outFile,"%d ",currCell);
+        for(int loopB=0;loopB<faceConnections[loopA].size();loopB++){
+          fprintf(outFile,"%d ",faceConnections[loopA][loopB]);
+        }
+        fprintf(outFile,"%e\n",currValue);
+      }
     }
   }
-  // Close Output file
+  // Close File
   fclose(outFile);
 
+  // =================
+  // NO DIRICHELET BCs
+  // =================
+  // SAVE DIRICHELET CONDITIONS
+  //outFile = fopen(diricheletFileName.c_str(),"w");
+  // Write Header
+  //double pos[3];
+  //for(int loopA=0;loopA<totAuxNodes;loopA++){
+  //  getAuxNodeCoordinates(loopA,pos);
+  //  if((fabs(pos[0]-(domainSizeMin[0]-0.5*cellLengths[0][0]))<1.0e-5)||((fabs(pos[0]-(domainSizeMax[0]-0.5*cellLengths[0][0]))<1.0e-5))){
+  //    fprintf(outFile,"%d %e\n",loopA,5.0);
+  //  }
+  //}
+  // Close Output file
+  //fclose(outFile);
 
+  // Free Memory
+  delete crit;
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    delete [] firstDerivs[loopA];
+    delete [] secondDerivs[loopA];
+  }
+  delete [] firstDerivs;
+  delete [] secondDerivs;
 }
+
+// ==========================
+// CONVERT CELL ARRAY TO FACE
+// ==========================
+void MRIStructuredScan::cellToFace(bool deleteWalls, MRIThresholdCriteria* thresholdCriteria,
+                                   mriDoubleMat cellVec, mriDoubleVec &faceVec){
+  bool   continueToProcess = false;
+  double currentValue = 0.0;
+  double faceComponent = 0.0;
+  int    currentFace = 0;
+  double currFaceArea = 0.0;
+  bool   checkPassed = false;
+  mriIntVec resID;
+  double currVel = 0.0;
+
+  // Get Total Number Of Faces
+  int totalFaces = faceConnections.size();
+
+  // Init
+  faceVec.resize(totalFaces);
+  resID.resize(totalFaces);
+  for(int loopA=0;loopA<totalFaces;loopA++){
+    faceVec[loopA] = 0.0;
+    resID[loopA] = 0;
+  }
+
+  // Loop To Assemble Residual Vector
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    // Check for BC
+    if(deleteWalls){
+      currentValue = cellPoints[loopA].getQuantity(thresholdCriteria->thresholdQty);
+      continueToProcess = thresholdCriteria->MeetsCriteria(currentValue);
+    }else{
+      continueToProcess = true;
+    }
+    if(continueToProcess){
+      // Loop On Faces
+      for(int loopB=0;loopB<k3DNeighbors;loopB++){
+        // Get Current Face
+        currentFace = cellFaces[loopA][loopB];
+        // Get Face Area
+        currFaceArea = faceArea[currentFace];
+        // Get Normal Veclocity
+        faceComponent = 0.0;
+        for(int loopC=0;loopC<kNumberOfDimensions;loopC++){
+          currVel = cellVec[loopA][loopC];
+          faceComponent += currVel * faceNormal[currentFace][loopC];
+        }
+        // Assemble
+        faceVec[currentFace] = faceVec[currentFace] + currFaceArea * faceComponent;
+        resID[currentFace]++;
+      }
+    }
+  }
+  // Check Faces
+  for(int loopA=0;loopA<totalFaces;loopA++){
+    if(deleteWalls) checkPassed = (resID[loopA]>2);
+    else checkPassed = (resID[loopA]<1)||(resID[loopA]>2);
+    if(checkPassed){
+      std::string currentMsgs = "Internal: Wrong Face Connectivity, Face: " + MRIUtils::IntToStr(loopA)+ "; Connectivity: " + MRIUtils::IntToStr(resID[loopA])+".";
+      throw new MRIMeshCompatibilityException(currentMsgs.c_str());
+    }
+  }
+
+  // Divide By the Number Of Faces
+  for(int loopA=0;loopA<totalFaces;loopA++){
+    if(resID[loopA]>0) faceVec[loopA] = ((double)faceVec[loopA]/(double)resID[loopA]);
+    else faceVec[loopA] = 0.0;
+  }
+}
+
+// ====================
+// EVALUATE CELL VOLUME
+// ====================
+double MRIStructuredScan::evalCellVolume(int cellNumber){
+  // Get Integer Indexes
+  int intCoords[3];
+  MapIndexToCoords(cellNumber,intCoords);
+  return cellLengths[0][intCoords[0]] * cellLengths[1][intCoords[1]] * cellLengths[2][intCoords[2]];
+}
+

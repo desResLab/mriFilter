@@ -2,6 +2,7 @@
 #include "mriThresholdCriteria.h"
 #include "mriConstants.h"
 #include "mriUtils.h"
+#include "mriException.h"
 
 #include <stdlib.h>
 #include <getopt.h>
@@ -13,6 +14,8 @@ MRIOptions::MRIOptions(){
   inputFileName = "";
   outputFileName = "";
   statFileName = "";
+  generateCommandFile = false;
+  useCommandFile = false;
   commandFileName = "";
   // Parameters
   itTol = 1.0e-3;
@@ -35,6 +38,8 @@ MRIOptions::MRIOptions(){
   evalPopVortexCriteria = false;
   evalSMPVortexCriterion = false;
   evalPressure = false;
+  // Export to Poisson
+  exportToPoisson = false;
 }
 
 // =========================
@@ -64,6 +69,7 @@ int MRIOptions::getCommadLineOptions(int argc, char **argv){
       {"evalSMPVortex",    no_argument, 0, 13},
       {"saveInitialVel",    no_argument, 0, 14},
       {"saveExpansionCoeffs",    no_argument, 0, 15},
+      {"poisson",    no_argument, 0, 16},
       {"normal",        no_argument, 0, 22},
       {"writexp",   no_argument, 0, 23},
       {"test",      no_argument, 0, 24},
@@ -74,7 +80,7 @@ int MRIOptions::getCommadLineOptions(int argc, char **argv){
     /* getopt_long stores the option index here. */
     int option_index = 0;    
 
-    c = getopt_long (argc, argv, "c:i:o:",
+    c = getopt_long (argc, argv, "c:i:o:g:",
                      long_options, &option_index);
 
     /* Detect the end of the options.*/
@@ -106,8 +112,16 @@ int MRIOptions::getCommadLineOptions(int argc, char **argv){
         break;
       case 'c':
         // Set input file name
+        useCommandFile = true;
         commandFileName = optarg;
         printf("COMMAND FILE MODE\n");
+        printf("Command File: %s\n",commandFileName.c_str());
+        break;
+      case 'g':
+        // Set input file name
+        generateCommandFile = true;
+        commandFileName = optarg;
+        printf("COMMAND FILE GENERATION MODE\n");
         printf("Command File: %s\n",commandFileName.c_str());
         break;
       case 1:
@@ -174,6 +188,10 @@ int MRIOptions::getCommadLineOptions(int argc, char **argv){
         saveExpansionCoeffs = true;
         printf("Saving Expansion Coefficients\n");
         break;
+      case 16:
+        exportToPoisson = true;
+        printf("Exporting FE Files for Poisson Solver\n");
+        break;
       case 22:
         runMode = rmNORMAL;
         // Read Sequence file names
@@ -181,9 +199,6 @@ int MRIOptions::getCommadLineOptions(int argc, char **argv){
         break;
       case '?':
         /* getopt_long already printed an error message. */
-        break;
-      case 16:
-        runMode = rmSOLVEPOISSON;
         break;
       default:
         abort ();
@@ -214,5 +229,222 @@ void MRIOptions::finalize(){
   }else{
     // READ FROM SEQUENCE LIST FILE
   }
+}
+
+// =============================
+// GET OPTIONS FROM COMMAND FILE
+// =============================
+int MRIOptions::getOptionsFromCommandFile(string commandFile){
+  // Write Message
+  printf("Reading Command file: %s\n",commandFile.c_str());
+
+  // Declare input File
+  std::ifstream infile;
+  infile.open(commandFile);
+
+  // Declare
+  vector<string> tokenizedString;
+
+  // Read Data From File
+  std::string buffer;
+  while (std::getline(infile,buffer)){
+    // Trim String
+    boost::trim(buffer);
+    // Tokenize String
+    boost::split(tokenizedString, buffer, boost::is_any_of(":"), boost::token_compress_on);
+    // CHECK THE ELEMENT TYPE
+    if(boost::to_upper_copy(tokenizedString[0]) == std::string("RUNMODE")){
+      // READ RUN MODE
+      if(boost::to_upper_copy(tokenizedString[1]) == std::string("NORMAL")){
+        runMode =rmNORMAL;
+      }else{
+        throw MRIException("ERROR: Invalid Run Mode.\n");
+      }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("INPUTFILE")){
+      try{
+        inputFileName = tokenizedString[1];
+      }catch(...){
+        throw MRIException("ERROR: Invalid Input File.\n");
+      }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("OUTPUTFILE")){
+      try{
+        outputFileName = tokenizedString[1];
+      }catch(...){
+        throw MRIException("ERROR: Invalid Output File.\n");
+      }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("STATFILE")){
+      try{
+        statFileName = tokenizedString[1];
+      }catch(...){
+        throw MRIException("ERROR: Invalid Statistics File.\n");
+      }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("SMPITERATIONTOLERANCE")){
+      try{
+        itTol = atof(tokenizedString[1].c_str());
+      }catch(...){
+        throw MRIException("ERROR: Invalid SMP Tolerance.\n");
+      }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("SMPMAXITERATIONS")){
+      try{
+        maxIt = atoi(tokenizedString[1].c_str());
+      }catch(...){
+        throw MRIException("ERROR: Invalid Max number of SMP Iterations.\n");
+      }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("THRESHOLDQTY")){
+      if(boost::to_upper_copy(tokenizedString[1]) == std::string("POSX")){
+        thresholdQty = kQtyPositionX;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("POSY")){
+        thresholdQty = kQtyPositionY;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("POSZ")){
+        thresholdQty = kQtyPositionZ;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("CONCENTRATION")){
+        thresholdQty = kQtyConcentration;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("VELX")){
+        thresholdQty = kQtyVelocityX;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("VELY")){
+        thresholdQty = kQtyVelocityY;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("VELZ")){
+        thresholdQty = kQtyVelocityZ;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("VELMOD")){
+        thresholdQty = kQtyVelModule;
+      }else{
+        throw MRIException("ERROR: Invalid Threshold Quantity.\n");
+      }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("THRESHOLDTYPE")){
+      if(boost::to_upper_copy(tokenizedString[1]) == std::string("LT")){
+        thresholdType = kCriterionLessThen;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("GT")){
+        thresholdType = kCriterionGreaterThen;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("ABSLT")){
+        thresholdType = kCriterionABSLessThen;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("ABSGT")){
+        thresholdType = kCriterionABSGreaterThen;
+      }else{
+        throw MRIException("ERROR: Invalid Threshold Type.\n");
+      }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("THRESHOLDVALUE")){
+      try{
+        thresholdValue = atof(tokenizedString[1].c_str());
+      }catch(...){
+        throw MRIException("ERROR: Invalid Threshold Value.\n");
+      }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("SAVEINITIALVELOCITIES")){
+      if(boost::to_upper_copy(tokenizedString[1]) == std::string("TRUE")){
+        saveInitialVel = true;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("FALSE")){
+        saveInitialVel = false;
+      }else{
+        throw MRIException("ERROR: Invalid logical value for saveInitialVel.\n");
+      }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("SAVEEXPANSIONCOEFFS")){
+      if(boost::to_upper_copy(tokenizedString[1]) == std::string("TRUE")){
+        saveExpansionCoeffs = true;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("FALSE")){
+        saveExpansionCoeffs = false;
+      }else{
+        throw MRIException("ERROR: Invalid logical value for saveExpansionCoeffs.\n");
+      }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("INPUTTYPE")){
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("OUTPUTTYPE")){
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("USESMPFILTER")){
+      if(boost::to_upper_copy(tokenizedString[1]) == std::string("TRUE")){
+        applySMPFilter = true;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("FALSE")){
+        applySMPFilter = false;
+      }else{
+        throw MRIException("ERROR: Invalid logical value for applySMPFilter.\n");
+      }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("USEBCFILTER")){
+      if(boost::to_upper_copy(tokenizedString[1]) == std::string("TRUE")){
+        applyBCFilter = true;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("FALSE")){
+        applyBCFilter = false;
+      }else{
+        throw MRIException("ERROR: Invalid logical value for applyBCFilter.\n");
+      }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("USECONSTANTPATTERNS")){
+      if(boost::to_upper_copy(tokenizedString[1]) == std::string("TRUE")){
+        useConstantPatterns = true;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("FALSE")){
+        useConstantPatterns = false;
+      }else{
+        throw MRIException("ERROR: Invalid logical value for useConstantPatterns.\n");
+      }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("SEQUENCEFILENAME")){
+      try{
+        sequenceFileName = tokenizedString[1];
+      }catch(...){
+        throw MRIException("ERROR: Invalid Sequence File Name.\n");
+      }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("EVALVORTEXCRITERIA")){
+      if(boost::to_upper_copy(tokenizedString[1]) == std::string("TRUE")){
+        evalPopVortexCriteria = true;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("FALSE")){
+        evalPopVortexCriteria = false;
+      }else{
+        throw MRIException("ERROR: Invalid logical value for evalPopVortexCriteria.\n");
+      }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("EVALSMPVORTEXCRITERIA")){
+      if(boost::to_upper_copy(tokenizedString[1]) == std::string("TRUE")){
+        evalSMPVortexCriterion = true;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("FALSE")){
+        evalSMPVortexCriterion = false;
+      }else{
+        throw MRIException("ERROR: Invalid logical value for evalSMPVortexCriterion.\n");
+      }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("EVALPRESSURE")){
+      if(boost::to_upper_copy(tokenizedString[1]) == std::string("TRUE")){
+        evalPressure = true;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("FALSE")){
+        evalPressure = false;
+      }else{
+        throw MRIException("ERROR: Invalid logical value for evalPressure.\n");
+      }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("EXPORTTOPOISSON")){
+      if(boost::to_upper_copy(tokenizedString[1]) == std::string("TRUE")){
+        exportToPoisson = true;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("FALSE")){
+        exportToPoisson = false;
+      }else{
+        throw MRIException("ERROR: Invalid logical value for exportToPoisson.\n");
+      }
+    }
+  }
+  // Close File
+  infile.close();
+}
+
+// ============================
+// WRITE COMMAND FILE PROTOTYPE
+// ============================
+int writeCommandFilePrototype(string commandFile){
+    // File Names
+    inputFileName = "";
+    outputFileName = "";
+    statFileName = "";
+    // Parameters
+    itTol = 1.0e-3;
+    maxIt = 2000;
+    thresholdType = kNoQuantity;
+    thresholdValue = 0.0;
+    // Save Initial Velocities
+    saveInitialVel = false;
+    saveExpansionCoeffs = false;
+    // Apply Filter
+    applySMPFilter = false;
+    applyBCFilter = false;
+    useConstantPatterns = true;
+    // Export Format Type
+    inputFormatType = itFILEVTK;
+    outputFormatType = otFILEVTK;
+    // Default: Process Single Scan
+    sequenceFileName = "";
+    // Post processing
+    evalPopVortexCriteria = false;
+    evalSMPVortexCriterion = false;
+    evalPressure = false;
+    // Export to Poisson
+    exportToPoisson = false;
 
 }
+

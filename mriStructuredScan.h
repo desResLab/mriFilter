@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "mriScan.h"
+#include "mriTypes.h"
 #include "mriCell.h"
 #include "mriVolData.h"
 #include "mriCellMaterial.h"
@@ -78,6 +79,7 @@ class MRIStructuredScan: public MRIScan{
     std::vector<std::vector<int>> cellConnections;
     std::vector<std::vector<int>> cellFaces;
     // Face Topology
+    std::vector<std::vector<int>> faceCells;
     std::vector<std::vector<int>> faceConnections;
     std::vector<std::vector<int>> faceEdges;
     std::vector<double> faceArea;
@@ -121,14 +123,15 @@ class MRIStructuredScan: public MRIScan{
     void FillPLTHeader(std::vector<std::string> &pltHeader, bool isFirstFile);
     void ExportToLSDYNA(std::string LSFileName);
     void ExportToCSV(std::string FileName);
-    virtual void ExportToTECPLOT(std::string FileName, bool isFirstFile);
     void ExportNodesToFile(std::string FileName);
-    virtual void ExportToVOL(std::string FileName);
     void FlushToFile(std::string FileName);
     void ExportVelocitiesToFile(std::string fileName, bool append);
+    // VIRTUAL
+    virtual void ExportToVOL(std::string FileName);
+    virtual void ExportToTECPLOT(std::string FileName, bool isFirstFile);
     virtual void ExportToVTK(std::string fileName);
     virtual void WriteExpansionFile(std::string fileName);
-    virtual void ExportForPOISSON(std::string FileName);
+    virtual void ExportForPOISSON();
 
     // ========
     // VOL DATA
@@ -148,6 +151,7 @@ class MRIStructuredScan: public MRIScan{
     int addToFaceConnections(std::vector<std::vector<mriFace* >> &AuxFirstNodeFaceList, std::vector<int> faceIds);
     // FACES
     void buildFaceConnections();
+    void buildFaceCells();
     void buildFaceAreasAndNormals();
     void getExternalFaceNormal(int cellID, int localFaceID, double* extNormal);
     // EDGES
@@ -162,6 +166,10 @@ class MRIStructuredScan: public MRIScan{
     void   getEdgeCenter(int edgeID, double* ec);
     void   getFaceCenter(int faceID, double* fc);
     void   getEdgeToFaceDirection(int edgeID, int faceID, std::vector<double> &edgeFaceVector);
+    // VOLUME
+    double evalCellVolume(int cellNumber);
+    // OTHER
+    int GetCellFaceID(int CellId,int FaceId);
 
     // =============================
     // TRANSFORMATIONS AND THRESHOLD
@@ -211,7 +219,10 @@ class MRIStructuredScan: public MRIScan{
     void GetLocalStarFaces(int StarNum, int CellsX, int CellsY, int &BottomFace, int &TopFace, int &LeftFace, int &RightFace);
     int  findFirstNotVisited(int cellTotal, bool* visitedCell, std::vector<int> cellStack);
     void formNotVisitedList(int cellTotal, bool* visitedCell,std::vector<bool>& notVisitedList);
-  
+
+    // Map cell vector to face vector
+    void cellToFace(bool deleteWalls, MRIThresholdCriteria* thresholdCriteria,mriDoubleMat cellVec, mriDoubleVec &faceVec);
+
     // =========
     // MP FILTER
     // =========
@@ -249,6 +260,9 @@ class MRIStructuredScan: public MRIScan{
     virtual void EvalSpaceDerivs(int currentCell, double** firstDerivs, double** secondDerivs);
     virtual void EvalSpaceGradient(int currentCell,int qtyID, double* gradient);
     void ComputeQuantityGradient(int qtyID);
+
+    // DIVERGENCE
+    mriDoubleVec evalCellDivergences(mriDoubleVec faceVec);
   
     // PRESSURE COMPUTATION
     void EvalRelativePressure(int startingCell, double refPressure);
@@ -284,6 +298,7 @@ class MRIStructuredScan: public MRIScan{
     void AssignToroidalVortexFlowSignature();
     void AssignTimeDependentPoiseilleSignature(double omega, double radius, double viscosity, double currtime, double maxVel);
     void AssignConstantFlowWithStep();
+    void AssignTaylorVortexSignature(MRIDirection dir);
     void AssignRandomStandardGaussianFlow();
     void AssignRandomComponent(const int kdirX,stdRndGenerator &generator);
     void AssignZeroVelocities();
@@ -297,7 +312,7 @@ class MRIStructuredScan: public MRIScan{
     virtual void   EvalVortexCriteria();
     virtual void   EvalVorticity();
     virtual void   EvalEnstrophy();
-    virtual void EvalSMPVortexCriteria(MRIExpansion* exp);
+    virtual void   EvalSMPVortexCriteria(MRIExpansion* exp);
 
     // SPATIAL REPRESENTATION OF VORTEX COEFFICIENTS
     double EvalVortexCriteria(MRIExpansion* exp);

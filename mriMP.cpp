@@ -2,6 +2,7 @@
 #include <math.h>
 
 #include "mriScan.h"
+#include "mriTypes.h"
 #include "mriStructuredScan.h"
 #include "mriConstants.h"
 #include "mriUtils.h"
@@ -204,6 +205,41 @@ double MRIStructuredScan::EvalMaxDivergence(double* filteredVec){
   }
   return maxDivergence;
 }
+
+// ====================================
+// EVAL CELL DIVERGENCE FOR A GIVEN QTY
+// ====================================
+mriDoubleVec MRIStructuredScan::evalCellDivergences(mriDoubleVec faceVec){
+  mriDoubleVec cellDivs;
+  double currentDiv = 0.0;
+  int currFace = 0;
+  double extNormal[3] = {0.0};
+  double normalSign = 0.0;
+
+  // Loop on cells
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    currentDiv = 0.0;
+    // Loop on faces
+    for(size_t loopB=0;loopB<cellFaces[loopA].size();loopB++){
+      // Get Current Face
+      currFace = cellFaces[loopA][loopB];
+      // Get External Normal
+      getExternalFaceNormal(loopA,loopB,extNormal);
+      // Get Sign
+      normalSign = 0.0;
+      for(int loopC=0;loopC<kNumberOfDimensions;loopC++){
+        normalSign += extNormal[loopC] * faceNormal[currFace][loopC];
+      }
+      round(normalSign);
+      // Get Sign
+      currentDiv += faceVec[cellFaces[loopA][loopB]] * normalSign;
+    }
+    // Store Divergence
+    cellDivs.push_back(currentDiv);
+  }
+  return cellDivs;
+}
+
 
 // =============
 // REORDER CELLS

@@ -128,7 +128,7 @@ class MRIScan{
     virtual void ExportToVOL(std::string FileName){throw MRIException("Error: Not Implemented!");}
     virtual void ExportToVTK(std::string fileName){throw MRIException("Error: Not Implemented!");}
     virtual void ExportToTECPLOT(std::string FileName, bool isFirstFile){throw MRIException("Error: Not Implemented!");}
-    virtual void ExportForPOISSON(std::string FileName){throw MRIException("Error: Not Implemented!");}
+    virtual void ExportForPOISSON(){throw MRIException("Error: Not Implemented!");}
     virtual void WriteExpansionFile(std::string fileName){throw MRIException("Error: Not Implemented!");}
 
     // MODEL MANIPULATION

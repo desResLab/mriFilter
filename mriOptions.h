@@ -49,6 +49,8 @@ public:
   string inputFileName;
   string outputFileName;
   string statFileName;
+  bool generateCommandFile;
+  bool useCommandFile;
   string commandFileName;
   double itTol;
   int maxIt;
@@ -75,12 +77,19 @@ public:
   bool evalPopVortexCriteria;
   bool evalSMPVortexCriterion;
   bool evalPressure;
+  // Export to Poisson Solver
+  bool exportToPoisson;
 
   // CONSTRUCTOR
   MRIOptions();
 
   // Get Command Options from input Arguments
   int getCommadLineOptions(int argc, char **argv);
+  // Get Options from Command File
+  int getOptionsFromCommandFile(string commandFile);
+  // Write Command File Prototype
+  int writeCommandFilePrototype(string commandFile);
+
   // Process Options
   void finalize();
 };

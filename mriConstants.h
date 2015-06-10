@@ -66,6 +66,7 @@
   const int kToroidalVortex       = 6;
   const int kTransientFlow        = 7;
   const int kConstantFlowWithStep = 8;
+  const int kTaylorVortex         = 9;
   
   // Streamlines Plane
   const int kPlaneXY = 0;

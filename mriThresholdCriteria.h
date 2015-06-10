@@ -7,8 +7,7 @@ const int kCriterionGreaterThen = 1;
 const int kCriterionABSLessThen = 2;
 const int kCriterionABSGreaterThen = 3;
 
-class MRIThresholdCriteria
-{
+class MRIThresholdCriteria{
 public:
   // Data Members
   int thresholdType;
