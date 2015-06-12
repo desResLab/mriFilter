@@ -56,7 +56,6 @@ void SolvePoissonEquation(MRICommunicator* comm){
   //MyMRIScan->SolvePoissonEquation(comm);
 }
 
-
 // =====================================
 // PROCESS SEQUENCE TO PRODUCE PRESSURES
 // =====================================
@@ -110,24 +109,11 @@ void EvalPressureFromSignatureFlow(MRIOptions* opts){
   currentTime = 0.0;
   for(int loopA=0;loopA<totalSlides;loopA++){
     MRIStructuredScan* MyMRIScan = new MRIStructuredScan(currentTime);
-    MyMRIScan->CreateSampleCase(kStagnationFlow,20,80,80,0.1,0.1,0.1,currentTime,kdirX);
-    //MyMRIScan->CreateSampleCase(kTransientFlow,40,60,80,0.01,0.01,0.01,currentTime,kdirX);
+    MyMRIScan->CreateSampleCase(kStagnationFlow,opts->templateParams);
+    //MyMRIScan->CreateSampleCase(kTransientFlow,opts->templateParams);
     MyMRISequence->AddScan(MyMRIScan);
     currentTime += timeIncrement;
   }
-
-  // Read Plt File
-  //MyMRIScan->ReadPltFile(inFileName,true);
-
-  // Generate Sample Case
-  // kPoiseilleFlow, kStagnationFlow, kCylindricalVortex,kSphericalVortex
-  //MyMRIScan->CreateSampleCase(kCylindricalVortex,20,50,50,1.0,1.0,1.0,kdirX);
-  //MyMRIScan->CreateSampleCase(kSphericalVortex,60,60,60,0.5,0.5,0.5,kdirX);
-  //MyMRIScan->CreateSampleCase(kToroidalVortex,40,60,80,1.0,1.0,1.0,kdirX);
-  //MyMRIScan->CreateSampleCase(kTransientFlow,40,60,80,0.01,0.01,0.01,0.0,kdirX);
-
-  // TEST: USE VOL FILES
-  //MyMRIScan->ReadScanFromVOLFiles(std::string("volDataAn.vol"),std::string("volDataAn.vol"),std::string("volDataAn.vol"),std::string("volDataAn.vol"));
 
   // USE DIVERGENCE SMOOTHING FILTER
   //MyMRIScan->ApplySmoothingFilter();
@@ -231,12 +217,31 @@ void ComputeScanMatrices(){
   int totalStarCols = 0;
   double** StarMatrix = NULL;
 
-  // Print Matrices for Matlab Analysis Of Variance
+  bool isIsotropic = true;
+
+  // Print Matrices for Matlab Analysis
+  // Create Scan
   MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
-  // ISOTROPIC
-  MyMRIScan->CreateSampleCase(kConstantFlow,5,5,5,1.0,1.0,1.0,0.0,kdirX);
-  // ANISOTROPIC
-  //MyMRIScan->CreateSampleCase(kConstantFlow,5,5,5,1.0,2.0,3.0,0.0,kdirX);
+  // Set Template Parameters
+  vector<double> params;
+  params.push_back(5);
+  params.push_back(5);
+  params.push_back(5);
+  params.push_back(1.0);
+  params.push_back(1.0);
+  params.push_back(1.0);
+  params.push_back(0.0);
+  params.push_back(1.0);
+  if(isIsotropic){
+    // ISOTROPIC
+    MyMRIScan->CreateSampleCase(kConstantFlow,params);
+  }else{
+    // ANISOTROPIC
+    params[3] = 1.0;
+    params[4] = 2.0;
+    params[5] = 3.0;
+    MyMRIScan->CreateSampleCase(kConstantFlow,params);
+  }
   // Assemble All Matrices
   // Assemble Encoding
   MyMRIScan->AssembleEncodingMatrix(totalERows,totalECols,EMat);
@@ -270,11 +275,26 @@ void ShowFaceFluxPatterns(std::string faceFluxFileName, std::string outFileName)
   // NEW SCAN
   MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
 
-  // ISOTROPIC
-  MyMRIScan->CreateSampleCase(kConstantFlow,5,5,5,1.0,1.0,1.0,0.0,kdirX);
+  bool isIsotropic = true;
 
-  // ANISOTROPIC
-  //MyMRIScan->CreateSampleCase(kConstantFlow,5,5,5,1.0,2.0,3.0,0.0,kdirX);
+  vector<double> params;
+  params.push_back(5.0);
+  params.push_back(5.0);
+  params.push_back(5.0);
+  params.push_back(1.0);
+  params.push_back(1.0);
+  params.push_back(1.0);
+  params.push_back(1.0);
+  if(isIsotropic){
+    // ISOTROPIC
+    MyMRIScan->CreateSampleCase(kConstantFlow,params);
+  }else{
+   // ANISOTROPIC
+   params[3] = 1.0;
+   params[4] = 2.0;
+   params[5] = 3.0;
+   MyMRIScan->CreateSampleCase(kConstantFlow,params);
+  }
 
   // READ FACE FLUXES FROM FILE
   int totalRows = 0;
@@ -540,7 +560,17 @@ void PerformRandomTest(MRIOptions* opts,MRICommunicator* comm){
 
     // Generate Random Velocity Field - Standard Gaussian Distribution
     MyMRIScan = new MRIStructuredScan(0.0);
-    MyMRIScan->CreateSampleCase(kZeroVelocity,5,5,5,1.0,1.0,1.0,0.0,kdirX);
+
+    vector<double> params;
+    params.push_back(5.0);
+    params.push_back(5.0);
+    params.push_back(5.0);
+    params.push_back(1.0);
+    params.push_back(1.0);
+    params.push_back(1.0);
+    params.push_back(0.0);
+    params.push_back(1.0);
+    MyMRIScan->CreateSampleCase(kZeroVelocity,params);
 
     // Assign Random Component
     MyMRIScan->AssignRandomComponent(kdirX,generator);
@@ -832,7 +862,7 @@ void WriteSpatialExpansion(MRIOptions* opts){
 }
 
 // ===============================
-// RUN APPLICATION IN NORMAL MODEL
+// RUN APPLICATION IN NORMAL MODE
 // ===============================
 void runApplication(MRIOptions* opts, MRICommunicator* comm){
 
@@ -853,12 +883,26 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
         // CHOOSE INPUT FORMAT
         if(opts->inputFormatType == itTEMPLATE){
           // CREATE TEMPLATE
-            MyMRIScan->CreateSampleCase(kPoiseilleFlow,15,15,15,1.0,1.0,1.0,0.0,kdirX);
-          //MyMRIScan->CreateSampleCase(kCylindricalVortex,20,50,50,1.0,1.0,1.0,0.0,kdirX);
-          //MyMRIScan->CreateSampleCase(kSphericalVortex,15,15,15,0.5,0.5,0.5,0.0,kdirX);
-          //MyMRIScan->CreateSampleCase(kToroidalVortex,40,60,80,1.0,1.0,1.0,0.0,kdirX);
-          //MyMRIScan->CreateSampleCase(kTransientFlow,20,30,30,0.01,0.01,0.01,0.0,kdirX);
-          //MyMRIScan->CreateSampleCase(kTaylorVortex,10,10,10,1.0,1.0,1.0,0.0,kdirZ);
+          switch(opts->templateType){
+            case kPoiseilleFlow:
+              MyMRIScan->CreateSampleCase(kPoiseilleFlow,opts->templateParams);
+              break;
+            case kCylindricalVortex:
+              MyMRIScan->CreateSampleCase(kCylindricalVortex,opts->templateParams);
+              break;
+            case kSphericalVortex:
+              MyMRIScan->CreateSampleCase(kSphericalVortex,opts->templateParams);
+              break;
+            case kToroidalVortex:
+              MyMRIScan->CreateSampleCase(kToroidalVortex,opts->templateParams);
+              break;
+            case kTransientFlow:
+              MyMRIScan->CreateSampleCase(kTransientFlow,opts->templateParams);
+              break;
+            case kTaylorVortex:
+              MyMRIScan->CreateSampleCase(kTaylorVortex,opts->templateParams);
+              break;
+          }
         }else if(opts->inputFormatType == itEXPANSION){
           // READ FROM EXPANSION COEFFICIENTS
           bool applyThreshold = true;
@@ -878,9 +922,18 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
       }
   }
 
+  // All processes are waiting for the root to read the files
+  int mpiError = MPI_Barrier(comm->mpiComm);
+  MRIUtils::checkMpiError(mpiError);
+
   // SAVE INITIAL VELOCITIES
   if (opts->saveInitialVel){
     MyMRISequence->saveVelocity();
+  }
+
+  // APPLY NOISE
+  if (opts->applyNoise){
+    MyMRISequence->applyNoise(opts->noiseIntensity);
   }
 
   // APPLY FULL FILTER

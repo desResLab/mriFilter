@@ -304,6 +304,15 @@ void MRISequence::ScalePositions(double factor){
   WriteSchMessage(std::string("Done.\n"));
 }
 
+// Add noise to measurements
+void MRISequence::applyNoise(double noiseIntensity){
+  WriteSchMessage(std::string("Applying Noise..."));
+  for(int loopA=0;loopA<totalScans;loopA++){
+    sequence[loopA]->ApplyGaussianNoise(noiseIntensity);
+  }
+  WriteSchMessage(std::string("Done.\n"));
+}
+
 
 
 

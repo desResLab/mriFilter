@@ -614,18 +614,25 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
   float updateStar_BeginTime = 0.0;
   float updateStar_TotalTime = 0.0;
 
-  
+  // Determine the Minimum and Maximum Face number of current processor
+  int minFaceOnProc = comm->currProc * int((totalFaces - 1)/(comm->totProc + 1));
+  int maxFaceOnProc = (comm->currProc + 1) * int((totalFaces - 1)/(comm->totProc + 1));
+
+  if(comm->currProc == comm->totProc){
+    maxFaceOnProc = totalFaces;
+  }
+
   // Only Master Process Assembles Residual Vector and Distribute it across the network
-  //if(comm->currProc == 0){
+  if(comm->currProc == 0){
     // Assemble Face Flux Vectors
     assembleRes_BeginTime = clock();
     AssembleResidualVector(isBC,options->thresholdCriteria,totalFaces,resVec,filteredVec,resNorm);
     assembleRes_TotalTime += float( clock () - assembleRes_BeginTime ) /  CLOCKS_PER_SEC;
 
     // Distribute it across the network
-    //mpiError = MPI_Bcast(&resVec,totalFaces, MPI_REAL,0,comm->mpiComm);
-    //MRIUtils::checkMpiError(mpiError);
-  //}
+    mpiError = MPI_Bcast(&resVec,totalFaces, MPI_REAL,0,comm->mpiComm);
+    MRIUtils::checkMpiError(mpiError);
+  }
 
   // Print Residual Vector
   //PrintResidualVector(std::string("resVectorFile_"+std::to_string(comm->currProc)+".txt").c_str(),totalFaces,resVec);
@@ -902,129 +909,3 @@ void MRIStructuredScan::RebuildFromExpansion(MRIExpansion* expansion,bool useCon
   // DELETE ARRAY
   delete [] faceFluxVec;
 }
-
-/*{Physics Filtering}
-Function PerformPhysicsFilteringLSMR(IsBCFilter: Boolean;
-                                     ThresholdCriterion: ThresholdCritRecord;
-                                     Var GlobalData: GlobalDataRecord): Integer4;
-Const
-  NumberOfDimensions = 3;
-Var
-  LoopA,LoopB,LoopC,LoopD: Integer4;
-  ErrorInt: Integer4;
-  {Direct Permutation For Ordering}
-  DirectPerm: Integer4Array;
-  {Inverse Permutation For Ordering}
-  InversePerm: Integer4Array;
-  {Residual}
-  ResVec: DoubleArray;
-  ResNorm: Double;
-  {Reconstructed Vector}
-  FilteredVec: DoubleArray;
-  FullStarVector: DoubleArray;
-  {Star Patterns}
-  TotalStarFaces: Integer4;
-  FacesID: Integer4Array;
-  FacesCoeffs: DoubleArray;
-  {Correlation Coeff}
-  CorrCoeff: Double;
-  {Total Slices and Stars}
-  TotalSlices,TotalStars: Integer4;
-  {Error Estimates}
-  MaxNormError,MaxAngleError: Double;
-  {Max Divergence}
-  MaxDivergence: Double;
-  IsValidPerm: Boolean;
-  CurrentIDX,TotalIDX: Integer4;
-  {LSMR Options}
-  LSMROptions: LSMROptionRecord;
-  ErrorString: String;
-  TotalFaces: Integer4;
-  TotalBasis: Integer4;
-  Converged: Boolean;
-  StarMatrix: Double2DArray;
-Const
-  UseFullLS = FALSE;
-Begin
-  {Init Result}
-  Result:=MRI_IO_NoError;
-
-  {Export Nodes}
-  //ExportNodesToFile('G:\Temp\Nodes.csv',GlobalData);
-
-  {Assemble Face Flux Vectors}
-  ErrorInt:=AssembleResidualVector(GlobalData,IsBCFilter,ThresholdCriterion,TotalFaces,ResVec,FilteredVec,ResNorm);
-  If (ErrorInt<>MRI_IO_NoError) Then
-  Begin
-    Result:=ErrorInt;
-    Exit;
-  End;
-
-  {Get the Total Number Of Basis}
-  TotalBasis:=GetTotalBasisNumber(GlobalData);
-
-  {Initial Residual}
-  WriteMsg('');
-  WriteMsg('FILTER ALGORITHM ----------------------------------------');
-
-  {Choose How to Solve}
-  If UseFullLS Then
-  Begin
-    {Use Full LS}
-    {Assemble Star Matrix}
-    AssembleStarMatrix(GlobalData,TotalFaces,TotalBasis,StarMatrix);
-    {Solve With Least Squares}
-    ErrorString:=LeastSquaresSolve(TotalFaces,TotalBasis,StarMatrix,ResVec,FilteredVec);
-    If (ErrorString<>'') Then
-    Begin
-      Result:=MRI_LSMR_Problems;
-      Exit;
-    End;
-  End Else Begin
-    {Solve With LSMR}
-    LSMROptions.MaxIt:=1000;
-    LSMROptions.ANormTol:=1.0e-6*ResNorm;
-    LSMROptions.BNormTol:=1.0e-6*ResNorm;
-    LSMROptions.WriteMsgs:=TRUE;
-    LSMROptions.IterationPrintStep:=1;
-    ErrorString:=LSMRSolve(LSMROptions,TotalFaces,TotalBasis,ResVec,Converged,FilteredVec);
-    If (ErrorString<>'') Then
-    Begin
-      MessageDlg('Problem: LSMR Solver',mtError,[mbOK],0);
-      Result:=MRI_LSMR_Problems;
-      Exit;
-    End;
-  End;
-
-  {Destroy Progress Box}
-  DestroyProgressBox;
-
-  {Check If the Flux Is Locally Conservative}
-  EvalMaxDivergence(GlobalData,FilteredVec,MaxDivergence);
-
-  {Write Divergence Message}
-  WriteMsg('Max Divergence: '+FloatToStr(MaxDivergence));
-
-  {Recover Velocities from Face Fluxes}
-  RecoverCellVelocitiesRT0(IsBCFilter,FilteredVec,GlobalData);
-  //RecoverCellVelocitiesRT0(ResVec,GlobalData);
-
-  {Eval Magniture and Angle Error}
-  RecoverGlobalErrorEstimates(GlobalData,MaxNormError,MaxAngleError);
-
-  {Final Residual}
-  WriteMsg('Max Norm Error: '+FloatToStr(MaxNormError));
-  WriteMsg('Max Angle Error: '+FloatToStr(MaxAngleError));
-
-  {Close Filter Comments}
-  WriteMsg('------------------------------------------------------');
-  WriteMsg('');
-
-  {Filtered Velocities Are Available}
-  AreVelocityFiltered:=TRUE;
-End;
-
-
-end.*/
-
-

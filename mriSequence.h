@@ -54,6 +54,9 @@ class MRISequence
     // PRESSURE COMPUTATION
     void ComputePressureGradients();
     void ComputeRelativePressure(bool doPressureSmoothing);
+
+    // ADD NOISE
+    void applyNoise(double noiseIntensity);
     
     // File List Printing
     void PrintSequenceFiles(std::string outFIleName);

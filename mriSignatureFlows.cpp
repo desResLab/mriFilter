@@ -478,10 +478,30 @@ void MRIStructuredScan::AssignVelocitySignature(MRIDirection dir, MRISamples sam
 }
 
 // CREATE SAMPLE FLOWS
-void MRIStructuredScan::CreateSampleCase(MRISamples sampleType,
-                               int sizeX, int sizeY, int sizeZ,
-                               double distX, double distY, double distZ,
-                               double currTime, MRIDirection dir){
+void MRIStructuredScan::CreateSampleCase(MRISamples sampleType,vector<double> params){
+
+  // Store Parameter Values
+  int sizeX = int(params[0]);
+  int sizeY = int(params[1]);
+  int sizeZ = int(params[2]);
+  double distX = params[3];
+  double distY = params[4];
+  double distZ = params[5];
+  double currTime = params[6];
+
+  // Template Orientation
+  int dir = 0;
+  int direction = int(params[7]);
+  if(direction == 0){
+    dir = kdirX;
+  }else if(direction == 1){
+    dir = kdirY;
+  }else if(direction == 2){
+    dir = kdirZ;
+  }else{
+    throw MRIException("ERROR: Invalid template direction in CreateSampleCase.\n");
+  }
+
   int* currentCoords = new int[kNumberOfDimensions];
   // Set Cells Totals
   cellTotals[0] = sizeX;

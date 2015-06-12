@@ -4,8 +4,12 @@
 #include "mriUtils.h"
 #include "mriException.h"
 
+#include <boost/algorithm/string.hpp>
+
 #include <stdlib.h>
 #include <getopt.h>
+
+using namespace boost::algorithm;
 
 MRIOptions::MRIOptions(){
   // Set Default Values of the parameters
@@ -40,6 +44,9 @@ MRIOptions::MRIOptions(){
   evalPressure = false;
   // Export to Poisson
   exportToPoisson = false;
+  // Add Noise
+  applyNoise = false;
+  noiseIntensity = 0.0;
 }
 
 // =========================
@@ -252,6 +259,10 @@ int MRIOptions::getOptionsFromCommandFile(string commandFile){
     boost::trim(buffer);
     // Tokenize String
     boost::split(tokenizedString, buffer, boost::is_any_of(":"), boost::token_compress_on);
+    // Trim All Strings
+    for(size_t loopA=0;loopA<tokenizedString.size();loopA++){
+      trim(tokenizedString[loopA]);
+    }
     // CHECK THE ELEMENT TYPE
     if(boost::to_upper_copy(tokenizedString[0]) == std::string("RUNMODE")){
       // READ RUN MODE
@@ -408,43 +419,226 @@ int MRIOptions::getOptionsFromCommandFile(string commandFile){
       }else{
         throw MRIException("ERROR: Invalid logical value for exportToPoisson.\n");
       }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("ADDNOISE")){
+      applyNoise = true;
+      try{
+        noiseIntensity = atof(tokenizedString[1].c_str());
+      }catch(...){
+        throw MRIException("ERROR: Invalid Noise Intensity.\n");
+      }
+    }else if((tokenizedString[0].empty())||(tokenizedString[0].at(0) == '#')){
+      // Comment: Do Nothing
+    }else{
+      throw MRIException("ERROR: Invalid Token in input File.\n");
     }
   }
   // Close File
   infile.close();
 }
 
+// UTILITY TO PRINT BOOLEAN VARIABLES
+string getTrueFalseString(bool value){
+  if(value){
+    return string("TRUE");
+  }else{
+    return string("FALSE");
+  }
+}
+
 // ============================
 // WRITE COMMAND FILE PROTOTYPE
 // ============================
-int writeCommandFilePrototype(string commandFile){
-    // File Names
-    inputFileName = "";
-    outputFileName = "";
-    statFileName = "";
-    // Parameters
-    itTol = 1.0e-3;
-    maxIt = 2000;
-    thresholdType = kNoQuantity;
-    thresholdValue = 0.0;
-    // Save Initial Velocities
-    saveInitialVel = false;
-    saveExpansionCoeffs = false;
-    // Apply Filter
-    applySMPFilter = false;
-    applyBCFilter = false;
-    useConstantPatterns = true;
-    // Export Format Type
-    inputFormatType = itFILEVTK;
-    outputFormatType = otFILEVTK;
-    // Default: Process Single Scan
-    sequenceFileName = "";
-    // Post processing
-    evalPopVortexCriteria = false;
-    evalSMPVortexCriterion = false;
-    evalPressure = false;
-    // Export to Poisson
-    exportToPoisson = false;
+int MRIOptions::writeCommandFilePrototype(string commandFile){
+  // Open Output File
+  FILE* f;
+  f = fopen(commandFile.c_str(),"w");
+  // Run Mode
+  fprintf(f,"RUNMODE:");
+  switch(runMode){
+    case rmNORMAL:
+      fprintf(f,"NORMAL\n");
+      break;
+    case rmEVALSEQUENCEPRESSURE:
+      fprintf(f,"EVALSEQUENCEPRESSURE\n");
+      break;
+    case rmEVALPRESSUREFROMSIGNATUREFLOW:
+      fprintf(f,"EVALPRESSUREFROMSIGNATUREFLOW\n");
+      break;
+    case rmPLTTOVTK:
+      fprintf(f,"PLTTOVTK\n");
+      break;
+    case rmEVALSCANSTATISTICS:
+      fprintf(f,"EVALSCANSTATISTICS\n");
+      break;
+    case rmCOMUTESCANMATRICES:
+      fprintf(f,"COMUTESCANMATRICES\n");
+      break;
+    case rmPERFORMRANDOMTEST:
+      fprintf(f,"PERFORMRANDOMTEST\n");
+      break;
+    case rmCROPANDCOMPUTEVOLUME:
+      fprintf(f,"CROPANDCOMPUTEVOLUME\n");
+      break;
+    case rmSTREAMLINETEST1:
+      fprintf(f,"STREAMLINETEST1\n");
+      break;
+    case rmSTREAMLINETEST2:
+      fprintf(f,"STREAMLINETEST2\n");
+      break;
+    case rmPRINTTHRESHOLDINGTOVTK:
+      fprintf(f,"PRINTTHRESHOLDINGTOVTK\n");
+      break;
+    case rmEVALREYNOLDSSTRESSES:
+      fprintf(f,"EVALREYNOLDSSTRESSES\n");
+      break;
+    case rmSHOWFACEFLUXPATTERS:
+      fprintf(f,"SHOWFACEFLUXPATTERS\n");
+      break;
+    case rmBUILDFROMCOEFFICIENTS:
+      fprintf(f,"BUILDFROMCOEFFICIENTS\n");
+      break;
+    case rmEVALPRESSURE:
+      fprintf(f,"EVALPRESSURE\n");
+      break;
+    case rmEVALCONCGRADIENT:
+      fprintf(f,"EVALCONCGRADIENT\n");
+      break;
+    case rmEVALVORTEXCRITERIA:
+      fprintf(f,"EVALVORTEXCRITERIA\n");
+      break;
+    case rmWRITESPATIALEXPANSION:
+      fprintf(f,"WRITESPATIALEXPANSION\n");
+      break;
+    case rmSOLVEPOISSON:
+      fprintf(f,"SOLVEPOISSON\n");
+      break;
+    case rmHELP:
+      fprintf(f,"HELP\n");
+      break;
+  }
+  // PRINT FILE NAMES
+  fprintf(f,"INPUTFILENAME:%s\n",inputFileName.c_str());
+  fprintf(f,"OUTPUTFILENAME:%s\n",outputFileName.c_str());
+  fprintf(f,"STATFILENAME:%s\n",statFileName.c_str());
 
+  // ADD NOISE
+  fprintf(f,"ADDNOISE:%e\n",noiseIntensity);
+
+  // SMP PARAMETERS
+  fprintf(f,"SMPITERATIONTOLERANCE:%e\n",itTol);
+  fprintf(f,"SMPMAXITERATIONS:%d\n",maxIt);
+  // THRESHOLD QUANTITY
+  fprintf(f,"THRESHOLDQTY:");
+  switch (thresholdQty){
+    case kQtyPositionX:
+      fprintf(f,"POSX\n");
+      break;
+    case kQtyPositionY:
+      fprintf(f,"POSY\n");
+      break;
+    case kQtyPositionZ:
+      fprintf(f,"POSZ\n");
+      break;
+    case kQtyConcentration:
+      fprintf(f,"CONCENTRATION\n");
+      break;
+    case kQtyVelocityX:
+      fprintf(f,"VELX\n");
+      break;
+    case kQtyVelocityY:
+      fprintf(f,"VELY\n");
+      break;
+    case kQtyVelocityZ:
+      fprintf(f,"VELZ\n");
+      break;
+    case kQtyVelModule:
+      fprintf(f,"VELMOD\n");
+      break;
+  }
+  // THRESHOLD TYPE
+  fprintf(f,"THRESHOLDTYPE:");
+  switch(thresholdType){
+    case kCriterionLessThen:
+      fprintf(f,"LT\n");
+      break;
+    case kCriterionGreaterThen:
+      fprintf(f,"GT\n");
+      break;
+    case kCriterionABSLessThen:
+      fprintf(f,"ABSLT\n");
+      break;
+    case kCriterionABSGreaterThen:
+      fprintf(f,"ABSGT\n");
+      break;
+  }
+  // THRESHOLD VALUE
+  fprintf(f,"THRESHOLDVALUE:%f\n",thresholdValue);
+  // SAVE INITIAL VELOCITY
+  fprintf(f,"SAVEINITIALVELOCITIES:%s\n",getTrueFalseString(saveInitialVel).c_str());
+  // SAVE EXPANSION COEFFICIENTS
+  fprintf(f,"SAVEEXPANSIONVOEFFS:%s\n",getTrueFalseString(saveExpansionCoeffs).c_str());
+  // SMP FILTER
+  fprintf(f,"USESMPFILTER:%s\n",getTrueFalseString(applySMPFilter).c_str());
+  fprintf(f,"USEBCFILTER:%s\n",getTrueFalseString(applyBCFilter).c_str());
+  fprintf(f,"USECONSTANTPATTERNS:%s\n",getTrueFalseString(useConstantPatterns).c_str());
+  // INPUT AND OUTPUT FORMAT TYPE
+  fprintf(f,"INPUTTYPE:");
+  switch(inputFormatType){
+    case itFILEVTK:
+      fprintf(f,"VTK\n");
+      break;
+    case itFILETECPLOT:
+      fprintf(f,"TECPLOT\n");
+      break;
+    case itTEMPLATE:
+      fprintf(f,"TEMPLATE\n");
+      break;
+    case itEXPANSION:
+      fprintf(f,"EXPANSION\n");
+      break;
+  }
+  fprintf(f,"OUTPUTTYPE:");
+  switch(outputFormatType){
+    case otFILEVTK:
+      fprintf(f,"VTK\n");
+      break;
+    case otFILETECPLOT:
+      fprintf(f,"TECPLOT\n");
+      break;
+  }
+  // TEMPLATE TO EXPORT
+  fprintf(f,"TEMPLATETYPE:");
+  switch(templateType){
+    case kPoiseilleFlow:
+      fprintf(f,"POISEILLE\n");
+      break;
+    case kCylindricalVortex:
+      fprintf(f,"CYLVORTEX\n");
+      break;
+    case kSphericalVortex:
+      fprintf(f,"SPHVORTEX\n");
+      break;
+    case kToroidalVortex:
+      fprintf(f,"TORVORTEX\n");
+      break;
+    case kTransientFlow:
+      fprintf(f,"TRANSIENT\n");
+      break;
+    case kTaylorVortex:
+      fprintf(f,"TAYLORVORTEX\n");
+      break;
+  }
+
+  // SEQUENCE FILE
+  fprintf(f,"SEQUENCEFILENAME:%s\n",sequenceFileName.c_str());
+  // POST PROCESSING
+  fprintf(f,"EVALVORTEXCRITERIA:%s\n",getTrueFalseString(evalPopVortexCriteria).c_str());
+  fprintf(f,"EVALSMPVORTEXCRITERIA:%s\n",getTrueFalseString(evalSMPVortexCriterion).c_str());
+  fprintf(f,"EVALPRESSURE:%s\n",getTrueFalseString(evalPressure).c_str());
+  // Export to Poisson
+  fprintf(f,"EXPORTTOPOISSON:%s\n",getTrueFalseString(exportToPoisson).c_str());
+
+  // Close Output file
+  fclose(f);
 }
 

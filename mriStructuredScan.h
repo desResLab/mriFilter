@@ -288,7 +288,7 @@ class MRIStructuredScan: public MRIScan{
     void EvalNoisyPressureGradientPoints();
   
     // SAMPLE FLOWS
-    void CreateSampleCase(MRISamples sample, int sizeX, int sizeY, int sizeZ, double distX, double distY, double distZ, double currTime, MRIDirection dir);    
+    void CreateSampleCase(MRISamples sampleType, vector<double> params);
     void AssignVelocitySignature(MRIDirection dir, MRISamples sample, double currTime);
     void AssignConstantSignature(MRIDirection dir);
     void AssignStagnationFlowSignature(MRIDirection dir);

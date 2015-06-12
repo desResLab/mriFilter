@@ -27,7 +27,7 @@ using namespace std;
 namespace MRIUtils{
   // GLOBAL VARIABLE FOR GENERATION
   //static boost::random::mt19937 intGen;
-  //static boost::random::mt19937 realGen;
+  static boost::random::mt19937 realGen;
   //static boost::random::mt19937 normGen;
 
 // ==================
@@ -227,13 +227,12 @@ inline void InsertInDoubleList(double Value,int &TotalCoords,std::vector<double>
 // ==========================
 // GENERATE STANDARD GAUSSIAN
 // ==========================
-/*inline double GenerateStandardGaussian(double stDev){
+inline double GenerateStandardGaussian(double stDev){
   // Allocate Vector
   boost::random::normal_distribution<> dist(0.0,stDev);
   // Add Random Component
-  //return dist(realGen);
-  return 0.0;
-}*/
+  return dist(realGen);
+}
 
 // ===========================================
 // PERTURB ITS COORDINATES WITH GAUSSIAN NOISE

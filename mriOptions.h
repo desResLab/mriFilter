@@ -39,7 +39,6 @@ using namespace std;
   // OUTPUT TYPES
   const int otFILEVTK                       = 0;
   const int otFILETECPLOT                   = 1;
-  const int itPOISSON                       = 2;
 
 // CLASS MRIPROGRAMOPTIONS
 class MRIOptions{
@@ -49,6 +48,10 @@ public:
   string inputFileName;
   string outputFileName;
   string statFileName;
+  // Input Templates
+  int templateType;
+  vector<double> templateParams;
+  // Command File Options
   bool generateCommandFile;
   bool useCommandFile;
   string commandFileName;
@@ -58,6 +61,9 @@ public:
   int thresholdType;
   double thresholdValue; 
   MRIThresholdCriteria* thresholdCriteria;
+  // Noise to apply
+  bool applyNoise;
+  double noiseIntensity;
   // Save Initial Velocities
   bool saveInitialVel;
   // Save Expansion Coefficients
