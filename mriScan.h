@@ -165,6 +165,9 @@ class MRIScan{
 
     // TENSOR AND VORTEX
     virtual void EvalSMPVortexCriteria(MRIExpansion* exp){throw MRIException("Error: Not Implemented!");}
+
+    // MESSAGE PASSING
+    virtual void DistributeScanData(MRICommunicator* comm);
 };
 
 #endif // MRISCAN_H

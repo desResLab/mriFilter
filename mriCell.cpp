@@ -69,7 +69,7 @@ double MRICell::getQuantity(int qtyID){
       return sqrt(velocity[0]*velocity[0] + velocity[1]*velocity[1] + velocity[2]*velocity[2]);
       break;
     default:
-      throw MRIStatisticsException("Error: Invalid quantity.\n");
+      throw MRIStatisticsException("Error: Invalid quantity in MRICell::getQuantity.\n");
       break;
   }
 }

@@ -5,6 +5,7 @@
 # include <vector>
 
 # include "mriThresholdCriteria.h"
+# include "mriCommunicator.h"
 
 using namespace std;
 
@@ -98,6 +99,10 @@ public:
 
   // Process Options
   void finalize();
+
+  // MESSAGE PASSING
+  void DistributeProgramOptions(MRICommunicator* comm);
+
 };
 
 #endif // MRIPROGRAMOPTIONS_H

@@ -4,8 +4,10 @@
 #include "mriScan.h"
 #include "mriCommunicator.h"
 
-class MRISequence
-{
+class MRIScan;
+class MRICommunicator;
+
+class MRISequence{
   protected:
     int totalScans;
     std::vector<MRIScan*> sequence;
@@ -24,6 +26,7 @@ class MRISequence
     // ADD AND GET FROM SEQUENCE
     void AddScan(MRIScan* scan);
     int GetTotalScans(){return totalScans;}
+    bool GetIsCyclic(){return isCyclic;}
     MRIScan* GetScan(int scanNumber);
 
     // READ SEQUENCE FROM FILE
@@ -73,6 +76,9 @@ class MRISequence
     void Crop(double* limitBox);
     void ScaleVelocities(double factor);
     void ScalePositions(double factor);
+
+    // MESSAGE PASSING
+    void DistributeSequenceData(MRICommunicator* comm);
 };
 
 #endif // MRISEQUENCE_H

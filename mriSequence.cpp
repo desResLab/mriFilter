@@ -313,6 +313,18 @@ void MRISequence::applyNoise(double noiseIntensity){
   WriteSchMessage(std::string("Done.\n"));
 }
 
+// =============================
+// DISTRIBUTION OF SEQUENCE DATA
+// =============================
+void MRISequence::DistributeSequenceData(MRICommunicator* comm){
+  // Create New Sequence
+  MRISequence* result = new MRISequence(this->isCyclic);
+  for(int loopA=0;loopA<this->totalScans;loopA++){
+    sequence[loopA]->DistributeScanData(comm);
+  }
+}
+
+
 
 
 

@@ -19,6 +19,13 @@
 
 using namespace std;
 
+MRIStructuredScan::MRIStructuredScan(double currentTime):MRIScan(currentTime){
+  cellTotals.resize(3);
+  cellTotals[0] = 0;
+  cellTotals[1] = 0;
+  cellTotals[2] = 0;
+}
+
 // ==============================================
 // READS TOKENIZED STRING AND ASSIGNS PLT OPTIONS
 // ==============================================
@@ -3081,10 +3088,10 @@ void MRIStructuredScan::ExportForPOISSON(){
   // ================
   // SAVE SOURCE TERM
   // ================
-  mriDoubleMat poissonSourceVec;
-  mriDoubleMat poissonViscousTerm;
-  mriDoubleVec temp;
-  mriDoubleVec tempViscous;
+  MRIDoubleMat poissonSourceVec;
+  MRIDoubleMat poissonViscousTerm;
+  MRIDoubleVec temp;
+  MRIDoubleVec tempViscous;
   double currValue = 0.0;
   double currValueViscous = 0.0;
   // First and Second Derivatives
@@ -3123,16 +3130,16 @@ void MRIStructuredScan::ExportForPOISSON(){
   // Convert Cell Vector to Face Vector
   bool deleteWalls = false;
   MRIThresholdCriteria* crit = new MRIThresholdCriteria(kCriterionLessThen,kNoQuantity,0.0);
-  mriDoubleVec poissonSourceFaceVec;
+  MRIDoubleVec poissonSourceFaceVec;
   cellToFace(deleteWalls,crit,poissonSourceVec,poissonSourceFaceVec);
 
 
   // Eval the integral of the divergence over the cell
-  mriDoubleVec cellDivs;
+  MRIDoubleVec cellDivs;
   cellDivs = evalCellDivergences(poissonSourceFaceVec);
 
   // Divide by the volume
-  mriDoubleVec sourcesToApply;
+  MRIDoubleVec sourcesToApply;
   double currVol = 0.0;
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     // Evaluate current cell volume
@@ -3218,14 +3225,14 @@ void MRIStructuredScan::ExportForPOISSON(){
 // CONVERT CELL ARRAY TO FACE
 // ==========================
 void MRIStructuredScan::cellToFace(bool deleteWalls, MRIThresholdCriteria* thresholdCriteria,
-                                   mriDoubleMat cellVec, mriDoubleVec &faceVec){
+                                   MRIDoubleMat cellVec, MRIDoubleVec &faceVec){
   bool   continueToProcess = false;
   double currentValue = 0.0;
   double faceComponent = 0.0;
   int    currentFace = 0;
   double currFaceArea = 0.0;
   bool   checkPassed = false;
-  mriIntVec resID;
+  MRIIntVec resID;
   double currVel = 0.0;
 
   // Get Total Number Of Faces
@@ -3293,4 +3300,28 @@ double MRIStructuredScan::evalCellVolume(int cellNumber){
   MapIndexToCoords(cellNumber,intCoords);
   return cellLengths[0][intCoords[0]] * cellLengths[1][intCoords[1]] * cellLengths[2][intCoords[2]];
 }
+
+// ====================
+// DISTRIBUTE SCAN DATA
+// ====================
+void MRIStructuredScan::DistributeScanData(MRICommunicator* comm){
+  // Exchange Quantities
+  //comm->passStdIntVector(cellTotals);
+  //comm->passStdDoubleMatrix(cellLengths);
+  //comm->passStdIntMatrix(cellConnections);
+  //comm->passStdIntMatrix(cellFaces);
+  //comm->passStdIntMatrix(faceCells);
+  //comm->passStdIntMatrix(faceConnections);
+  //comm->passStdIntMatrix(faceEdges);
+  //comm->passStdDoubleVector(faceArea);
+  if(comm->currProc == 0){
+    printf("FACE NORMAL SIZE: %d\n",faceNormal.size());
+  }
+
+
+  comm->passStdDoubleMatrix(faceNormal);
+  //comm->passStdIntMatrix(edgeConnections);
+  //comm->passStdIntMatrix(edgeFaces);
+}
+
 

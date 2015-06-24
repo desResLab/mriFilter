@@ -1,5 +1,5 @@
-#ifndef MRIUNSTRUCTUREDSCAN_H
-#define MRIUNSTRUCTUREDSCAN_H
+#ifndef MRISTRUCTUREDSCAN_H
+#define MRISTRUCTUREDSCAN_H
 
 #include <stdio.h>
 #include <string>
@@ -65,6 +65,9 @@ struct vtkStructuredPointsOptionRecord{
   bool isDefined[5];
 };
 
+class MRIScan;
+class MRICommunicator;
+
 // ========================
 // UNSTRUCTURED GRID LAYOUT
 // ========================
@@ -73,27 +76,27 @@ class MRIStructuredScan: public MRIScan{
     void CreateGridFromVTKStructuredPoints(vtkStructuredPointsOptionRecord opts);
   public:
     // Cells Totals
-    int cellTotals[3];
-    std::vector<std::vector<double>> cellLengths;
+    MRIIntVec cellTotals;
+    MRIDoubleMat cellLengths;
     // Cells Topology
-    std::vector<std::vector<int>> cellConnections;
-    std::vector<std::vector<int>> cellFaces;
+    MRIIntMat cellConnections;
+    MRIIntMat cellFaces;
     // Face Topology
-    std::vector<std::vector<int>> faceCells;
-    std::vector<std::vector<int>> faceConnections;
-    std::vector<std::vector<int>> faceEdges;
-    std::vector<double> faceArea;
+    MRIIntMat faceCells;
+    MRIIntMat faceConnections;
+    MRIIntMat faceEdges;
+    MRIDoubleVec faceArea;
     std::vector<std::vector<double>> faceNormal;
     // Edge Topology
-    std::vector<std::vector<int>> edgeConnections;
-    std::vector<std::vector<int>> edgeFaces;
+    MRIIntMat edgeConnections;
+    MRIIntMat edgeFaces;
 
     // ================
     // MEMBER FUNCTIONS
     // ================
     // Constructor
     // 1 - Empty
-    MRIStructuredScan(double currentTime):MRIScan(currentTime){}
+    MRIStructuredScan(double currentTime);
     // 2 - Create a Zero Scan from another Scan
     MRIStructuredScan(MRIStructuredScan &copyScan);
     // Destructor
@@ -221,7 +224,7 @@ class MRIStructuredScan: public MRIScan{
     void formNotVisitedList(int cellTotal, bool* visitedCell,std::vector<bool>& notVisitedList);
 
     // Map cell vector to face vector
-    void cellToFace(bool deleteWalls, MRIThresholdCriteria* thresholdCriteria,mriDoubleMat cellVec, mriDoubleVec &faceVec);
+    void cellToFace(bool deleteWalls, MRIThresholdCriteria* thresholdCriteria,MRIDoubleMat cellVec, MRIDoubleVec &faceVec);
 
     // =========
     // MP FILTER
@@ -262,7 +265,7 @@ class MRIStructuredScan: public MRIScan{
     void ComputeQuantityGradient(int qtyID);
 
     // DIVERGENCE
-    mriDoubleVec evalCellDivergences(mriDoubleVec faceVec);
+    MRIDoubleVec evalCellDivergences(MRIDoubleVec faceVec);
   
     // PRESSURE COMPUTATION
     void EvalRelativePressure(int startingCell, double refPressure);
@@ -337,6 +340,9 @@ class MRIStructuredScan: public MRIScan{
    double GetDiffNorm(MRIStructuredScan* otherScan);
 
    void buildMetisConnectivities(int *eptr,int *eind);
+
+   // MESSAGE PASSING
+   virtual void DistributeScanData(MRICommunicator* comm);
 };
 
-#endif // MRIUNSTRUCTUREDSCAN_H
+#endif // MRISTRUCTUREDSCAN_H

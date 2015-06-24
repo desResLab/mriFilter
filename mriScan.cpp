@@ -218,3 +218,10 @@ void MRIScan::saveVelocity(){
   outputs.push_back(out1);
   printf("Velocity Energy: %e\n",totalVel);
 }
+
+// ===============
+// MESSAGE PASSING
+// ===============
+void MRIScan::DistributeScanData(MRICommunicator* comm){
+  throw MRIException("ERROR: MRIScan::DistributeScanData Not Implemented.");
+}

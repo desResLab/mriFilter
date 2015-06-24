@@ -258,7 +258,7 @@ int MRIOptions::getOptionsFromCommandFile(string commandFile){
     // Trim String
     boost::trim(buffer);
     // Tokenize String
-    boost::split(tokenizedString, buffer, boost::is_any_of(":"), boost::token_compress_on);
+    boost::split(tokenizedString, buffer, boost::is_any_of(":,"), boost::token_compress_on);
     // Trim All Strings
     for(size_t loopA=0;loopA<tokenizedString.size();loopA++){
       trim(tokenizedString[loopA]);
@@ -318,6 +318,8 @@ int MRIOptions::getOptionsFromCommandFile(string commandFile){
         thresholdQty = kQtyVelocityZ;
       }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("VELMOD")){
         thresholdQty = kQtyVelModule;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("NONE")){
+          thresholdQty = kNoQuantity;
       }else{
         throw MRIException("ERROR: Invalid Threshold Quantity.\n");
       }
@@ -356,7 +358,25 @@ int MRIOptions::getOptionsFromCommandFile(string commandFile){
         throw MRIException("ERROR: Invalid logical value for saveExpansionCoeffs.\n");
       }
     }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("INPUTTYPE")){
+      if(boost::to_upper_copy(tokenizedString[1]) == std::string("VTK")){
+        inputFormatType = itFILEVTK;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("TECPLOT")){
+        inputFormatType = itFILETECPLOT;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("TEMPLATE")){
+        inputFormatType = itTEMPLATE;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("EXPANSION")){
+        inputFormatType = itEXPANSION;
+      }else{
+        throw MRIException("ERROR: Invalid input file type.\n");
+      }
     }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("OUTPUTTYPE")){
+      if(boost::to_upper_copy(tokenizedString[1]) == std::string("VTK")){
+        outputFormatType = otFILEVTK;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("TECPLOT")){
+        outputFormatType = otFILETECPLOT;
+      }else{
+        throw MRIException("ERROR: Invalid output file type.\n");
+      }
     }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("USESMPFILTER")){
       if(boost::to_upper_copy(tokenizedString[1]) == std::string("TRUE")){
         applySMPFilter = true;
@@ -426,14 +446,49 @@ int MRIOptions::getOptionsFromCommandFile(string commandFile){
       }catch(...){
         throw MRIException("ERROR: Invalid Noise Intensity.\n");
       }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("TEMPLATETYPE")){
+      if(boost::to_upper_copy(tokenizedString[1]) == std::string("ZEROVELOCITY")){
+        templateType = kZeroVelocity;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("CONSTANT")){
+        templateType = kConstantFlow;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("POISEILLE")){
+        templateType = kPoiseilleFlow;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("STAGNATION")){
+        templateType = kStagnationFlow;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("CYLINDRICALVOLTEX")){
+        templateType = kCylindricalVortex;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("SPHERICALVORTEX")){
+        templateType = kSphericalVortex;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("TOROIDALVORTEX")){
+          templateType = kToroidalVortex;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("TRANSIENT")){
+          templateType = kTransientFlow;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("CONSTANTWITHSTEP")){
+          templateType = kConstantFlowWithStep;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("TAYLORVORTEX")){
+          templateType = kTaylorVortex;
+      }else{
+        throw MRIException("ERROR: Invalid logical value for exportToPoisson.\n");
+      }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("TEMPLATEPARAMS")){
+      try{
+        for(int loopA=1;loopA<tokenizedString.size();loopA++){
+          templateParams.push_back(atof(tokenizedString[loopA].c_str()));
+        }
+      }catch(...){
+        throw MRIException("ERROR: Invalid template parameters.\n");
+      }
     }else if((tokenizedString[0].empty())||(tokenizedString[0].at(0) == '#')){
       // Comment: Do Nothing
     }else{
-      throw MRIException("ERROR: Invalid Token in input File.\n");
+      string errorMsg("ERROR: Invalid Token in input File: " + tokenizedString[0] + "\n");
+      throw MRIException(errorMsg.c_str());
     }
   }
   // Close File
   infile.close();
+  // Return
+  return 0;
 }
 
 // UTILITY TO PRINT BOOLEAN VARIABLES
@@ -641,4 +696,103 @@ int MRIOptions::writeCommandFilePrototype(string commandFile){
   // Close Output file
   fclose(f);
 }
+
+// Distribute Program Options
+void MRIOptions::DistributeProgramOptions(MRICommunicator* comm){
+  // FORM INTEGER OPTIONS
+  printf("DISTRIBUTING OPTIONS\n");
+  int size = 0;
+  int mpiError = 0;
+  int* intParams = NULL;
+  double* doubleParams = NULL;
+
+  // INTEGER OPTIONS
+  size = 7;
+  intParams = new int[size];
+  intParams[0] = runMode;
+  intParams[1] = templateType;
+  intParams[2] = maxIt;
+  intParams[3] = thresholdQty;
+  intParams[4] = thresholdType;
+  intParams[5] = inputFormatType;
+  intParams[6] = outputFormatType;
+  mpiError = MPI_Bcast(intParams,size,MPI_INT,0,comm->mpiComm);
+  MRIUtils::checkMpiError(mpiError);
+  printf("AFTER BCAST: %d\n",comm->currProc);
+  if(comm->currProc > 0){
+    runMode = intParams[0];
+    templateType = intParams[1];
+    maxIt = intParams[2];
+    thresholdQty = intParams[3];
+    thresholdType = intParams[4];
+    inputFormatType = intParams[5];
+    outputFormatType = intParams[6];
+    printf("P: %d, Pars: %d %d %d %d %d %d %d\n",comm->currProc,runMode,templateType,maxIt,thresholdQty,thresholdType,inputFormatType,outputFormatType);
+  }
+  delete [] intParams;
+
+  // DOUBLE OPTIONS
+  size = 3;
+  doubleParams = new double[size];
+  doubleParams[0] = itTol;
+  doubleParams[1] = thresholdValue;
+  doubleParams[2] = noiseIntensity;
+  mpiError = MPI_Bcast(doubleParams,size,MPI_DOUBLE,0,comm->mpiComm);
+  MRIUtils::checkMpiError(mpiError);
+  printf("AFTER BCAST: %d\n",comm->currProc);
+  if(comm->currProc > 0){
+    itTol = doubleParams[0];
+    thresholdValue = doubleParams[1];
+    noiseIntensity = doubleParams[2];
+  }
+
+  // BOOLEAN OPTIONS
+  size = 12;
+  bool* boolParams = new bool[size];
+  boolParams[0] = generateCommandFile;
+  boolParams[1] =  useCommandFile;
+  boolParams[2] =  applyNoise;
+  boolParams[3] =  saveInitialVel;
+  boolParams[4] =  saveExpansionCoeffs;
+  boolParams[5] =  applySMPFilter;
+  boolParams[6] =  applyBCFilter;
+  boolParams[7] =  useConstantPatterns;
+  boolParams[8] =  evalPopVortexCriteria;
+  boolParams[9] =  evalSMPVortexCriterion;
+  boolParams[10] =  evalPressure;
+  boolParams[11] =  exportToPoisson;
+  mpiError = MPI_Bcast(boolParams,size,MPI_LOGICAL,0,comm->mpiComm);
+  MRIUtils::checkMpiError(mpiError);
+  if(comm->currProc > 0){
+    generateCommandFile = boolParams[0];
+    useCommandFile = boolParams[1];
+    applyNoise = boolParams[2];
+    saveInitialVel = boolParams[3];
+    saveExpansionCoeffs = boolParams[4];
+    applySMPFilter = boolParams[5];
+    applyBCFilter = boolParams[6];
+    useConstantPatterns = boolParams[7];
+    evalPopVortexCriteria = boolParams[8];
+    evalSMPVortexCriterion = boolParams[9];
+    evalPressure = boolParams[10];
+    exportToPoisson = boolParams[11];
+  }
+
+  // PASS STRINGS
+  comm->passString(inputFileName);
+  comm->passString(outputFileName);
+  comm->passString(statFileName);
+  comm->passString(commandFileName);
+  comm->passString(sequenceFileName);
+
+  // PASS VECTOR
+  comm->passStdDoubleVector(templateParams);
+
+  // PASS STRING LIST
+  //vector<string> sequenceFileList;
+
+}
+
+
+
 

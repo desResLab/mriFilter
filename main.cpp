@@ -875,7 +875,7 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
       MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
 
       // LOOP ON THE NUMBER OF SCANS
-      for(int loopA=0;loopA<opts->sequenceFileList.size();loopA++){
+      for(size_t loopA=0;loopA<opts->sequenceFileList.size();loopA++){
 
         // CREATE NEW SCAN
         MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
@@ -883,26 +883,7 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
         // CHOOSE INPUT FORMAT
         if(opts->inputFormatType == itTEMPLATE){
           // CREATE TEMPLATE
-          switch(opts->templateType){
-            case kPoiseilleFlow:
-              MyMRIScan->CreateSampleCase(kPoiseilleFlow,opts->templateParams);
-              break;
-            case kCylindricalVortex:
-              MyMRIScan->CreateSampleCase(kCylindricalVortex,opts->templateParams);
-              break;
-            case kSphericalVortex:
-              MyMRIScan->CreateSampleCase(kSphericalVortex,opts->templateParams);
-              break;
-            case kToroidalVortex:
-              MyMRIScan->CreateSampleCase(kToroidalVortex,opts->templateParams);
-              break;
-            case kTransientFlow:
-              MyMRIScan->CreateSampleCase(kTransientFlow,opts->templateParams);
-              break;
-            case kTaylorVortex:
-              MyMRIScan->CreateSampleCase(kTaylorVortex,opts->templateParams);
-              break;
-          }
+          MyMRIScan->CreateSampleCase(opts->templateType,opts->templateParams);
         }else if(opts->inputFormatType == itEXPANSION){
           // READ FROM EXPANSION COEFFICIENTS
           bool applyThreshold = true;
@@ -920,11 +901,26 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
         // ADD TO SEQUENCE
         MyMRISequence->AddScan(MyMRIScan);
       }
+  }else{
+    // LOOP ON THE NUMBER OF SCANS
+      // INIT SEQUENCE
+      MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
+//    for(size_t loopA=0;loopA<opts->sequenceFileList.size();loopA++){
+      // CREATE EMPTY SCAN
+      MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
+      // ADD TO SEQUENCE
+      MyMRISequence->AddScan(MyMRIScan);
+//    }
   }
 
   // All processes are waiting for the root to read the files
   int mpiError = MPI_Barrier(comm->mpiComm);
   MRIUtils::checkMpiError(mpiError);
+
+  // Distribute Sequence Data using MPI
+  if(comm->totProc > 1){
+    MyMRISequence->DistributeSequenceData(comm);
+  }
 
   // SAVE INITIAL VELOCITIES
   if (opts->saveInitialVel){
@@ -1015,45 +1011,63 @@ int main(int argc, char **argv){
 
   //  Declare
   int val = 0;
-  MRIOptions* options = new MRIOptions();
+  MRIOptions* options;
 
   // WRITE PROGRAM HEADER - ONLY MASTER NODE
   if(comm->currProc == 0){
     WriteHeader();
-  }
 
-  // Read Options from Command Line
-  int res = options->getCommadLineOptions(argc,argv);
-  if(res != 0){
-    return -1;
-  }
+    // Create Options
+    options = new MRIOptions();
 
-  // Read options from command file if required
-  if(options->useCommandFile){
-    int res = options->getOptionsFromCommandFile(options->commandFileName);
+    // Read Options from Command Line
+    int res = options->getCommadLineOptions(argc,argv);
     if(res != 0){
       return -1;
     }
+
+    // Read options from command file if required
+    if(options->useCommandFile){
+      int res = options->getOptionsFromCommandFile(options->commandFileName);
+      if(res != 0){
+        return -1;
+      }
+    }
+
+    // Generate Command File if needed
+    if(options->generateCommandFile){
+      int res = options->writeCommandFilePrototype(options->commandFileName);
+      if(res != 0){
+        return -1;
+      }
+      return 0;
+    }
+  }else{
+    options = new MRIOptions();
   }
 
-  // Generate Command File if needed
-  if(options->generateCommandFile){
-    int res = options->writeCommandFilePrototype(options->commandFileName);
-    if(res != 0){
-      return -1;
-    }
-    return 0;
+  // Wait for all processes
+  int mpiError = MPI_Barrier(comm->mpiComm);
+  MRIUtils::checkMpiError(mpiError);
+
+  // Distribute Options using MPI
+  if(comm->totProc > 1){
+    options->DistributeProgramOptions(comm);
   }
 
   // Finalize options
   options->finalize();
 
+
+  // MAIN PROGRAM
   try{
     // Write Program Help
     switch(options->runMode){
       case rmHELP:
-        // Write Program Help
-        MRIUtils::WriteProgramHelp();
+        if(comm->currProc == 0){
+          // Write Program Help
+          MRIUtils::WriteProgramHelp();
+        }
         break;
       // PREFERRED RUNNING MODE
       case rmNORMAL:

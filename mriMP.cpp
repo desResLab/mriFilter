@@ -209,8 +209,8 @@ double MRIStructuredScan::EvalMaxDivergence(double* filteredVec){
 // ====================================
 // EVAL CELL DIVERGENCE FOR A GIVEN QTY
 // ====================================
-mriDoubleVec MRIStructuredScan::evalCellDivergences(mriDoubleVec faceVec){
-  mriDoubleVec cellDivs;
+MRIDoubleVec MRIStructuredScan::evalCellDivergences(MRIDoubleVec faceVec){
+  MRIDoubleVec cellDivs;
   double currentDiv = 0.0;
   int currFace = 0;
   double extNormal[3] = {0.0};
@@ -615,24 +615,23 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
   float updateStar_TotalTime = 0.0;
 
   // Determine the Minimum and Maximum Face number of current processor
-  int minFaceOnProc = comm->currProc * int((totalFaces - 1)/(comm->totProc + 1));
-  int maxFaceOnProc = (comm->currProc + 1) * int((totalFaces - 1)/(comm->totProc + 1));
-
-  if(comm->currProc == comm->totProc){
-    maxFaceOnProc = totalFaces;
+  int minFaceOnProc = comm->currProc * int((cellFaces.size() - 1)/(comm->totProc + 1));
+  int maxFaceOnProc = (comm->currProc + 1) * int((cellFaces.size() - 1)/(comm->totProc + 1));
+  if(comm->currProc == (comm->totProc-1)){
+    maxFaceOnProc = cellFaces.size();
   }
 
-  // Only Master Process Assembles Residual Vector and Distribute it across the network
-  if(comm->currProc == 0){
-    // Assemble Face Flux Vectors
-    assembleRes_BeginTime = clock();
-    AssembleResidualVector(isBC,options->thresholdCriteria,totalFaces,resVec,filteredVec,resNorm);
-    assembleRes_TotalTime += float( clock () - assembleRes_BeginTime ) /  CLOCKS_PER_SEC;
+  // All processes are waiting for the root to read the files
+  mpiError = MPI_Barrier(comm->mpiComm);
+  MRIUtils::checkMpiError(mpiError);
 
-    // Distribute it across the network
-    mpiError = MPI_Bcast(&resVec,totalFaces, MPI_REAL,0,comm->mpiComm);
-    MRIUtils::checkMpiError(mpiError);
-  }
+  printf("Curr Proc: %d, Tot Proc: %d, MinFace: %d, MaxFace: %d\n",comm->currProc,comm->totProc,minFaceOnProc,maxFaceOnProc);
+
+  // Assemble Face Flux Vectors
+  assembleRes_BeginTime = clock();
+  AssembleResidualVector(isBC,options->thresholdCriteria,totalFaces,resVec,filteredVec,resNorm);
+  assembleRes_TotalTime += float( clock () - assembleRes_BeginTime ) /  CLOCKS_PER_SEC;
+
 
   // Print Residual Vector
   //PrintResidualVector(std::string("resVectorFile_"+std::to_string(comm->currProc)+".txt").c_str(),totalFaces,resVec);

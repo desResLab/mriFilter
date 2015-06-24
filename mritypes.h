@@ -1,11 +1,12 @@
 #ifndef MRITYPES_H
 #define MRITYPES_H
 
-typedef std::vector< std::vector<double> > mriDoubleMat;
-typedef std::vector<double> mriDoubleVec;
-typedef std::vector< std::vector<int> > mriIntMat;
-typedef std::vector<int> mriIntVec;
+# include <vector>
 
+typedef std::vector< std::vector<double> > MRIDoubleMat;
+typedef std::vector<double> MRIDoubleVec;
+typedef std::vector< std::vector<int> > MRIIntMat;
+typedef std::vector<int> MRIIntVec;
 
 #endif // MRITYPES_H
 
