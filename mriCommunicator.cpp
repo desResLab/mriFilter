@@ -678,7 +678,7 @@ void MRICommunicator::passString(string& msg){
   int source = 0;
   int tag = 0;
   if(currProc == 0){
-    int strSize = msg.length();
+    int strSize = msg.length() + 1;
     for(int loopDest=1;loopDest<totProc;loopDest++){
       int mpiError = MPI_Send(msg.c_str(),strSize,MPI_CHAR,loopDest,tag,mpiComm);
       MRIUtils::checkMpiError(mpiError);

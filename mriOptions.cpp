@@ -718,7 +718,6 @@ void MRIOptions::DistributeProgramOptions(MRICommunicator* comm){
   intParams[6] = outputFormatType;
   mpiError = MPI_Bcast(intParams,size,MPI_INT,0,comm->mpiComm);
   MRIUtils::checkMpiError(mpiError);
-  printf("AFTER BCAST: %d\n",comm->currProc);
   if(comm->currProc > 0){
     runMode = intParams[0];
     templateType = intParams[1];
@@ -727,7 +726,6 @@ void MRIOptions::DistributeProgramOptions(MRICommunicator* comm){
     thresholdType = intParams[4];
     inputFormatType = intParams[5];
     outputFormatType = intParams[6];
-    printf("P: %d, Pars: %d %d %d %d %d %d %d\n",comm->currProc,runMode,templateType,maxIt,thresholdQty,thresholdType,inputFormatType,outputFormatType);
   }
   delete [] intParams;
 
@@ -739,12 +737,12 @@ void MRIOptions::DistributeProgramOptions(MRICommunicator* comm){
   doubleParams[2] = noiseIntensity;
   mpiError = MPI_Bcast(doubleParams,size,MPI_DOUBLE,0,comm->mpiComm);
   MRIUtils::checkMpiError(mpiError);
-  printf("AFTER BCAST: %d\n",comm->currProc);
   if(comm->currProc > 0){
     itTol = doubleParams[0];
     thresholdValue = doubleParams[1];
     noiseIntensity = doubleParams[2];
   }
+  delete [] doubleParams;
 
   // BOOLEAN OPTIONS
   size = 12;
@@ -777,21 +775,68 @@ void MRIOptions::DistributeProgramOptions(MRICommunicator* comm){
     evalPressure = boolParams[10];
     exportToPoisson = boolParams[11];
   }
+  delete [] boolParams;
 
   // PASS STRINGS
-  comm->passString(inputFileName);
-  comm->passString(outputFileName);
-  comm->passString(statFileName);
-  comm->passString(commandFileName);
-  comm->passString(sequenceFileName);
+  //comm->passString(inputFileName);
+  //comm->passString(outputFileName);
+  //comm->passString(statFileName);
+  //comm->passString(commandFileName);
+  //comm->passString(sequenceFileName);
 
   // PASS VECTOR
-  comm->passStdDoubleVector(templateParams);
+  //comm->passStdDoubleVector(templateParams);
 
   // PASS STRING LIST
   //vector<string> sequenceFileList;
 
 }
+
+// Write Options to file
+int MRIOptions::writeOptionsToFile(string outFile){
+  // Open Output File
+  FILE* f;
+  f = fopen(outFile.c_str(),"w");
+  // Write Options
+  fprintf(f,"Run Mode: %d\n",runMode);
+  // File Names
+  fprintf(f,"Input File: %s\n",inputFileName.c_str());
+  fprintf(f,"Output File: %s\n",outputFileName.c_str());
+  fprintf(f,"Statistics File: %s\n",statFileName.c_str());
+  fprintf(f,"Generate Command File: %s\n",generateCommandFile ? "True" : "False");
+  fprintf(f,"Use Command File: %s\n",useCommandFile ? "True" : "False");
+  fprintf(f,"Command File Name: %s\n",commandFileName.c_str());
+  // Parameters
+  fprintf(f,"Iteration Tolerance: %e\n",itTol);
+  fprintf(f,"Max Iterations: %d\n",maxIt);
+  fprintf(f,"Threshold Type: %d\n",thresholdType);
+  fprintf(f,"Threshold Value: %e\n",thresholdValue);
+  // Save Initial Velocities
+  fprintf(f,"Set Initial Velocities: %s\n",saveInitialVel ? "True" : "False");
+  fprintf(f,"Save Expansion Coefficients: %s\n",saveExpansionCoeffs ? "True" : "False");
+  // Apply Filter
+  fprintf(f,"Apply SMP Filter: %s\n",applySMPFilter ? "True" : "False");
+  fprintf(f,"Apply Boundary Filter: %s\n",applyBCFilter ? "True" : "False");
+  fprintf(f,"Use Constant Pattern: %s\n",useConstantPatterns ? "True" : "False");
+  // Export Format Type
+  fprintf(f,"Input Format Type: %d\n",inputFormatType);
+  fprintf(f,"Output Format Type: %d\n",outputFormatType);
+  // Default: Process Single Scan
+  fprintf(f,"Sequence File Name: %s\n",sequenceFileName.c_str());
+  // Post processing
+  fprintf(f,"Eval Popular Vortex Criteria: %s\n",evalPopVortexCriteria ? "True" : "False");
+  fprintf(f,"Eval SMP Vortex Criteria: %s\n",evalSMPVortexCriterion ? "True" : "False");
+  fprintf(f,"Eval Pressure: %s\n",evalPressure ? "True" : "False");
+  // Export to Poisson
+  fprintf(f,"Export To FEM Poisson Solver: %s\n",exportToPoisson ? "True" : "False");
+  // Add Noise
+  fprintf(f,"Apply Noise: %s\n",applyNoise ? "True" : "False");
+  fprintf(f,"Noise Intensity: %e\n",noiseIntensity);
+  // Close Output file
+  fclose(f);
+
+}
+
 
 
 

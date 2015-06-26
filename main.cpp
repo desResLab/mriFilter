@@ -1056,7 +1056,14 @@ int main(int argc, char **argv){
   }
 
   // Finalize options
-  options->finalize();
+  //options->finalize();
+
+  //string optOut("optionsOut_" + to_string(comm->currProc) + ".out");
+  //options->writeOptionsToFile(optOut);
+
+  // Exit
+  MPI::Finalize();
+  return 0;
 
 
   // MAIN PROGRAM

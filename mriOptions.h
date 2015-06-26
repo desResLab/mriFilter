@@ -95,7 +95,9 @@ public:
   // Get Options from Command File
   int getOptionsFromCommandFile(string commandFile);
   // Write Command File Prototype
-  int writeCommandFilePrototype(string commandFile);
+  int writeCommandFilePrototype(string commandFile);  
+  // Write Options to file
+  int writeOptionsToFile(string outFile);
 
   // Process Options
   void finalize();

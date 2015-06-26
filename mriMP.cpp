@@ -579,6 +579,8 @@ void MRIStructuredScan::AssembleResidualVector(bool useBCFilter, MRIThresholdCri
 // PHYSICS FILTERING
 // =================
 void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommunicator* comm){
+
+  printf("SMPFILTER processor %d\n",comm->currProc);
   // Initialization
   int totalFaces = 0;
   double* resVec = nullptr;

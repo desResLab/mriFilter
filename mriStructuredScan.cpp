@@ -89,8 +89,7 @@ int MRIStructuredScan::GetTotalFaces(){
 }
 
 // Print the File List Log
-void PrintFileListLog(int totalFiles,std::string* fileNames)
-{
+void PrintFileListLog(int totalFiles,std::string* fileNames){
   // Open Output File
   FILE* outFile;
   outFile = fopen("FileList.log","w");
@@ -3306,22 +3305,17 @@ double MRIStructuredScan::evalCellVolume(int cellNumber){
 // ====================
 void MRIStructuredScan::DistributeScanData(MRICommunicator* comm){
   // Exchange Quantities
-  //comm->passStdIntVector(cellTotals);
-  //comm->passStdDoubleMatrix(cellLengths);
-  //comm->passStdIntMatrix(cellConnections);
-  //comm->passStdIntMatrix(cellFaces);
-  //comm->passStdIntMatrix(faceCells);
-  //comm->passStdIntMatrix(faceConnections);
-  //comm->passStdIntMatrix(faceEdges);
-  //comm->passStdDoubleVector(faceArea);
-  if(comm->currProc == 0){
-    printf("FACE NORMAL SIZE: %d\n",faceNormal.size());
-  }
-
-
-  comm->passStdDoubleMatrix(faceNormal);
-  //comm->passStdIntMatrix(edgeConnections);
-  //comm->passStdIntMatrix(edgeFaces);
+  comm->passStdIntVector(cellTotals);
+  comm->passStdDoubleMatrix(cellLengths);
+  comm->passStdIntMatrix(cellConnections);
+  comm->passStdIntMatrix(cellFaces);
+  comm->passStdIntMatrix(faceCells);
+  comm->passStdIntMatrix(faceConnections);
+  comm->passStdIntMatrix(faceEdges);
+  comm->passStdDoubleVector(faceArea);
+  //comm->passStdDoubleMatrix(faceNormal);
+  comm->passStdIntMatrix(edgeConnections);
+  comm->passStdIntMatrix(edgeFaces);
 }
 
 
