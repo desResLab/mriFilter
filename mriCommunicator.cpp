@@ -212,7 +212,7 @@ void MRICommunicator::passStdDoubleMatrix(MRIDoubleMat& matrix){
 // ======================
 // PASS ARRAY OF INTEGERS
 // ======================
-void MRICommunicator::passStdIntVector(MRIIntVec vector){
+void MRICommunicator::passStdIntVector(MRIIntVec& vector){
   int mpiError = 0;
   int tag = 0;
   int source = 0;

@@ -29,7 +29,7 @@ public:
   // Double Mat
   void passStdDoubleMatrix(MRIDoubleMat& matrix);
   // Int Vector
-  void passStdIntVector(MRIIntVec vector);
+  void passStdIntVector(MRIIntVec& vector);
   // Double Vector
   void passStdDoubleVector(MRIDoubleVec& vector);
   // String

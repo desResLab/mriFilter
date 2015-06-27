@@ -702,6 +702,8 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
       }
     }
 
+    //printf("RESIDUAL NORM AFTER CONSTANT: %e, proc: %d\n",resNorm,comm->currProc);
+
     constPattern_TotalTime = float( clock () - constPattern_BeginTime ) /  CLOCKS_PER_SEC;
 
     // Reserve these two
@@ -715,13 +717,11 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
       componentCount++;
 
       // ASSEMBLE STAR
-
       assembleStar_BeginTime = clock();
       AssembleStarShape(loopB,totalStarFaces,facesID,facesCoeffs);
       assembleStar_TotalTime += float( clock () - assembleStar_BeginTime ) /  CLOCKS_PER_SEC;
 
       // FIND CORRELATION
-
       correlateStar_BeginTime = clock();
       corrCoeff = EvalCorrelationCoefficient(resVec,totalStarFaces,facesID,facesCoeffs);
       correlateStar_TotalTime += float( clock () - correlateStar_BeginTime ) /  CLOCKS_PER_SEC;

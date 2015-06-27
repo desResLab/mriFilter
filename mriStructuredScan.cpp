@@ -3302,14 +3302,48 @@ double MRIStructuredScan::evalCellVolume(int cellNumber){
   return cellLengths[0][intCoords[0]] * cellLengths[1][intCoords[1]] * cellLengths[2][intCoords[2]];
 }
 
+// ===========================
+// PASS INFO FROM PARENT CLASS
+// ===========================
+void MRIStructuredScan::passScanData(MRICommunicator* comm){
+  MRIDoubleVec doubleVec;
+  if(comm->currProc == 0){
+    // Domain Dimension
+    doubleVec.push_back(domainSizeMin[0]);
+    doubleVec.push_back(domainSizeMin[1]);
+    doubleVec.push_back(domainSizeMin[2]);
+    doubleVec.push_back(domainSizeMax[0]);
+    doubleVec.push_back(domainSizeMax[1]);
+    doubleVec.push_back(domainSizeMax[2]);
+    doubleVec.push_back(maxVelModule);
+  }
+  // Pass Data
+  comm->passStdDoubleVector(doubleVec);
+  // Copy Scan Data
+  if(comm->currProc != 0){
+    domainSizeMin[0] = doubleVec[0];
+    domainSizeMin[1] = doubleVec[1];
+    domainSizeMin[2] = doubleVec[2];
+    domainSizeMax[0] = doubleVec[3];
+    domainSizeMax[1] = doubleVec[4];
+    domainSizeMax[2] = doubleVec[5];
+    maxVelModule = doubleVec[6];
+  }
+
+  // Exchange Cell Data
+  comm->passCellData(totalCellPoints,cellPoints);
+}
+
+
 // ====================
 // DISTRIBUTE SCAN DATA
 // ====================
 void MRIStructuredScan::DistributeScanData(MRICommunicator* comm){
-  // Exchange Cell Data
-  comm->passCellData(totalCellPoints,cellPoints);
+  // Pass Scan Data
+  passScanData(comm);
   // Exchange Topology Information
   comm->passStdIntVector(cellTotals);
+  printf("CELL TOTALS: %d %d %d, proc %d\n",cellTotals[0],cellTotals[1],cellTotals[2],comm->currProc);
   comm->passStdDoubleMatrix(cellLengths);
   comm->passStdIntMatrix(cellConnections);
   comm->passStdIntMatrix(cellFaces);

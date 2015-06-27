@@ -86,7 +86,7 @@ class MRIStructuredScan: public MRIScan{
     MRIIntMat faceConnections;
     MRIIntMat faceEdges;
     MRIDoubleVec faceArea;
-    std::vector<std::vector<double>> faceNormal;
+    MRIDoubleMat faceNormal;
     // Edge Topology
     MRIIntMat edgeConnections;
     MRIIntMat edgeFaces;
@@ -342,6 +342,7 @@ class MRIStructuredScan: public MRIScan{
    void buildMetisConnectivities(int *eptr,int *eind);
 
    // MESSAGE PASSING
+   void passScanData(MRICommunicator* comm);
    virtual void DistributeScanData(MRICommunicator* comm);
 };
 
