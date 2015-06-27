@@ -921,6 +921,9 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
   if(comm->totProc > 1){
     MyMRISequence->DistributeSequenceData(comm);
   }
+  if(comm->currProc == 0){
+    printf("Data Structure Communication OK.\n");
+  }
 
   // SAVE INITIAL VELOCITIES
   if (opts->saveInitialVel){
@@ -1054,19 +1057,19 @@ int main(int argc, char **argv){
   if(comm->totProc > 1){
     options->DistributeProgramOptions(comm);
   }
+  if(comm->currProc == 0){
+    printf("Program Options Communication OK.\n");
+  }
+
+  string optOut("optionsOut_" + to_string(comm->currProc) + ".out");
+  options->writeOptionsToFile(optOut);
 
   // Finalize options
-  //options->finalize();
+  options->finalize();
 
-  //string optOut("optionsOut_" + to_string(comm->currProc) + ".out");
-  //options->writeOptionsToFile(optOut);
-
-  // Exit
-  MPI::Finalize();
-  return 0;
-
-
+  // ============
   // MAIN PROGRAM
+  // ============
   try{
     // Write Program Help
     switch(options->runMode){
@@ -1205,6 +1208,8 @@ int main(int argc, char **argv){
   WriteSchMessage(std::string("\n"));
   WriteSchMessage(std::string("Program Completed.\n"));
   // Finalize MPI
+  delete comm;
+  delete options;
   MPI::Finalize();
   return val;
 }

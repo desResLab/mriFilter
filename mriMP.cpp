@@ -618,7 +618,7 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
 
   // Determine the Minimum and Maximum Face number of current processor
   int minFaceOnProc = comm->currProc * int((cellFaces.size() - 1)/(comm->totProc + 1));
-  int maxFaceOnProc = (comm->currProc + 1) * int((cellFaces.size() - 1)/(comm->totProc + 1));
+  int maxFaceOnProc = (comm->currProc + 1) * int((cellFaces.size() - 1)/(comm->totProc + 1))-1;
   if(comm->currProc == (comm->totProc-1)){
     maxFaceOnProc = cellFaces.size();
   }

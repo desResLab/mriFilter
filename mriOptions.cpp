@@ -49,6 +49,10 @@ MRIOptions::MRIOptions(){
   noiseIntensity = 0.0;
 }
 
+MRIOptions::~MRIOptions(){
+
+}
+
 // =========================
 // GET COMMANDLINE ARGUMENTS
 // =========================
@@ -700,7 +704,6 @@ int MRIOptions::writeCommandFilePrototype(string commandFile){
 // Distribute Program Options
 void MRIOptions::DistributeProgramOptions(MRICommunicator* comm){
   // FORM INTEGER OPTIONS
-  printf("DISTRIBUTING OPTIONS\n");
   int size = 0;
   int mpiError = 0;
   int* intParams = NULL;
@@ -759,7 +762,7 @@ void MRIOptions::DistributeProgramOptions(MRICommunicator* comm){
   boolParams[9] =  evalSMPVortexCriterion;
   boolParams[10] =  evalPressure;
   boolParams[11] =  exportToPoisson;
-  mpiError = MPI_Bcast(boolParams,size,MPI_LOGICAL,0,comm->mpiComm);
+  mpiError = MPI_Bcast(boolParams,size,MPI::BOOL,0,comm->mpiComm);
   MRIUtils::checkMpiError(mpiError);
   if(comm->currProc > 0){
     generateCommandFile = boolParams[0];
@@ -778,14 +781,14 @@ void MRIOptions::DistributeProgramOptions(MRICommunicator* comm){
   delete [] boolParams;
 
   // PASS STRINGS
-  //comm->passString(inputFileName);
-  //comm->passString(outputFileName);
-  //comm->passString(statFileName);
-  //comm->passString(commandFileName);
-  //comm->passString(sequenceFileName);
+  comm->passString(inputFileName);
+  comm->passString(outputFileName);
+  comm->passString(statFileName);
+  comm->passString(commandFileName);
+  comm->passString(sequenceFileName);
 
   // PASS VECTOR
-  //comm->passStdDoubleVector(templateParams);
+  comm->passStdDoubleVector(templateParams);
 
   // PASS STRING LIST
   //vector<string> sequenceFileList;

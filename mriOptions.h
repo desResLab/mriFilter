@@ -89,6 +89,9 @@ public:
 
   // CONSTRUCTOR
   MRIOptions();
+  // Distructor
+  ~MRIOptions();
+
 
   // Get Command Options from input Arguments
   int getCommadLineOptions(int argc, char **argv);

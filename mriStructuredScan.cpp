@@ -440,6 +440,8 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
       Continue = true;
     }
   }
+  delete [] LocalVal;
+  delete [] TempVal;
 
   // Set The Effective Number Of Data Read
   totalCellPoints = LocalCount;
@@ -3304,7 +3306,9 @@ double MRIStructuredScan::evalCellVolume(int cellNumber){
 // DISTRIBUTE SCAN DATA
 // ====================
 void MRIStructuredScan::DistributeScanData(MRICommunicator* comm){
-  // Exchange Quantities
+  // Exchange Cell Data
+  comm->passCellData(totalCellPoints,cellPoints);
+  // Exchange Topology Information
   comm->passStdIntVector(cellTotals);
   comm->passStdDoubleMatrix(cellLengths);
   comm->passStdIntMatrix(cellConnections);
@@ -3313,7 +3317,7 @@ void MRIStructuredScan::DistributeScanData(MRICommunicator* comm){
   comm->passStdIntMatrix(faceConnections);
   comm->passStdIntMatrix(faceEdges);
   comm->passStdDoubleVector(faceArea);
-  //comm->passStdDoubleMatrix(faceNormal);
+  comm->passStdDoubleMatrix(faceNormal);
   comm->passStdIntMatrix(edgeConnections);
   comm->passStdIntMatrix(edgeFaces);
 }
