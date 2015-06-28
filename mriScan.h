@@ -159,6 +159,9 @@ class MRIScan{
     virtual int    EvalTotalVortex(){return 0;}
     virtual void   AssembleResidualVector(bool useBCFilter, MRIThresholdCriteria* thresholdCriteria, int &totalFaces, double* &ResVec, double* &filteredVec, double &resNorm){throw MRIException("Error: Not Implemented!");}
     virtual void   AssembleConstantPattern(int currentDim, int &totalConstantFaces, std::vector<int> &facesID, std::vector<double> &facesCoeffs){throw MRIException("Error: Not Implemented!");}
+    virtual void   AssembleConstantPatternMPI(int currentDim, int &totalConstantFacesOnProc,
+                                              std::vector<int> &facesIDOnProc, std::vector<double> &facesCoeffsOnProc,
+                                              int minFaceOnProc, int maxFaceOnProc){throw MRIException("Error: Not Implemented!");}
     virtual void   AssembleStarShape(int vortexNumber, int &totalFaces,std::vector<int> &facesID,std::vector<double> &facesCoeffs){throw MRIException("Error: Not Implemented!");}
     virtual double EvalMaxDivergence(double* filteredVec){return 1000.0;}
     virtual void   RecoverCellVelocitiesRT0(bool useBCFilter, double* filteredVec){throw MRIException("Error: Not Implemented!");}

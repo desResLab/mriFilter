@@ -3343,7 +3343,6 @@ void MRIStructuredScan::DistributeScanData(MRICommunicator* comm){
   passScanData(comm);
   // Exchange Topology Information
   comm->passStdIntVector(cellTotals);
-  printf("CELL TOTALS: %d %d %d, proc %d\n",cellTotals[0],cellTotals[1],cellTotals[2],comm->currProc);
   comm->passStdDoubleMatrix(cellLengths);
   comm->passStdIntMatrix(cellConnections);
   comm->passStdIntMatrix(cellFaces);
