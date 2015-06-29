@@ -235,7 +235,7 @@ class MRIStructuredScan: public MRIScan{
     virtual void   AssembleConstantPattern(int currentDim, int &totalConstantFaces, std::vector<int> &facesID, std::vector<double> &facesCoeffs);
     virtual void   AssembleConstantPatternMPI(int currentDim, int &totalConstantFacesOnProc,
                                               std::vector<int> &facesIDOnProc, std::vector<double> &facesCoeffsOnProc,
-                                              int minFaceOnProc, int maxFaceOnProc);
+                                              int minFaceOnProc, int maxFaceOnProc,MRICommunicator* comm);
     virtual void   AssembleStarShape(int vortexNumber, int &totalFaces,std::vector<int> &facesID,std::vector<double> &facesCoeffs);
     virtual void   AssembleStarShapeMPI(int vortexNumber, int &totalFaces, std::vector<int> &facesID, std::vector<double> &facesCoeffs,int minFaceOnProc, int maxFaceOnProc);
     virtual double EvalMaxDivergence(double* filteredVec);

@@ -66,6 +66,7 @@ void MRIStructuredScan::AssembleConstantPattern(int currentDim, int &totalConsta
   std::vector<int> orientation;
 
   // Loop Over Faces
+  int totNegFaces = 0;
   for(size_t loopA=0;loopA<faceConnections.size();loopA++){
     if(fabs(faceNormal[loopA][currentDim])>kMathZero){
       facesID.push_back(loopA);
@@ -73,14 +74,19 @@ void MRIStructuredScan::AssembleConstantPattern(int currentDim, int &totalConsta
         orientation.push_back(1);
       }else{
         orientation.push_back(-1);
+        totNegFaces++;
       }
     }
   }
+
+  //printf("NEGATIVE FACES: %d\n",totNegFaces);
 
   // Fill Coefficients
   for(size_t loopA=0;loopA<facesID.size();loopA++){
     facesCoeffs.push_back((orientation[loopA]/sqrt((double)facesID.size())));
   }
+
+  //printf("TOTAL FACES: %d\n",facesID.size());
 
   // Update Counter
   totalConstantFaces = facesID.size();
@@ -92,13 +98,13 @@ void MRIStructuredScan::AssembleConstantPattern(int currentDim, int &totalConsta
 // =======================
 void MRIStructuredScan::AssembleConstantPatternMPI(int currentDim, int &totalConstantFacesOnProc,
                                                    std::vector<int> &facesIDOnProc, std::vector<double> &facesCoeffsOnProc,
-                                                   int minFaceOnProc, int maxFaceOnProc){
+                                                   int minFaceOnProc, int maxFaceOnProc, MRICommunicator* comm){
 
   // Clear Vectors
   totalConstantFacesOnProc = 0;
   facesIDOnProc.clear();
   facesCoeffsOnProc.clear();
-  std::vector<int> orientation;
+  MRIDoubleVec orientation;
 
   // Get Total Number of Faces in this Direction
   int totFacesThisDir = 0;
@@ -115,16 +121,20 @@ void MRIStructuredScan::AssembleConstantPatternMPI(int currentDim, int &totalCon
   }
 
   // Decide Orientations
+  int totNegative = 0;
   for(int loopA=minFaceOnProc;loopA<maxFaceOnProc;loopA++){
     if(fabs(faceNormal[loopA][currentDim])>kMathZero){
       facesIDOnProc.push_back(loopA);
       if(faceNormal[loopA][currentDim]>kMathZero){
-        orientation.push_back(1);
+        orientation.push_back(1.0);
       }else{
-        orientation.push_back(-1);
+        orientation.push_back(-1.0);
+        totNegative++;
       }
     }
   }
+
+  //printf("[%d] NEGATIVE FACES: %d\n",comm->currProc,totNegative);
 
   // Fill Coefficients
   for(size_t loopA=0;loopA<facesIDOnProc.size();loopA++){
@@ -654,14 +664,24 @@ void UpdateResidualAndFilterMPI(int globTotFaces, double corrCoeff, int totalFac
   int size = maxFaceGlob[comm->currProc] - minFaceGlob[comm->currProc];
   int* recvcounts = new int[comm->totProc];
   int* displs = new int[comm->totProc];
+  double* storeVec = new double[size];
   for(int loopA=0;loopA<comm->totProc;loopA++){
     displs[loopA] = minFaceGlob[loopA];
+    printf("[%d] DISP: %d\n",comm->currProc,displs[loopA]);
     recvcounts[loopA] = maxFaceGlob[loopA] - minFaceGlob[loopA];
+    printf("[%d] CONT: %d\n",comm->currProc,recvcounts[loopA]);
   }
+
   // Residual Vector
-  MPI_Allgatherv(&resVec[minFaceGlob[comm->currProc]],size,MPI_DOUBLE,&resVec[0],recvcounts,displs,MPI_DOUBLE,comm->mpiComm);
+  for(int loopA=minFaceGlob[comm->currProc];loopA<maxFaceGlob[comm->currProc];loopA++){
+    storeVec[loopA-minFaceGlob[comm->currProc]] = resVec[loopA];
+  }
+  MPI_Allgatherv(&storeVec[0],size,MPI_DOUBLE,&resVec[0],recvcounts,displs,MPI_DOUBLE,comm->mpiComm);
   // Filter Vector
-  MPI_Allgatherv(&filteredVels[minFaceGlob[comm->currProc]],size,MPI_DOUBLE,&filteredVels[0],recvcounts,displs,MPI_DOUBLE,comm->mpiComm);
+  for(int loopA=minFaceGlob[comm->currProc];loopA<maxFaceGlob[comm->currProc];loopA++){
+    storeVec[loopA-minFaceGlob[comm->currProc]] = filteredVels[loopA];
+  }
+  MPI_Allgatherv(&storeVec[0],size,MPI_DOUBLE,&filteredVels[0],recvcounts,displs,MPI_DOUBLE,comm->mpiComm);
 }
 
 // =====================================
@@ -809,6 +829,88 @@ void MRIStructuredScan::AssembleResidualVector(bool useBCFilter, MRIThresholdCri
   delete [] resID;
 }
 
+// ===================
+// PRINT DOUBLE MATRIX
+// ===================
+void printDoubleMatToFile(string fileName, MRIDoubleMat faceNormals){
+  // Open Output File
+  FILE* f;
+  f = fopen(fileName.c_str(),"w");
+  // Write Header
+  for(int loopA=0;loopA<faceNormals.size();loopA++){
+    for(int loopB=0;loopB<faceNormals[loopA].size();loopB++){
+      fprintf(f,"%f ",faceNormals[loopA][loopB]);
+    }
+    fprintf(f,"\n");
+  }
+  // Close Output file
+  fclose(f);
+}
+
+// ================
+// PRINT INT MATRIX
+// ================
+void printIntMatToFile(string fileName, MRIIntMat mat){
+  // Open Output File
+  FILE* f;
+  f = fopen(fileName.c_str(),"w");
+  // Write Header
+  for(int loopA=0;loopA<mat.size();loopA++){
+    for(int loopB=0;loopB<mat[loopA].size();loopB++){
+      fprintf(f,"%d ",mat[loopA][loopB]);
+    }
+    fprintf(f,"\n");
+  }
+  // Close Output file
+  fclose(f);
+}
+
+// ===================
+// PRINT DOUBLE VECTOR
+// ===================
+void printDoubleVecToFile(string fileName, MRIDoubleVec vec){
+  // Open Output File
+  FILE* f;
+  f = fopen(fileName.c_str(),"w");
+  // Write Header
+  for(int loopA=0;loopA<vec.size();loopA++){
+    fprintf(f,"%f\n",vec[loopA]);
+  }
+  // Close Output file
+  fclose(f);
+}
+
+// ===================
+// PRINT DOUBLE VECTOR
+// ===================
+void printIntVecToFile(string fileName, MRIIntVec vec){
+  // Open Output File
+  FILE* f;
+  f = fopen(fileName.c_str(),"w");
+  // Write Header
+  for(int loopA=0;loopA<vec.size();loopA++){
+    fprintf(f,"%d\n",vec[loopA]);
+  }
+  // Close Output file
+  fclose(f);
+}
+
+// ===================
+// PRINT DOUBLE MATRIX
+// ===================
+void printDoubleArrayToFile(string fileName, int size, double* vec){
+  // Open Output File
+  FILE* f;
+  f = fopen(fileName.c_str(),"w");
+  // Write Header
+  for(int loopA=0;loopA<size;loopA++){
+    fprintf(f,"%f\n",vec[loopA]);
+  }
+  // Close Output file
+  fclose(f);
+}
+
+
 // =================
 // PHYSICS FILTERING
 // =================
@@ -855,10 +957,12 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
   // Global Array for Face Storage
   int minFaceGlob[comm->totProc];
   int maxFaceGlob[comm->totProc];
+  int minFaceOnProc = 0.0;
+  int maxFaceOnProc = 0.0;
   for(int loopA=0;loopA<comm->totProc;loopA++){
     // Determine the Minimum and Maximum Face number of current processor
-    int minFaceOnProc = int(loopA * (totalFaces - 1)/(comm->totProc));
-    int maxFaceOnProc = int((loopA + 1) * (totalFaces - 1)/(comm->totProc));
+    minFaceOnProc = int(loopA * (totalFaces - 1)/(comm->totProc));
+    maxFaceOnProc = int((loopA + 1) * (totalFaces - 1)/(comm->totProc));
     if(loopA == (comm->totProc-1)){
       maxFaceOnProc = totalFaces;
     }
@@ -868,12 +972,11 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
   }
 
   // Determine the Minimum and Maximum Face number of current processor
-  int minFaceOnProc = comm->currProc * int((totalFaces - 1)/(comm->totProc + 1));
-  int maxFaceOnProc = (comm->currProc + 1) * int((totalFaces - 1)/(comm->totProc + 1));
+  minFaceOnProc = comm->currProc * int((totalFaces - 1)/(comm->totProc + 1));
+  maxFaceOnProc = (comm->currProc + 1) * int((totalFaces - 1)/(comm->totProc + 1));
   if(comm->currProc == (comm->totProc-1)){
     maxFaceOnProc = totalFaces;
   }
-  int totFaceOnProc = maxFaceOnProc - minFaceOnProc;
 
   // All processes are waiting for the root to read the files
   mpiError = MPI_Barrier(comm->mpiComm);
@@ -885,6 +988,10 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
   assembleRes_BeginTime = clock();
   AssembleResidualVector(isBC,options->thresholdCriteria,totalFaces,resVec,filteredVec,resNorm);
   assembleRes_TotalTime += float( clock () - assembleRes_BeginTime ) /  CLOCKS_PER_SEC;
+
+  // Print Face Normals
+  //string fileName("resVec_proc_" + to_string(comm->currProc) + ".dat");
+  //printfDoubleArrayToFile(fileName,totalFaces,resVec);
 
   // Print Residual Vector
   //PrintResidualVector(std::string("resVectorFile_"+std::to_string(comm->currProc)+".txt").c_str(),totalFaces,resVec);
@@ -937,8 +1044,18 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
     for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
       // Correlate Constant Patterns
       if(options->useConstantPatterns){
-        // Find Star Shape
-        AssembleConstantPatternMPI(loopB,totalStarFaces,facesID,facesCoeffs,minFaceOnProc,maxFaceOnProc);
+
+        // Find Constant Patterns
+        if(comm->totProc > 1){
+          //AssembleConstantPattern(loopB,totalStarFaces,facesID,facesCoeffs);
+          AssembleConstantPatternMPI(loopB,totalStarFaces,facesID,facesCoeffs,minFaceOnProc,maxFaceOnProc,comm);
+          //printf("[%d] TOTAL FACES: %d\n",comm->currProc,totalStarFaces);
+        }else{
+          AssembleConstantPattern(loopB,totalStarFaces,facesID,facesCoeffs);
+        }
+
+        //string fileName("faceID_proc_" + to_string(comm->currProc) + ".dat");
+        //printfIntVecToFile(fileName,facesID);
 
         // PRINT FASE ID INDEX
         //PrintFaceIDIndexes("ConstantFaceIDs.txt",totalStarFaces,facesID,facesCoeffs);
@@ -946,13 +1063,18 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
         // Find Correlation
         corrCoeff = EvalCorrelationCoefficient(resVec,totalStarFaces,facesID,facesCoeffs);
 
-        //printf("Correlation Coeff on proc %d before Reduce: %f\n",comm->currProc,corrCoeff);
+        //printf("[%d] CORR COEFF BEFORE: %f\n",comm->currProc,corrCoeff);
 
         // Store Correlation coefficient in Expansion
-        MPI_Allreduce(&corrCoeff, &redcorrCoeff, 1, MPI_DOUBLE, MPI_SUM, comm->mpiComm);
-        corrCoeff = redcorrCoeff;
+        if(comm->totProc > 1){
+          MPI_Allreduce(&corrCoeff, &redcorrCoeff, 1, MPI_DOUBLE, MPI_SUM, comm->mpiComm);
+          corrCoeff = redcorrCoeff;
+        }
 
-        //printf("Correlation Coeff on proc %d after Reduce: %f\n",comm->currProc,corrCoeff);
+        if(comm->currProc == 0){
+          printf("CORR COEFF AFTER: %f\n",corrCoeff);
+        }
+
 
         // Store Expansion Coefficients on Master Processor
         if(comm->currProc == 0){
@@ -964,18 +1086,28 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
         }
 
         // Update Residual
-        UpdateResidualAndFilterMPI(totalFaces,corrCoeff,totalStarFaces,facesID,facesCoeffs,resVec,filteredVec,resNorm,minFaceGlob,maxFaceGlob,comm);
-
-        string fileName("resVec_Proc" + to_string(comm->currProc) + ".dat");
-        writeVectorToFile(fileName,totalFaces,resVec);
-
-        MPI::Finalize();
-        exit(0);
-
+        if(comm->totProc > 1){
+          //UpdateResidualAndFilter(corrCoeff,totalStarFaces,facesID,facesCoeffs,resVec,filteredVec,resNorm);
+          UpdateResidualAndFilterMPI(totalFaces,corrCoeff,totalStarFaces,facesID,facesCoeffs,resVec,filteredVec,resNorm,minFaceGlob,maxFaceGlob,comm);
+        }else{
+          UpdateResidualAndFilter(corrCoeff,totalStarFaces,facesID,facesCoeffs,resVec,filteredVec,resNorm);
+        }
       }
     }
 
-    printf("[%d] RESIDUAL NORM AFTER CONSTANT: %f\n",comm->currProc,resNorm);
+    // Print Residual Vector
+    if(comm->totProc > 1){
+      PrintResidualVector(std::string("resVectorFile1_"+std::to_string(comm->currProc)+"_m.txt").c_str(),totalFaces,resVec);
+    }else{
+      PrintResidualVector(std::string("resVectorFile1_"+std::to_string(comm->currProc)+".txt").c_str(),totalFaces,resVec);
+    }
+
+    if(comm->currProc == 0){
+      printf("[it:%d] RESIDUAL NORM AFTER CONSTANT: %f\n",itCount,resNorm);
+    }
+
+    //string fileName("faceEdge_proc_" + to_string(comm->currProc) + ".dat");
+    //printfIntMatToFile(fileName,faceEdges);
 
     constPattern_TotalTime = float( clock () - constPattern_BeginTime ) /  CLOCKS_PER_SEC;
 
@@ -986,19 +1118,41 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
     // LOOP ON VORTEXES
     componentCount = -1;
 
+    MRIIntVec numFaces;
+    MRIDoubleVec testVec;
+    MRIDoubleVec temp;
+    MRIIntVec temp2;
+    MRIDoubleMat facecf;
+    MRIIntMat faceIDout;
+
     for(int loopB=0;loopB<totalVortexes;loopB++){
       // Increment the current component
       componentCount++;
 
       // ASSEMBLE STAR
+      temp.clear();
+      temp2.clear();
       assembleStar_BeginTime = clock();
       AssembleStarShape(loopB,totalStarFaces,facesID,facesCoeffs);
       assembleStar_TotalTime += float( clock () - assembleStar_BeginTime ) /  CLOCKS_PER_SEC;
+      for(int loopC=0;loopC<totalStarFaces;loopC++){
+        temp.push_back(facesCoeffs[loopC]);
+        temp2.push_back(facesID[loopC]);
+      }
 
       // FIND CORRELATION
       correlateStar_BeginTime = clock();
       corrCoeff = EvalCorrelationCoefficient(resVec,totalStarFaces,facesID,facesCoeffs);
       correlateStar_TotalTime += float( clock () - correlateStar_BeginTime ) /  CLOCKS_PER_SEC;
+
+      if(loopB == 4){
+        printf("VORTEX CORR COEFF: %f\n",corrCoeff);
+        printf("TOT STAR FACES: %f\n",totalStarFaces);
+        for(int loopC=0;loopC<totalStarFaces;loopC++){
+          printf("FACES: %d, COEFF: %f, RES: %f\n",facesID[loopC],facesCoeffs[loopC],resVec[facesID[loopC]]);
+        }
+
+      }
 
       // Store Correlation coefficient in Expansion
       if(comm->currProc == 0){
@@ -1013,6 +1167,52 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
       updateStar_BeginTime = clock();
       UpdateResidualAndFilter(corrCoeff,totalStarFaces,facesID,facesCoeffs,resVec,filteredVec,resNorm);
       updateStar_TotalTime += float( clock () - updateStar_BeginTime ) /  CLOCKS_PER_SEC;
+
+      testVec.push_back(corrCoeff);
+      numFaces.push_back(totalStarFaces);
+      facecf.push_back(temp);
+      faceIDout.push_back(temp2);
+
+    }
+
+    string fileName;
+    if(comm->totProc > 1){
+      fileName = "Corr_proc_" + to_string(comm->currProc) + "_m.dat";
+    }else{
+      fileName = "Corr_proc_" + to_string(comm->currProc) + ".dat";
+    }
+    printDoubleVecToFile(fileName,testVec);
+    if(comm->totProc > 1){
+      fileName = "numFace_proc_" + to_string(comm->currProc) + "_m.dat";
+    }else{
+      fileName = "numFace_proc_" + to_string(comm->currProc) + ".dat";
+    }
+    printIntVecToFile(fileName,numFaces);
+    if(comm->totProc > 1){
+      fileName = "faceCoeff_proc_" + to_string(comm->currProc) + "_m.dat";
+    }else{
+      fileName = "faceCoeff_proc_" + to_string(comm->currProc) + ".dat";
+    }
+    printDoubleMatToFile(fileName,facecf);
+    if(comm->totProc > 1){
+      fileName = "faceIDs_proc_" + to_string(comm->currProc) + "_m.dat";
+    }else{
+      fileName = "faceIDs_proc_" + to_string(comm->currProc) + ".dat";
+    }
+    printIntMatToFile(fileName,faceIDout);
+
+    if(comm->currProc == 0){
+      printf("[it:%d] RESIDUAL NORM AFTER STARS: %f\n",itCount,resNorm);
+    }
+
+    MPI::Finalize();
+    exit(0);
+
+    // Print Residual Vector
+    if(comm->totProc > 1){
+      PrintResidualVector(std::string("resVectorFile2_"+std::to_string(comm->currProc)+"_m.txt").c_str(),totalFaces,resVec);
+    }else{
+      PrintResidualVector(std::string("resVectorFile2_"+std::to_string(comm->currProc)+".txt").c_str(),totalFaces,resVec);
     }
 
     // Eval Two-Norm of the Coefficient Vector
@@ -1123,9 +1323,9 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
 
 }
 
-// ======================================
+// ==================================
 // REBUILD FROM EXPANSION COEFFICIENT
-// ======================================
+// ==================================
 void MRIStructuredScan::RebuildFromExpansion(MRIExpansion* expansion,bool useConstantFlux){
   // RECONSTRUCTION
   int totalStarFaces = 0;
