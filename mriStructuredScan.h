@@ -345,7 +345,7 @@ class MRIStructuredScan: public MRIScan{
    void buildMetisConnectivities(int *eptr,int *eind);
 
    // MESSAGE PASSING
-   void formVortexList(int totVortex,int minFaceOnProc,int maxFaceOnProc,MRIIntVec& vortexList);
+   void formVortexList(int totVortex,int* minFace,int* maxFace,MRIIntVec& innerVortexList,MRIIntVec& boundaryVortexList,MRICommunicator* comm);
    void passScanData(MRICommunicator* comm);
    virtual void DistributeScanData(MRICommunicator* comm);
 };

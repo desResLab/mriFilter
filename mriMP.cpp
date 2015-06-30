@@ -796,22 +796,42 @@ void printDoubleArrayToFile(string fileName, int size, double* vec){
 // ================
 // FORM VORTEX LIST
 // ================
-void MRIStructuredScan::formVortexList(int totVortex,int minFaceOnProc,int maxFaceOnProc,MRIIntVec& vortexList){
+void MRIStructuredScan::formVortexList(int totVortex,int* minFace,int* maxFace,MRIIntVec& innerVortexList,MRIIntVec& boundaryVortexList,MRICommunicator* comm){
   bool foundFace = true;
+  bool isInternal = true;
   int currFace = 0;
   int countFace = 0;
+
+  // Form Inner List for Current Processor
   for(int loopA=0;loopA<totVortex;loopA++){
-    foundFace = false;
+    foundFace = true;
     for(size_t loopB=0;loopB<edgeFaces[loopA].size();loopB++){
       currFace = abs(edgeFaces[loopA][loopB])-1;
-      foundFace = (foundFace || ((currFace>=minFaceOnProc)&&(currFace<maxFaceOnProc)));
+      foundFace = (foundFace && ((currFace>=minFace[comm->currProc])&&(currFace<maxFace[comm->currProc])));
     }
     if(foundFace){
-      vortexList.push_back(loopA);
+      innerVortexList.push_back(loopA);
       countFace++;
     }
   }
-  printf("NUMBER OF VORTEXES FOR THIS PROCESS: %d\n",countFace);
+
+  // Form Boundary List
+  for(int loopA=0;loopA<totVortex;loopA++){
+    foundFace = true;
+    isInternal = false;
+    for(int loopC=0;loopC<comm->totProc;loopC++){
+      foundFace = true;
+      for(size_t loopB=0;loopB<edgeFaces[loopA].size();loopB++){
+        currFace = abs(edgeFaces[loopA][loopB])-1;
+        foundFace = (foundFace && ((currFace>=minFace[loopC])&&(currFace<maxFace[loopC])));
+      }
+      isInternal = (isInternal || foundFace);
+    }
+    if(!isInternal){
+      boundaryVortexList.push_back(loopA);
+    }
+  }
+  //printf("NUMBER OF VORTEXES FOR THIS PROCESS: %d\n",countFace);
 }
 
 // =========================================
@@ -851,15 +871,14 @@ void communicateResFilt2(int totalFaces,double* resVec,double* filteredVels,MRIC
 // =================
 void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommunicator* comm){
 
-  printf("SMPFILTER processor %d\n",comm->currProc);
-
   // INITIALIZATION
   int totalFaces = faceConnections.size();
   double* resVec = nullptr;
   double* filteredVec = nullptr;
   std::vector<int> facesID;
   std::vector<double> facesCoeffs;
-  MRIIntVec vortexList;
+  MRIIntVec innerVortexList;
+  MRIIntVec boundaryVortexList;
   double corrCoeff = 0.0;
   int totalStarFaces = 0;
   int mpiError = 0;
@@ -915,7 +934,7 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
   mpiError = MPI_Barrier(comm->mpiComm);
   MRIUtils::checkMpiError(mpiError);
 
-  printf("Curr Proc: %d, Tot Proc: %d, MinFace: %d, MaxFace: %d\n",comm->currProc,comm->totProc,minFaceOnProc,maxFaceOnProc);
+  printf("[%d/%d] MinFace: %d, MaxFace: %d\n",comm->currProc,comm->totProc,minFaceOnProc,maxFaceOnProc);
 
   // Assemble Face Flux Vectors
   assembleRes_BeginTime = clock();
@@ -930,31 +949,34 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
   //PrintResidualVector(std::string("resVectorFile_"+std::to_string(comm->currProc)+".txt").c_str(),totalFaces,resVec);
 
   // Initial Residual
-  WriteSchMessage("\n");
-  if (isBC){
-    WriteSchMessage("FILTER ALGORITHM - BC - Step: "+MRIUtils::FloatToStr(scanTime)+" ---------------------------\n");
-  }else{
-    WriteSchMessage("FILTER ALGORITHM - FULL - Step "+MRIUtils::FloatToStr(scanTime)+" ---------------------------\n");
+  if(comm->currProc == 0){
+    WriteSchMessage("\n");
+    if (isBC){
+      WriteSchMessage("FILTER ALGORITHM - BC - Step: "+MRIUtils::FloatToStr(scanTime)+" ---------------------------\n");
+    }else{
+      WriteSchMessage("FILTER ALGORITHM - FULL - Step "+MRIUtils::FloatToStr(scanTime)+" ---------------------------\n");
+    }
   }
 
   // START CLOCK
   const clock_t begin_time = clock();
   
-  WriteSchMessage("Initial Residual Norm: "+MRIUtils::FloatToStr(resNorm)+"\n");
+  if(comm->currProc == 0){
+    WriteSchMessage("Initial Residual Norm: "+MRIUtils::FloatToStr(resNorm)+"\n");
+  }
 
   // Initialize Expansion
   MRIExpansion* bcExpansion = NULL;
   int totalVortexes = EvalTotalVortex();
-  printf("TOTAL VORTEXES: %d\n",totalVortexes);
 
   // Form List of Vortexes Including Faces for MPI
-  //if(comm->totProc > 1){
-  //  formVortexList(totalVortexes,minFaceOnProc,maxFaceOnProc,vortexList);
-  //}else{
+  if(comm->totProc > 1){
+    formVortexList(totalVortexes,minFaceGlob,maxFaceGlob,innerVortexList,boundaryVortexList,comm);
+  }else{
     for(int loopA=0;loopA<totalVortexes;loopA++){
-      vortexList.push_back(loopA);
+      innerVortexList.push_back(loopA);
     }
-  //}
+  }
 
   // Processor 0 has expansion Coefficients
   if(comm->currProc == 0){
@@ -1035,12 +1057,12 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
     componentCount = -1;
 
     int currVortex = 0;
-    for(int loopB=0;loopB<vortexList.size();loopB++){
+    for(int loopB=0;loopB<innerVortexList.size();loopB++){
       // Increment the current component
       componentCount++;
 
       // Get Current Vortex
-      currVortex = vortexList[loopB];
+      currVortex = innerVortexList[loopB];
 
       // ASSEMBLE STAR
       assembleStar_BeginTime = clock();
@@ -1074,10 +1096,40 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
       communicateResFilt2(totalFaces,resVec,filteredVec,comm,minFaceGlob,maxFaceGlob,resNorm);
     }
 
-    //printf("[%d] RESIDUAL AFTER STARS: %f\n",comm->currProc,resNorm);
+    for(int loopB=0;loopB<boundaryVortexList.size();loopB++){
+      // Increment the current component
+      componentCount++;
 
-    //MPI::Finalize();
-    //exit(0);
+      // Get Current Vortex
+      currVortex = boundaryVortexList[loopB];
+
+      // ASSEMBLE STAR
+      assembleStar_BeginTime = clock();
+      AssembleStarShape(currVortex,totalStarFaces,facesID,facesCoeffs);
+      // Communicate
+      assembleStar_TotalTime += float( clock () - assembleStar_BeginTime ) /  CLOCKS_PER_SEC;
+
+      // FIND CORRELATION
+      correlateStar_BeginTime = clock();
+      corrCoeff = EvalCorrelationCoefficient(resVec,totalStarFaces,facesID,facesCoeffs);
+      correlateStar_TotalTime += float( clock () - correlateStar_BeginTime ) /  CLOCKS_PER_SEC;
+
+      // Store Correlation coefficient in Expansion
+      if(comm->currProc == 0){
+        if(!isBC){
+          expansion->vortexCoeff[componentCount] += corrCoeff;
+        }else{
+          bcExpansion->vortexCoeff[componentCount] += corrCoeff;
+        }
+      }
+
+      // UPDATE RESIDUAL
+      updateStar_BeginTime = clock();
+      UpdateResidualAndFilter(corrCoeff,totalStarFaces,facesID,facesCoeffs,resVec,filteredVec,resNorm);
+      updateStar_TotalTime += float( clock () - updateStar_BeginTime ) /  CLOCKS_PER_SEC;
+    }
+
+    //printf("[%d] RESIDUAL AFTER STARS: %f\n",comm->currProc,resNorm);
 
     // Eval Two-Norm of the Coefficient Vector
     if(comm->currProc == 0){
@@ -1126,23 +1178,8 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
     oldTwoNorm = twoNorm;
   }
 
-  // PRINT TIME STATISTICS
-  printf("--- TIME STATISTICS\n");
-  printf("Residual Assembly Time: %f [s]\n",assembleRes_TotalTime);
-  printf("Constant Pattern Correlation Time: %f [s]\n",constPattern_TotalTime);
-  printf("Star Shape Assembly Time: %f [s]\n",assembleStar_TotalTime);
-  printf("Star Correlation Time: %f [s]\n",correlateStar_TotalTime);
-  printf("Residual Update Time: %f [s]\n",updateStar_TotalTime);
-
-  // Final Residual
-  printf("--- INFO\n");
-  WriteSchMessage("Final Residual Norm: " + MRIUtils::FloatToStr(resNorm) + "\n");
-
   // Check If the Flux Is Locally Conservative
   maxDivergence = EvalMaxDivergence(filteredVec);
-
-  // Write Divergence Message
-  WriteSchMessage("Max Divergence: " + MRIUtils::FloatToStr(maxDivergence) + "\n");
 
   // Make Diffence between Coefficient Expansions
   if(comm->currProc == 0){
@@ -1166,12 +1203,25 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
   // Eval Magniture and Angle Error
   RecoverGlobalErrorEstimates(maxNormError,maxAngleError);
 
-  // Write Final Residual
-  WriteSchMessage("Average Magnitude Error: " + MRIUtils::FloatToStr(maxNormError) + "\n");
-  WriteSchMessage("Average Angular Error: " + MRIUtils::FloatToStr(maxAngleError) + "\n");
-
-  // Close Filter Comments
-  WriteSchMessage("------------------------------------------------------\n");
+  // PRINT TIME STATISTICS
+  if(comm->currProc == 0){
+    printf("--- TIME STATISTICS\n");
+    printf("Residual Assembly Time: %f [s]\n",assembleRes_TotalTime);
+    printf("Constant Pattern Correlation Time: %f [s]\n",constPattern_TotalTime);
+    printf("Star Shape Assembly Time: %f [s]\n",assembleStar_TotalTime);
+    printf("Star Correlation Time: %f [s]\n",correlateStar_TotalTime);
+    printf("Residual Update Time: %f [s]\n",updateStar_TotalTime);
+    printf("\n");
+    printf("--- INFO\n");
+    WriteSchMessage("Final Residual Norm: " + MRIUtils::FloatToStr(resNorm) + "\n");
+    // Write Divergence Message
+    WriteSchMessage("Max Divergence: " + MRIUtils::FloatToStr(maxDivergence) + "\n");
+    // Write Final Residual
+    WriteSchMessage("Average Magnitude Error: " + MRIUtils::FloatToStr(maxNormError) + "\n");
+    WriteSchMessage("Average Angular Error: " + MRIUtils::FloatToStr(maxAngleError) + "\n");
+    // Close Filter Comments
+    WriteSchMessage("---\n");
+  }
 
   // Update Velocities
   //UpdateVelocities(GlobalData);
@@ -1182,10 +1232,6 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
   // Deallocate
   delete [] resVec;
   delete [] filteredVec;
-
-  MPI::Finalize();
-  exit(0);
-
 }
 
 // ==================================

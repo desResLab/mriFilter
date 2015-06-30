@@ -925,9 +925,11 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
     printf("Data Structure Communication OK.\n");
   }
 
-  // SAVE INITIAL VELOCITIES
-  if (opts->saveInitialVel){
-    MyMRISequence->saveVelocity();
+  // SAVE INITIAL VELOCITIES ON ROOT PROCESSOR
+  if(comm->currProc == 0){
+    if (opts->saveInitialVel){
+      MyMRISequence->saveVelocity();
+    }
   }
 
   // APPLY NOISE
@@ -949,21 +951,23 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
   MyMRISequence->ApplyThresholding(opts->thresholdCriteria);
 
   // EVAL VORTEX CRITERIA
-  if(opts->evalPopVortexCriteria){
-    MyMRISequence->EvalVortexCriteria();
-    MyMRISequence->EvalVorticity();
-    MyMRISequence->EvalEnstrophy();
+  if(comm->currProc == 0){
+    if(opts->evalPopVortexCriteria){
+      MyMRISequence->EvalVortexCriteria();
+      MyMRISequence->EvalVorticity();
+      MyMRISequence->EvalEnstrophy();
+    }
   }
 
-  if(opts->evalSMPVortexCriterion){
-    // SPATIALLY EVALUATE VORTEX COEFFICIENTS
-    MyMRISequence->EvalSMPVortexCriteria();
-
-    // Threshold Vortex Expansion
-    //void ApplyVortexThreshold(int thresholdType, double ratio);
-    // Eval 2-Norm of Coefficient Vector
-    //double Get2Norm(bool onlyVortex);
-
+  if(comm->currProc == 0){
+    if(opts->evalSMPVortexCriterion){
+      // SPATIALLY EVALUATE VORTEX COEFFICIENTS
+      MyMRISequence->EvalSMPVortexCriteria();
+      // Threshold Vortex Expansion
+      //void ApplyVortexThreshold(int thresholdType, double ratio);
+      // Eval 2-Norm of Coefficient Vector
+      //double Get2Norm(bool onlyVortex);
+    }
   }
 
   if(opts->evalPressure){
@@ -975,24 +979,30 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
   }
 
   // SAVE EXPANSION COEFFICIENTS IF REQUESTED
-  if(opts->saveExpansionCoeffs){
-    MyMRISequence->WriteExpansionFile(std::string(opts->outputFileName + "_expCoeff"));
+  if(comm->currProc == 0){
+    if(opts->saveExpansionCoeffs){
+      MyMRISequence->WriteExpansionFile(std::string(opts->outputFileName + "_expCoeff"));
+    }
   }
 
   // SAVE FILE FOR POISSON COMPUTATION
-  if (opts->exportToPoisson){
-    MyMRISequence->ExportForPOISSON();
+  if(comm->currProc == 0){
+    if (opts->exportToPoisson){
+      MyMRISequence->ExportForPOISSON();
+    }
   }
 
   // EXPORT FILE
-  if(opts->outputFormatType == itFILEVTK){
-    // READ FROM FILE
-    MyMRISequence->ExportToVTK(opts->outputFileName);
-  }else if (opts->outputFormatType == itFILETECPLOT){
-    // READ FROM FILE
-    MyMRISequence->ExportToTECPLOT(opts->outputFileName);
-  }else{
-    throw MRIException("ERROR: Invalid output file format.\n");
+  if(comm->currProc == 0){
+    if(opts->outputFormatType == itFILEVTK){
+      // READ FROM FILE
+      MyMRISequence->ExportToVTK(opts->outputFileName);
+    }else if (opts->outputFormatType == itFILETECPLOT){
+      // READ FROM FILE
+      MyMRISequence->ExportToTECPLOT(opts->outputFileName);
+    }else{
+      throw MRIException("ERROR: Invalid output file format.\n");
+    }
   }
 
 }
@@ -1060,9 +1070,8 @@ int main(int argc, char **argv){
   if(comm->currProc == 0){
     printf("Program Options Communication OK.\n");
   }
-
-  string optOut("optionsOut_" + to_string(comm->currProc) + ".out");
-  options->writeOptionsToFile(optOut);
+  //string optOut("optionsOut_" + to_string(comm->currProc) + ".out");
+  //options->writeOptionsToFile(optOut);
 
   // Finalize options
   options->finalize();
