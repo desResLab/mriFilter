@@ -508,125 +508,6 @@ void MRIStructuredScan::AssembleStarShape(int vortexNumber, int &totalFaces, std
   }
 }
 
-// ====================
-// ASSEMBLE STAR SHAPES
-// ====================
-void MRIStructuredScan::AssembleStarShapeMPI(int vortexNumber, int &totalFaces,
-                                             std::vector<int> &facesID, std::vector<double> &facesCoeffs,
-                                             int minFaceOnProc, int maxFaceOnProc){
-  // Declare
-  int currFace = 0;
-  double currCoeff = 0.0;
-
-  // Clear Array and Reset Counters
-  totalFaces = 0;
-  //facesID.reserve(10);
-  //facesCoeffs.reserve(10);
-
-  // Loop Over All Faces
-  double norm = 0.0;
-  for(size_t loopB=0;loopB<edgeFaces[vortexNumber].size();loopB++){
-    currFace = abs(edgeFaces[vortexNumber][loopB])-1;
-    currCoeff = (double)edgeFaces[vortexNumber][loopB]/(double)fabs(edgeFaces[vortexNumber][loopB]);
-
-    // New Code
-    totalFaces++;
-    facesID[totalFaces-1] = currFace;
-    facesCoeffs[totalFaces-1] = currCoeff;
-
-    norm += currCoeff*currCoeff;
-
-    //MRIUtils::InsertInIntList(currFace,totalFaces,facesID);
-    //facesCoeffs.push_back(currCoeff);
-  }
-  norm = sqrt(norm);
-  for(int loopA=0;loopA<totalFaces;loopA++){
-    facesCoeffs[loopA] = (facesCoeffs[loopA]/norm);
-  }
-}
-
-// ========================================
-// COMMUNICATE RESIDUAL AND FILTERED VECTOR
-// ========================================
-void communicateResFiltVector(int totFaces, double* resVec,double* filteredVels,int* minFaceGlob,int* maxFaceGlob, MRICommunicator* comm){
-
-
-  if(comm->currProc != 0){
-    // Send Residual to Root
-    MPI_Send(&resVec[minFaceGlob[comm->currProc]],maxFaceGlob[comm->currProc]-minFaceGlob[comm->currProc],MPI_DOUBLE,0,comm->currProc,comm->mpiComm);
-  }else{
-    MPI_Status status;
-    double* recvRes;
-    int mpiError;
-    int size;
-
-
-
-    // Root Receives Residual
-    for(int loopSource=1;loopSource<comm->totProc;loopSource++){
-
-      // Probe Sizes Lengths
-      mpiError = MPI_Probe(loopSource,loopSource,comm->mpiComm,&status);
-      MRIUtils::checkMpiError(mpiError);
-      mpiError = MPI_Get_count(&status,MPI_INT,&size);
-      MRIUtils::checkMpiError(mpiError);
-
-      // Receive Lengths Vector
-      if(size > 0){
-        recvRes = new double[size];
-        // Receive Residual
-        MPI_Recv(recvRes,size,MPI_DOUBLE,loopSource,0,comm->mpiComm,&status);
-        for(int loopA=minFaceGlob[loopSource];loopA<maxFaceGlob[loopSource];loopA++){
-          resVec[loopA] = recvRes[loopA-minFaceGlob[loopSource]];
-        }
-        delete [] recvRes;
-      }
-      // BCast the Full Vectors
-      MPI_Bcast(resVec, totFaces, MPI_DOUBLE, 0, comm->mpiComm);
-    }
-  }
-
-
-
-
-
-
-
-  /*if(comm->currProc != 0){
-    // Send Residual to Root
-    MPI_Send(&resVec[minFaceGlob[comm->currProc]],maxFaceGlob[comm->currProc]-minFaceGlob[comm->currProc],MPI_DOUBLE,0,0,comm->mpiComm);
-    // Send Filtered to Root
-    MPI_Send(&filteredVels[minFaceGlob[comm->currProc]],maxFaceGlob[comm->currProc]-minFaceGlob[comm->currProc],MPI_DOUBLE,0,1,comm->mpiComm);
-  }else{
-    MPI_Status status;
-    double* recvRes;
-    double* recvFil;
-    int size;
-    // Root Receives Residual
-    for(int loopSource=1;loopSource<comm->totProc;loopSource++){
-      size = maxFaceGlob[loopSource]-minFaceGlob[loopSource];
-      recvRes = new double[size];
-      recvFil = new double[size];
-      // Receive Residual
-      MPI_Recv(recvRes,size,MPI_DOUBLE,loopSource,0,comm->mpiComm,&status);
-      for(int loopA=minFaceGlob[loopSource];loopA<maxFaceGlob[loopSource];loopA++){
-        resVec[loopA] = recvRes[loopA-minFaceGlob[loopSource]];
-      }
-      delete [] recvRes;
-      // Receive Filtered
-      MPI_Recv(recvFil,size,MPI_DOUBLE,loopSource,1,comm->mpiComm,&status);
-
-      for(int loopA=minFaceGlob[loopSource];loopA<maxFaceGlob[loopSource];loopA++){
-        filteredVels[loopA] = recvFil[loopA-minFaceGlob[loopSource]];
-      }
-      delete [] recvFil;
-    }
-    // BCast the Full Vectors
-    MPI_Bcast(resVec, totFaces, MPI_DOUBLE, 0, comm->mpiComm);
-    MPI_Bcast(filteredVels, totFaces, MPI_DOUBLE, 0, comm->mpiComm);
-  }*/
-}
-
 // ===========================================
 // UPDATE THE RESIDUAL AND RESIDUAL NORM - MPI
 // ===========================================
@@ -667,9 +548,7 @@ void UpdateResidualAndFilterMPI(int globTotFaces, double corrCoeff, int totalFac
   double* storeVec = new double[size];
   for(int loopA=0;loopA<comm->totProc;loopA++){
     displs[loopA] = minFaceGlob[loopA];
-    printf("[%d] DISP: %d\n",comm->currProc,displs[loopA]);
     recvcounts[loopA] = maxFaceGlob[loopA] - minFaceGlob[loopA];
-    printf("[%d] CONT: %d\n",comm->currProc,recvcounts[loopA]);
   }
 
   // Residual Vector
@@ -682,6 +561,10 @@ void UpdateResidualAndFilterMPI(int globTotFaces, double corrCoeff, int totalFac
     storeVec[loopA-minFaceGlob[comm->currProc]] = filteredVels[loopA];
   }
   MPI_Allgatherv(&storeVec[0],size,MPI_DOUBLE,&filteredVels[0],recvcounts,displs,MPI_DOUBLE,comm->mpiComm);
+  // Free Memory
+  delete [] recvcounts;
+  delete [] displs;
+  delete [] storeVec;
 }
 
 // =====================================
@@ -910,6 +793,58 @@ void printDoubleArrayToFile(string fileName, int size, double* vec){
   fclose(f);
 }
 
+// ================
+// FORM VORTEX LIST
+// ================
+void MRIStructuredScan::formVortexList(int totVortex,int minFaceOnProc,int maxFaceOnProc,MRIIntVec& vortexList){
+  bool foundFace = true;
+  int currFace = 0;
+  int countFace = 0;
+  for(int loopA=0;loopA<totVortex;loopA++){
+    foundFace = false;
+    for(size_t loopB=0;loopB<edgeFaces[loopA].size();loopB++){
+      currFace = abs(edgeFaces[loopA][loopB])-1;
+      foundFace = (foundFace || ((currFace>=minFaceOnProc)&&(currFace<maxFaceOnProc)));
+    }
+    if(foundFace){
+      vortexList.push_back(loopA);
+      countFace++;
+    }
+  }
+  printf("NUMBER OF VORTEXES FOR THIS PROCESS: %d\n",countFace);
+}
+
+// =========================================
+// Communicate Residual and Filtered Vectors
+// =========================================
+void communicateResFilt2(int totalFaces,double* resVec,double* filteredVels,MRICommunicator* comm,int* minFaceGlob,int* maxFaceGlob,double& resNorm){
+  int size = maxFaceGlob[comm->currProc] - minFaceGlob[comm->currProc];
+  int* recvcounts = new int[comm->totProc];
+  int* displs = new int[comm->totProc];
+  double* storeVec = new double[size];
+  for(int loopA=0;loopA<comm->totProc;loopA++){
+    displs[loopA] = minFaceGlob[loopA];
+    recvcounts[loopA] = maxFaceGlob[loopA] - minFaceGlob[loopA];
+  }
+  // Residual Vector
+  for(int loopA=minFaceGlob[comm->currProc];loopA<maxFaceGlob[comm->currProc];loopA++){
+    storeVec[loopA-minFaceGlob[comm->currProc]] = resVec[loopA];
+  }
+  MPI_Allgatherv(&storeVec[0],size,MPI_DOUBLE,&resVec[0],recvcounts,displs,MPI_DOUBLE,comm->mpiComm);
+  // Filter Vector
+  for(int loopA=minFaceGlob[comm->currProc];loopA<maxFaceGlob[comm->currProc];loopA++){
+    storeVec[loopA-minFaceGlob[comm->currProc]] = filteredVels[loopA];
+  }
+  MPI_Allgatherv(&storeVec[0],size,MPI_DOUBLE,&filteredVels[0],recvcounts,displs,MPI_DOUBLE,comm->mpiComm);
+  // Update Norm
+  resNorm = 0.0;
+  for(int loopA=0;loopA<totalFaces;loopA++){
+    resNorm += resVec[loopA] * resVec[loopA];
+  }
+  resNorm = sqrt(resNorm);
+  delete [] recvcounts;
+  delete [] displs;
+}
 
 // =================
 // PHYSICS FILTERING
@@ -918,12 +853,13 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
 
   printf("SMPFILTER processor %d\n",comm->currProc);
 
-  // Initialization
+  // INITIALIZATION
   int totalFaces = faceConnections.size();
   double* resVec = nullptr;
   double* filteredVec = nullptr;
   std::vector<int> facesID;
   std::vector<double> facesCoeffs;
+  MRIIntVec vortexList;
   double corrCoeff = 0.0;
   int totalStarFaces = 0;
   int mpiError = 0;
@@ -972,11 +908,8 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
   }
 
   // Determine the Minimum and Maximum Face number of current processor
-  minFaceOnProc = comm->currProc * int((totalFaces - 1)/(comm->totProc + 1));
-  maxFaceOnProc = (comm->currProc + 1) * int((totalFaces - 1)/(comm->totProc + 1));
-  if(comm->currProc == (comm->totProc-1)){
-    maxFaceOnProc = totalFaces;
-  }
+  minFaceOnProc = minFaceGlob[comm->currProc];
+  maxFaceOnProc = maxFaceGlob[comm->currProc];
 
   // All processes are waiting for the root to read the files
   mpiError = MPI_Barrier(comm->mpiComm);
@@ -1012,6 +945,16 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
   // Initialize Expansion
   MRIExpansion* bcExpansion = NULL;
   int totalVortexes = EvalTotalVortex();
+  printf("TOTAL VORTEXES: %d\n",totalVortexes);
+
+  // Form List of Vortexes Including Faces for MPI
+  //if(comm->totProc > 1){
+  //  formVortexList(totalVortexes,minFaceOnProc,maxFaceOnProc,vortexList);
+  //}else{
+    for(int loopA=0;loopA<totalVortexes;loopA++){
+      vortexList.push_back(loopA);
+    }
+  //}
 
   // Processor 0 has expansion Coefficients
   if(comm->currProc == 0){
@@ -1047,34 +990,19 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
 
         // Find Constant Patterns
         if(comm->totProc > 1){
-          //AssembleConstantPattern(loopB,totalStarFaces,facesID,facesCoeffs);
           AssembleConstantPatternMPI(loopB,totalStarFaces,facesID,facesCoeffs,minFaceOnProc,maxFaceOnProc,comm);
-          //printf("[%d] TOTAL FACES: %d\n",comm->currProc,totalStarFaces);
         }else{
           AssembleConstantPattern(loopB,totalStarFaces,facesID,facesCoeffs);
         }
 
-        //string fileName("faceID_proc_" + to_string(comm->currProc) + ".dat");
-        //printfIntVecToFile(fileName,facesID);
-
-        // PRINT FASE ID INDEX
-        //PrintFaceIDIndexes("ConstantFaceIDs.txt",totalStarFaces,facesID,facesCoeffs);
-
         // Find Correlation
         corrCoeff = EvalCorrelationCoefficient(resVec,totalStarFaces,facesID,facesCoeffs);
-
-        //printf("[%d] CORR COEFF BEFORE: %f\n",comm->currProc,corrCoeff);
 
         // Store Correlation coefficient in Expansion
         if(comm->totProc > 1){
           MPI_Allreduce(&corrCoeff, &redcorrCoeff, 1, MPI_DOUBLE, MPI_SUM, comm->mpiComm);
           corrCoeff = redcorrCoeff;
         }
-
-        if(comm->currProc == 0){
-          printf("CORR COEFF AFTER: %f\n",corrCoeff);
-        }
-
 
         // Store Expansion Coefficients on Master Processor
         if(comm->currProc == 0){
@@ -1087,23 +1015,11 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
 
         // Update Residual
         if(comm->totProc > 1){
-          //UpdateResidualAndFilter(corrCoeff,totalStarFaces,facesID,facesCoeffs,resVec,filteredVec,resNorm);
           UpdateResidualAndFilterMPI(totalFaces,corrCoeff,totalStarFaces,facesID,facesCoeffs,resVec,filteredVec,resNorm,minFaceGlob,maxFaceGlob,comm);
         }else{
           UpdateResidualAndFilter(corrCoeff,totalStarFaces,facesID,facesCoeffs,resVec,filteredVec,resNorm);
         }
       }
-    }
-
-    // Print Residual Vector
-    if(comm->totProc > 1){
-      PrintResidualVector(std::string("resVectorFile1_"+std::to_string(comm->currProc)+"_m.txt").c_str(),totalFaces,resVec);
-    }else{
-      PrintResidualVector(std::string("resVectorFile1_"+std::to_string(comm->currProc)+".txt").c_str(),totalFaces,resVec);
-    }
-
-    if(comm->currProc == 0){
-      printf("[it:%d] RESIDUAL NORM AFTER CONSTANT: %f\n",itCount,resNorm);
     }
 
     //string fileName("faceEdge_proc_" + to_string(comm->currProc) + ".dat");
@@ -1118,41 +1034,24 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
     // LOOP ON VORTEXES
     componentCount = -1;
 
-    MRIIntVec numFaces;
-    MRIDoubleVec testVec;
-    MRIDoubleVec temp;
-    MRIIntVec temp2;
-    MRIDoubleMat facecf;
-    MRIIntMat faceIDout;
-
-    for(int loopB=0;loopB<totalVortexes;loopB++){
+    int currVortex = 0;
+    for(int loopB=0;loopB<vortexList.size();loopB++){
       // Increment the current component
       componentCount++;
 
+      // Get Current Vortex
+      currVortex = vortexList[loopB];
+
       // ASSEMBLE STAR
-      temp.clear();
-      temp2.clear();
       assembleStar_BeginTime = clock();
-      AssembleStarShape(loopB,totalStarFaces,facesID,facesCoeffs);
+      AssembleStarShape(currVortex,totalStarFaces,facesID,facesCoeffs);
+      // Communicate
       assembleStar_TotalTime += float( clock () - assembleStar_BeginTime ) /  CLOCKS_PER_SEC;
-      for(int loopC=0;loopC<totalStarFaces;loopC++){
-        temp.push_back(facesCoeffs[loopC]);
-        temp2.push_back(facesID[loopC]);
-      }
 
       // FIND CORRELATION
       correlateStar_BeginTime = clock();
       corrCoeff = EvalCorrelationCoefficient(resVec,totalStarFaces,facesID,facesCoeffs);
       correlateStar_TotalTime += float( clock () - correlateStar_BeginTime ) /  CLOCKS_PER_SEC;
-
-      if(loopB == 4){
-        printf("VORTEX CORR COEFF: %f\n",corrCoeff);
-        printf("TOT STAR FACES: %f\n",totalStarFaces);
-        for(int loopC=0;loopC<totalStarFaces;loopC++){
-          printf("FACES: %d, COEFF: %f, RES: %f\n",facesID[loopC],facesCoeffs[loopC],resVec[facesID[loopC]]);
-        }
-
-      }
 
       // Store Correlation coefficient in Expansion
       if(comm->currProc == 0){
@@ -1167,53 +1066,18 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
       updateStar_BeginTime = clock();
       UpdateResidualAndFilter(corrCoeff,totalStarFaces,facesID,facesCoeffs,resVec,filteredVec,resNorm);
       updateStar_TotalTime += float( clock () - updateStar_BeginTime ) /  CLOCKS_PER_SEC;
-
-      testVec.push_back(corrCoeff);
-      numFaces.push_back(totalStarFaces);
-      facecf.push_back(temp);
-      faceIDout.push_back(temp2);
-
     }
 
-    string fileName;
+    // IF MPI then Communicate Residual Vector
     if(comm->totProc > 1){
-      fileName = "Corr_proc_" + to_string(comm->currProc) + "_m.dat";
-    }else{
-      fileName = "Corr_proc_" + to_string(comm->currProc) + ".dat";
-    }
-    printDoubleVecToFile(fileName,testVec);
-    if(comm->totProc > 1){
-      fileName = "numFace_proc_" + to_string(comm->currProc) + "_m.dat";
-    }else{
-      fileName = "numFace_proc_" + to_string(comm->currProc) + ".dat";
-    }
-    printIntVecToFile(fileName,numFaces);
-    if(comm->totProc > 1){
-      fileName = "faceCoeff_proc_" + to_string(comm->currProc) + "_m.dat";
-    }else{
-      fileName = "faceCoeff_proc_" + to_string(comm->currProc) + ".dat";
-    }
-    printDoubleMatToFile(fileName,facecf);
-    if(comm->totProc > 1){
-      fileName = "faceIDs_proc_" + to_string(comm->currProc) + "_m.dat";
-    }else{
-      fileName = "faceIDs_proc_" + to_string(comm->currProc) + ".dat";
-    }
-    printIntMatToFile(fileName,faceIDout);
-
-    if(comm->currProc == 0){
-      printf("[it:%d] RESIDUAL NORM AFTER STARS: %f\n",itCount,resNorm);
+      // Communicate Residual, FilteredVels and Update Norm
+      communicateResFilt2(totalFaces,resVec,filteredVec,comm,minFaceGlob,maxFaceGlob,resNorm);
     }
 
-    MPI::Finalize();
-    exit(0);
+    //printf("[%d] RESIDUAL AFTER STARS: %f\n",comm->currProc,resNorm);
 
-    // Print Residual Vector
-    if(comm->totProc > 1){
-      PrintResidualVector(std::string("resVectorFile2_"+std::to_string(comm->currProc)+"_m.txt").c_str(),totalFaces,resVec);
-    }else{
-      PrintResidualVector(std::string("resVectorFile2_"+std::to_string(comm->currProc)+".txt").c_str(),totalFaces,resVec);
-    }
+    //MPI::Finalize();
+    //exit(0);
 
     // Eval Two-Norm of the Coefficient Vector
     if(comm->currProc == 0){
@@ -1241,11 +1105,12 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
     }
 
     // WRITE MESSAGE AT EVERY INTERATION
-    WriteSchMessage("[" + to_string(comm->currProc) + "] It: " + MRIUtils::IntToStr(itCount) + "; ABS Res: "+MRIUtils::FloatToStr(resNorm)+"; Rel: " + MRIUtils::FloatToStr(relResNorm) +
-                    "; Coeff 2-Norm: "+MRIUtils::FloatToStr(twoNorm)+"; Rel 2-Norm: " + MRIUtils::FloatToStr(relTwoNorm)+"\n");
+    if(comm->currProc == 0){
+      WriteSchMessage("[" + to_string(comm->currProc) + "] It: " + MRIUtils::IntToStr(itCount) + "; ABS Res: "+MRIUtils::FloatToStr(resNorm)+"; Rel: " + MRIUtils::FloatToStr(relResNorm) +
+                      "; Coeff 2-Norm: "+MRIUtils::FloatToStr(twoNorm)+"; Rel 2-Norm: " + MRIUtils::FloatToStr(relTwoNorm)+"\n");
+    }
 
     // Check Convergence
-    //converged = (itCount>1);
     if(itCount>1){
       if(oldResNorm<kMathZero){
         converged = true;

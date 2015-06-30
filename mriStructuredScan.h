@@ -237,7 +237,6 @@ class MRIStructuredScan: public MRIScan{
                                               std::vector<int> &facesIDOnProc, std::vector<double> &facesCoeffsOnProc,
                                               int minFaceOnProc, int maxFaceOnProc,MRICommunicator* comm);
     virtual void   AssembleStarShape(int vortexNumber, int &totalFaces,std::vector<int> &facesID,std::vector<double> &facesCoeffs);
-    virtual void   AssembleStarShapeMPI(int vortexNumber, int &totalFaces, std::vector<int> &facesID, std::vector<double> &facesCoeffs,int minFaceOnProc, int maxFaceOnProc);
     virtual double EvalMaxDivergence(double* filteredVec);
     virtual void   RecoverGlobalErrorEstimates(double& AvNormError, double& AvAngleError);
     void   ExpandStarShape(int totalStarFaces, int* facesID, double* facesCoeffs, double* &fullStarVector);
@@ -346,6 +345,7 @@ class MRIStructuredScan: public MRIScan{
    void buildMetisConnectivities(int *eptr,int *eind);
 
    // MESSAGE PASSING
+   void formVortexList(int totVortex,int minFaceOnProc,int maxFaceOnProc,MRIIntVec& vortexList);
    void passScanData(MRICommunicator* comm);
    virtual void DistributeScanData(MRICommunicator* comm);
 };
