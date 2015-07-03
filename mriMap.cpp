@@ -263,33 +263,36 @@ int MRIStructuredScan::GetAdjacentFace(int globalNodeNumber /*Already Ordered Gl
 // ================================
 // GET VORTEXES ASSOCIATED TO CELLS
 // ================================
-void MRIStructuredScan::getNeighborVortexes(int cellNumber,int dim,int& idx1,int& idx2,int& idx3,int& idx4){
-  int coords[3];
-  int initialOffset = 0;
-  MapIndexToCoords(cellNumber,coords);
-  if(dim == 1){
-    // YZ Plane
-    initialOffset = coords[0]*((cellTotals[1]+1)*(cellTotals[2]+1)) + coords[2]*(cellTotals[1]+1);
-    idx1 = initialOffset + coords[1];
-    idx2 = idx1 + 1;
-    idx3 = idx2 + (cellTotals[1]);
-    idx4 = idx3 + 1;
-  }else if(dim == 2){
-    // XZ Plane
-    initialOffset = (cellTotals[0]*(cellTotals[1]+1)*(cellTotals[2]+1)) + coords[1]*((cellTotals[0]+1)*(cellTotals[2]+1)) + coords[2]*(cellTotals[0]+1);
-    idx1 = initialOffset + coords[0];
-    idx2 = idx1 + 1;
-    idx3 = idx2 + (cellTotals[0]);
-    idx4 = idx3 + 1;
-  }else{
-    // XY Plane
-    initialOffset = (cellTotals[0]*(cellTotals[1]+1)*(cellTotals[2]+1)) +
-                    ((cellTotals[0]+1)*cellTotals[1]*(cellTotals[2]+1)) +
-                    coords[2]*((cellTotals[0]+1)*(cellTotals[1]+1)) + coords[1]*(cellTotals[0]+1);
-    idx1 = initialOffset + coords[0];
-    idx2 = idx1 + 1;
-    idx3 = idx2 + (cellTotals[0]);
-    idx4 = idx3 + 1;
+void MRIStructuredScan::getNeighborVortexes(int cellNumber,int dim,MRIIntVec& idx){
+  // Loop through the edges
+  MRIIntVec ElEdgeList;
+  MRIDoubleVec currEdgeDirVector;
+  int currFace = 0;
+  int currEdge = 0;
+  for(int loopA=0;loopA<cellFaces[cellNumber].size();loopA++){
+    currFace = cellFaces[cellNumber][loopA];
+    for(int loopB=0;loopB<faceEdges[currFace].size();loopB++){
+      currEdge = faceEdges[currFace][loopB];
+      MRIUtils::InsertInIntList(currEdge,ElEdgeList);
+    }
+  }
+  // Find the Edges Aligned with the Selected Dimension
+  idx.clear();
+  int currDir = 0;
+  for(int loopA=0;loopA<ElEdgeList.size();loopA++){
+    getEdgeDirection(ElEdgeList[loopA],currEdgeDirVector);
+    if((fabs(currEdgeDirVector[1])<kMathZero)&&(fabs(currEdgeDirVector[2])<kMathZero)){
+      currDir = 0;
+    }else if((fabs(currEdgeDirVector[0])<kMathZero)&&(fabs(currEdgeDirVector[2])<kMathZero)){
+      currDir = 1;
+    }else if((fabs(currEdgeDirVector[0])<kMathZero)&&(fabs(currEdgeDirVector[1])<kMathZero)){
+      currDir = 2;
+    }else{
+      throw MRIException("ERROR: Invalid Edge Direction in getNeighborVortexes.\n");
+    }
+    if(currDir == dim){
+      idx.push_back(ElEdgeList[loopA]);
+    }
   }
 }
 

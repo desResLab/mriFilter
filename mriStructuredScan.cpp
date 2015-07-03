@@ -1580,7 +1580,7 @@ void MRIStructuredScan::ExportToVTK(std::string fileName){
       int count = 0;
       fprintf(outFile,string("VECTORS " + outputs[loopA].name + " float\n").c_str());
       for (int loopB=0;loopB<totalCellPoints;loopB++){
-        for(int loopC=0;loopC<3;loopC++){
+        for(int loopC=0;loopC<outputs[loopA].totComponents;loopC++){
           fprintf(outFile,"%e ",outputs[loopA].values[count]);
           count++;
         }
@@ -2025,10 +2025,7 @@ void MRIStructuredScan::ThresholdQuantity(int qtyID,double threshold){
 // ====================================================================
 void MRIStructuredScan::EvalSMPVortexCriteria(MRIExpansion* exp){
   // LOOP ON CELLS
-  int idx1 = 0;
-  int idx2 = 0;
-  int idx3 = 0;
-  int idx4 = 0;
+  MRIIntVec idx;
   MRIOutput out1("SMPVortexCriterion",3);
   double avVortexIndex = 0.0;
   double totalIntensity = 0.0;
@@ -2036,14 +2033,18 @@ void MRIStructuredScan::EvalSMPVortexCriteria(MRIExpansion* exp){
     // Loop on the dimensions
     for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
       // Determine the idexes for the adjacent vortices
-      getNeighborVortexes(loopA,loopB,idx1,idx2,idx3,idx4);
+      getNeighborVortexes(loopA,loopB,idx);
+      printf("%d %d %d %d\n",idx[0],idx[1],idx[2],idx[3]);
       // Average the values
-      avVortexIndex = 0.25*(exp->vortexCoeff[idx1] + exp->vortexCoeff[idx2] + exp->vortexCoeff[idx3] + exp->vortexCoeff[idx4]);
+      avVortexIndex = 0.25*(exp->vortexCoeff[idx[0]] +
+                            exp->vortexCoeff[idx[1]] +
+                            exp->vortexCoeff[idx[2]] +
+                            exp->vortexCoeff[idx[3]]);
       // Get total Intensity
-      totalIntensity += (exp->vortexCoeff[idx1]*exp->vortexCoeff[idx1] +
-                         exp->vortexCoeff[idx2]*exp->vortexCoeff[idx2] +
-                         exp->vortexCoeff[idx3]*exp->vortexCoeff[idx3] +
-                         exp->vortexCoeff[idx4]*exp->vortexCoeff[idx4]);
+      totalIntensity += (exp->vortexCoeff[idx[0]]*exp->vortexCoeff[idx[0]] +
+                         exp->vortexCoeff[idx[1]]*exp->vortexCoeff[idx[1]] +
+                         exp->vortexCoeff[idx[2]]*exp->vortexCoeff[idx[2]] +
+                         exp->vortexCoeff[idx[3]]*exp->vortexCoeff[idx[3]]);
       // Assign To cell
       out1.values.push_back(avVortexIndex);
     }
@@ -3029,62 +3030,48 @@ int MRIStructuredScan::GetCellFaceID(int CellId,int FaceId){
 // ========================
 // EXPORT TO POISSON SOLVER
 // ========================
-void MRIStructuredScan::ExportForPOISSON(){
+void MRIStructuredScan::ExportForPOISSON(string inputFileName){
   // Declare
   FILE* outFile;
+  outFile = fopen(inputFileName.c_str(),"w");
+  int totAuxNodes = (cellTotals[0] + 1) * (cellTotals[1] + 1) * (cellTotals[2] + 1);
 
-  // Set File Names
-  string nodeFileName("poissonNodes.dat");
-  string elementFileName("poissonConnections.dat");
-  string diffusivityFileName("poissonDiffusivity.dat");
-  string sourceFileName("poissonSources.dat");
-  string diricheletFileName("poissonDirBC.dat");
-  string bcFileName("poissonFluxBC.dat");
-
-  // TOTAL AUX NODES
-  int totAuxNodes = (cellTotals[0]+1)*(cellTotals[1]+1)*(cellTotals[2]+1);
+  // ============
+  // SAVE OPTIONS
+  // ============
+  fprintf(outFile,"SOLVER POISSON\n");
 
   // ==================
   // SAVE MESH TOPOLOGY
   // ==================
-
   // SAVE NODE COORDS
   if(totalCellPoints>0){
-    outFile = fopen(nodeFileName.c_str(),"w");
     double pos[3];
     for(int loopA=0;loopA<totAuxNodes;loopA++){
       getAuxNodeCoordinates(loopA,pos);
-      fprintf(outFile,"%d %e %e %e\n",loopA,pos[0],pos[1],pos[2]);
+      fprintf(outFile,"NODE %d %e %e %e\n",loopA+1,pos[0],pos[1],pos[2]);
     }
-    // Close Output file
-    fclose(outFile);
 
     // SAVE ELEMENT CONNECTIONS
-    outFile = fopen(elementFileName.c_str(),"w");
-    // Write Header
     for(int loopA=0;loopA<totalCellPoints;loopA++){
-      fprintf(outFile,"%d ",loopA);
+      fprintf(outFile,"ELEMENT HEXA8 %d 1 ",loopA+1);
       for(int loopB=0;loopB<cellConnections[loopA].size();loopB++){
-        fprintf(outFile,"%d ",cellConnections[loopA][loopB]);
+        fprintf(outFile,"%d ",cellConnections[loopA][loopB] + 1);
       }
       fprintf(outFile,"\n");
     }
-    // Close Output file
-    fclose(outFile);
   }
 
-  // ==============================
-  // SAVE ANISOTROPIC CONDUCIBILITY
-  // ==============================
-  outFile = fopen(diffusivityFileName.c_str(),"w");
+  // ========================
+  // SAVE ELEMENT DIFFUSIVITY
+  // ========================
   for(int loopA=0;loopA<totalCellPoints;loopA++){
-    fprintf(outFile,"%d ",loopA);
+    fprintf(outFile,"ELDIFF %d ",loopA);
     fprintf(outFile,"%e ",cellPoints[loopA].concentration);
     fprintf(outFile,"%e ",cellPoints[loopA].concentration*0.05);
     fprintf(outFile,"%e ",cellPoints[loopA].concentration*0.05);
     fprintf(outFile,"\n");
   }
-  fclose(outFile);
 
   // ================
   // SAVE SOURCE TERM
@@ -3150,12 +3137,9 @@ void MRIStructuredScan::ExportForPOISSON(){
   }
 
   // SAVE ELEMENT SOURCES TO FILE
-  outFile = fopen(sourceFileName.c_str(),"w");
   for(int loopA=0;loopA<totalCellPoints;loopA++){
-    fprintf(outFile,"%d %e\n",loopA,sourcesToApply[loopA]);
+    fprintf(outFile,"ELSOURCE %d %e\n",loopA,sourcesToApply[loopA]);
   }
-  // Close Output file
-  fclose(outFile);
 
   // =====================
   // SAVE NEUMANN BOUNDARY
@@ -3164,8 +3148,6 @@ void MRIStructuredScan::ExportForPOISSON(){
   double currVec[3] = {0.0};
   double normComp = 0.0;
   int faceID = 0.0;
-  // Open File
-  outFile = fopen(bcFileName.c_str(),"w");
   // Loop on the free faces
   for(int loopA=0;loopA<faceCells.size();loopA++){
     // Check if the face is free
@@ -3185,7 +3167,7 @@ void MRIStructuredScan::ExportForPOISSON(){
       currValue = faceArea[loopA] * normComp;
       // Print Line
       if(fabs(currValue) > 0.0){
-        fprintf(outFile,"%d ",currCell);
+        fprintf(outFile,"FACENEUMANN %d ",currCell);
         for(int loopB=0;loopB<faceConnections[loopA].size();loopB++){
           fprintf(outFile,"%d ",faceConnections[loopA][loopB]);
         }
@@ -3193,8 +3175,6 @@ void MRIStructuredScan::ExportForPOISSON(){
       }
     }
   }
-  // Close File
-  fclose(outFile);
 
   // =================
   // NO DIRICHELET BCs
@@ -3209,8 +3189,9 @@ void MRIStructuredScan::ExportForPOISSON(){
   //    fprintf(outFile,"%d %e\n",loopA,5.0);
   //  }
   //}
+
   // Close Output file
-  //fclose(outFile);
+  fclose(outFile);
 
   // Free Memory
   delete crit;

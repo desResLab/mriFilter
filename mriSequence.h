@@ -37,7 +37,7 @@ class MRISequence{
     void ExportToVOL(std::string outfileName);
     void ExportToVTK(std::string outfileName);
     void WriteExpansionFile(string fileName);
-    void ExportForPOISSON();
+    void ExportForPOISSON(string inputFileName);
 
     // SAVE QUANTITIES TO OUTPUTS
     void saveVelocity();

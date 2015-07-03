@@ -181,9 +181,12 @@ void MRISequence::ExportToVOL(std::string outfileName){
 }
 
 // Export to Poisson Solver
-void MRISequence::ExportForPOISSON(){
-  // Export Only the first step
-  sequence[0]->ExportForPOISSON();
+void MRISequence::ExportForPOISSON(string inputFileName){
+  string name;
+  for(int loopA=0;loopA<totalScans;loopA++){
+    name = inputFileName + to_string(loopA);
+    sequence[loopA]->ExportForPOISSON(name);
+  }
 }
 
 // EXPORT TO SEQUENCE OF VTK FILES

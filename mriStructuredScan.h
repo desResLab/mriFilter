@@ -134,7 +134,7 @@ class MRIStructuredScan: public MRIScan{
     virtual void ExportToTECPLOT(std::string FileName, bool isFirstFile);
     virtual void ExportToVTK(std::string fileName);
     virtual void WriteExpansionFile(std::string fileName);
-    virtual void ExportForPOISSON();
+    void         ExportForPOISSON(string inputFileName);
 
     // ========
     // VOL DATA
@@ -322,7 +322,7 @@ class MRIStructuredScan: public MRIScan{
 
     // SPATIAL REPRESENTATION OF VORTEX COEFFICIENTS
     double EvalVortexCriteria(MRIExpansion* exp);
-    void   getNeighborVortexes(int cellNumber,int dim,int& idx1,int& idx2,int& idx3,int& idx4);
+    void   getNeighborVortexes(int cellNumber,int dim, MRIIntVec& idx);
     
     // ADD GAUSSIAN NOISE
     void ApplyGaussianNoise(double stDev);

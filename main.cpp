@@ -948,7 +948,9 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
   }
 
   // APPLY THRESHOLD
-  MyMRISequence->ApplyThresholding(opts->thresholdCriteria);
+  if(comm->currProc == 0){
+    MyMRISequence->ApplyThresholding(opts->thresholdCriteria);
+  }
 
   // EVAL VORTEX CRITERIA
   if(comm->currProc == 0){
@@ -960,7 +962,7 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
   }
 
   if(comm->currProc == 0){
-    if(opts->evalSMPVortexCriterion){
+    if(opts->applySMPFilter && opts->evalSMPVortexCriterion){
       // SPATIALLY EVALUATE VORTEX COEFFICIENTS
       MyMRISequence->EvalSMPVortexCriteria();
       // Threshold Vortex Expansion
@@ -980,7 +982,7 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
 
   // SAVE EXPANSION COEFFICIENTS IF REQUESTED
   if(comm->currProc == 0){
-    if(opts->saveExpansionCoeffs){
+    if(opts->applySMPFilter && opts->saveExpansionCoeffs){
       MyMRISequence->WriteExpansionFile(std::string(opts->outputFileName + "_expCoeff"));
     }
   }
@@ -988,7 +990,8 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
   // SAVE FILE FOR POISSON COMPUTATION
   if(comm->currProc == 0){
     if (opts->exportToPoisson){
-      MyMRISequence->ExportForPOISSON();
+      string inputFileName("poissonExport.dat");
+      MyMRISequence->ExportForPOISSON(inputFileName);
     }
   }
 
@@ -1005,6 +1008,8 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
     }
   }
 
+  // Free Memory
+  delete MyMRISequence;
 }
 
 // ============
@@ -1207,19 +1212,23 @@ int main(int argc, char **argv){
         break;
     }
   }catch (std::exception& ex){
-    WriteSchMessage(std::string(ex.what()));
-    WriteSchMessage(std::string("\n"));
-    WriteSchMessage(std::string("Program Terminated.\n"));
+    if(comm->currProc == 0){
+      WriteSchMessage(std::string(ex.what()));
+      WriteSchMessage(std::string("\n"));
+      WriteSchMessage(std::string("Program Terminated.\n"));
+    }
     // Finalize MPI
     MPI::Finalize();
     return -1;
   }
-  WriteSchMessage(std::string("\n"));
-  WriteSchMessage(std::string("Program Completed.\n"));
+  if(comm->currProc == 0){
+    WriteSchMessage(string("\n"));
+    WriteSchMessage(string("Program Completed.\n"));
+  }
   // Finalize MPI
-  delete comm;
+  //delete comm;
   delete options;
   MPI::Finalize();
-  return val;
+  return 0;
 }
 

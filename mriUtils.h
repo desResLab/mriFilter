@@ -19,6 +19,7 @@
 #include "mriCoordItem.h"
 #include "mriStreamline.h"
 #include "mriThresholdCriteria.h"
+#include "mriTypes.h"
 #include "schMessages.h"
 
 using namespace std;
@@ -177,6 +178,13 @@ inline void Normalize3DVector(std::vector<double> &v){
 // =======================================
 // INSERTION IN VECTORS WITH NO DUPLICATES
 // =======================================
+
+inline void InsertInIntList(int Item,MRIIntVec &FacesID){
+  for(int LoopA=0;LoopA<FacesID.size();LoopA++){
+    if (FacesID[LoopA]==Item) return;
+  }
+  FacesID.push_back(Item);
+}
 
 // INSERT IN DOUBLE LIST
 inline void InsertInIntList(int Item,int &TotalFaces,std::vector<int> &FacesID){
