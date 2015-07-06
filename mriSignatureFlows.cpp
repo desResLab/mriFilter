@@ -37,6 +37,7 @@ void MRIStructuredScan::AssignStagnationFlowSignature(MRIDirection dir){
         cellPoints[loopA].velocity[2] = 0.0;
         break;
     }
+    cellPoints[loopA].concentration = 1.0;
   }
 }
 
@@ -69,8 +70,11 @@ void EvalTangentDirection(MRIDirection dir, double* radialVector, double* tangVe
 // ASSIGN CYLINDRICAL VORTEX FLOW 
 void MRIStructuredScan::AssignCylindricalFlowSignature(MRIDirection dir){
   // Set Parameters
-  const double minRadius = 10.0;
-  const double maxRadius = 15.0;
+  // Get Min Dimension
+  double minDist = min((domainSizeMax[0]-domainSizeMin[0]),min((domainSizeMax[1]-domainSizeMin[1]),(domainSizeMax[2]-domainSizeMin[2])));
+  // Set the Minimum and Maximum Radius
+  const double minRadius = minDist * 0.1;
+  const double maxRadius = minDist * 0.4;
   const double velMod = 10.0;
   // Init Coords
   double currRadius = 0.0;
@@ -83,8 +87,6 @@ void MRIStructuredScan::AssignCylindricalFlowSignature(MRIDirection dir){
   centrePoint[2] = 0.5 * (domainSizeMax[2]+domainSizeMin[2]);
   // Assign Cell Velocities
   for(int loopA=0;loopA<totalCellPoints;loopA++){
-    // Set to Zero
-    cellPoints[loopA].concentration = 0.0;
     switch(dir){
       case kdirX:
         // Get Current Radius
@@ -115,6 +117,9 @@ void MRIStructuredScan::AssignCylindricalFlowSignature(MRIDirection dir){
       cellPoints[loopA].velocity[0] = tangVector[0]*velMod;
       cellPoints[loopA].velocity[1] = tangVector[1]*velMod;
       cellPoints[loopA].velocity[2] = tangVector[2]*velMod;
+      cellPoints[loopA].concentration = 1.0;
+    }else{
+      cellPoints[loopA].concentration = 0.0;
     }
   }  
 }
@@ -122,8 +127,9 @@ void MRIStructuredScan::AssignCylindricalFlowSignature(MRIDirection dir){
 // ASSIGN SPHERICAL HILL VORTEX FLOW 
 void MRIStructuredScan::AssignSphericalFlowSignature(MRIDirection dir){
   // Set Parameters
+  double minDist = min(domainSizeMax[0]-domainSizeMin[0],min(domainSizeMax[1]-domainSizeMin[1],domainSizeMax[2]-domainSizeMin[2]));
   const double CONST_U0 = 0.1;
-  const double CONST_A = 12.0;
+  const double CONST_A = minDist * 0.4;
   // Init Local Coords
   double currentX = 0.0;
   double currentY = 0.0;
@@ -195,6 +201,8 @@ void MRIStructuredScan::AssignSphericalFlowSignature(MRIDirection dir){
         MRIUtils::Normalize3DVector(radialVec);
         break;
     }
+    // Assign Concentration
+    cellPoints[loopA].concentration = 1.0;
     // Normalize Radial Direction
     axialComponentIn = (3.0/2.0)*CONST_U0*(1.0-((2.0*localR*localR+localZ*localZ)/(CONST_A*CONST_A)));
     radialComponentIn = (3.0/2.0)*CONST_U0*((localR*localZ)/(CONST_A*CONST_A));
@@ -219,7 +227,7 @@ void MRIStructuredScan::AssignSphericalFlowSignature(MRIDirection dir){
 // ASSIGN SPHERICAL VORTEX FLOW 
 void MRIStructuredScan::AssignToroidalVortexFlowSignature(){
   // Set Parameters
-  const double CONST_A = 20.0;
+  const double CONST_A = 5.0;
   const double CONST_L = 1.3*1.3;
   // Init Local Coords
   double currentX = 0.0;
@@ -246,7 +254,7 @@ void MRIStructuredScan::AssignToroidalVortexFlowSignature(){
     currentZ = cellPoints[loopA].position[2] - centrePoint[2];
     
     // Set a Zero Concentration
-    cellPoints[loopA].concentration = 0.0;
+    cellPoints[loopA].concentration = 1.0;
     
     // Build Axial Vector
     axialVec[0] = 1.0;
@@ -337,6 +345,7 @@ void MRIStructuredScan::AssignTaylorVortexSignature(MRIDirection dir){
         cellPoints[loopA].velocity[2] = 0.0;
         break;
     }
+    cellPoints[loopA].concentration = 1.0;
   }
 }
 
@@ -466,7 +475,7 @@ void MRIStructuredScan::AssignVelocitySignature(MRIDirection dir, MRISamples sam
       AssignToroidalVortexFlowSignature();
       break;  
     case kTransientFlow:
-      AssignTimeDependentPoiseilleSignature(2*3.1415,0.1,1.0e-3,currTime,1.0);
+      AssignTimeDependentPoiseilleSignature(2*3.1415,8.0,1.0e-3,currTime,1.0);
       break;
     case kConstantFlowWithStep:
       AssignConstantFlowWithStep();
@@ -606,10 +615,12 @@ void MRIStructuredScan::AssignTimeDependentPoiseilleSignature(double omega, doub
       }
       cellPoints[loopA].velocity[1] = 0.0;
       cellPoints[loopA].velocity[2] = 0.0;
+      cellPoints[loopA].concentration = 1.0;
     }else{
       cellPoints[loopA].velocity[0] = 0.0;
       cellPoints[loopA].velocity[1] = 0.0;
-      cellPoints[loopA].velocity[2] = 0.0;      
+      cellPoints[loopA].velocity[2] = 0.0;
+      cellPoints[loopA].concentration = 0.0;
     }
   }
 }

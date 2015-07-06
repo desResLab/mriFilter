@@ -3036,11 +3036,6 @@ void MRIStructuredScan::ExportForPOISSON(string inputFileName){
   outFile = fopen(inputFileName.c_str(),"w");
   int totAuxNodes = (cellTotals[0] + 1) * (cellTotals[1] + 1) * (cellTotals[2] + 1);
 
-  // ============
-  // SAVE OPTIONS
-  // ============
-  fprintf(outFile,"SOLVER POISSON\n");
-
   // ==================
   // SAVE MESH TOPOLOGY
   // ==================
@@ -3066,10 +3061,10 @@ void MRIStructuredScan::ExportForPOISSON(string inputFileName){
   // SAVE ELEMENT DIFFUSIVITY
   // ========================
   for(int loopA=0;loopA<totalCellPoints;loopA++){
-    fprintf(outFile,"ELDIFF %d ",loopA);
+    fprintf(outFile,"ELDIFF %d ",loopA+1);
     fprintf(outFile,"%e ",cellPoints[loopA].concentration);
-    fprintf(outFile,"%e ",cellPoints[loopA].concentration*0.05);
-    fprintf(outFile,"%e ",cellPoints[loopA].concentration*0.05);
+    fprintf(outFile,"%e ",cellPoints[loopA].concentration);
+    fprintf(outFile,"%e ",cellPoints[loopA].concentration);
     fprintf(outFile,"\n");
   }
 
@@ -3138,7 +3133,7 @@ void MRIStructuredScan::ExportForPOISSON(string inputFileName){
 
   // SAVE ELEMENT SOURCES TO FILE
   for(int loopA=0;loopA<totalCellPoints;loopA++){
-    fprintf(outFile,"ELSOURCE %d %e\n",loopA,sourcesToApply[loopA]);
+    fprintf(outFile,"ELSOURCE %d %e\n",loopA+1,sourcesToApply[loopA]);
   }
 
   // =====================
@@ -3166,29 +3161,30 @@ void MRIStructuredScan::ExportForPOISSON(string inputFileName){
       // Multiply by the face area
       currValue = faceArea[loopA] * normComp;
       // Print Line
-      if(fabs(currValue) > 0.0){
-        fprintf(outFile,"FACENEUMANN %d ",currCell);
+      if(fabs(currValue) > kMathZero){
+        fprintf(outFile,"FACENEUMANN %d ",currCell + 1);
         for(int loopB=0;loopB<faceConnections[loopA].size();loopB++){
-          fprintf(outFile,"%d ",faceConnections[loopA][loopB]);
+          fprintf(outFile,"%d ",faceConnections[loopA][loopB] + 1);
         }
         fprintf(outFile,"%e\n",currValue);
       }
     }
   }
 
-  // =================
-  // NO DIRICHELET BCs
-  // =================
-  // SAVE DIRICHELET CONDITIONS
-  //outFile = fopen(diricheletFileName.c_str(),"w");
-  // Write Header
-  //double pos[3];
-  //for(int loopA=0;loopA<totAuxNodes;loopA++){
-  //  getAuxNodeCoordinates(loopA,pos);
-  //  if((fabs(pos[0]-(domainSizeMin[0]-0.5*cellLengths[0][0]))<1.0e-5)||((fabs(pos[0]-(domainSizeMax[0]-0.5*cellLengths[0][0]))<1.0e-5))){
-  //    fprintf(outFile,"%d %e\n",loopA,5.0);
-  //  }
-  //}
+  // ===================
+  // SAVE DIRICHELET BCS
+  // ===================
+  /*double pos[3];
+  for(int loopA=0;loopA<totAuxNodes;loopA++){
+    getAuxNodeCoordinates(loopA,pos);
+    if((fabs(pos[0]-(domainSizeMin[0]-0.5*cellLengths[0][0]))<1.0e-5)){
+      fprintf(outFile,"NODEDIRBC %d %e\n",loopA + 1,5.0);
+    }
+    if((fabs(pos[0]-(domainSizeMax[0]-0.5*cellLengths[0][0]))<1.0e-5)){
+      fprintf(outFile,"NODEDIRBC %d %e\n",loopA + 1,-5.0);
+    }
+  }*/
+  //fprintf(outFile,"NODEDIRBC 1 30.0\n");
 
   // Close Output file
   fclose(outFile);
