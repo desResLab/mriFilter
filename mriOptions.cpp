@@ -787,8 +787,10 @@ void MRIOptions::DistributeProgramOptions(MRICommunicator* comm){
   comm->passString(commandFileName);
   comm->passString(sequenceFileName);
 
-  // PASS VECTOR
-  comm->passStdDoubleVector(templateParams);
+  // PASS VECTOR: CAREFULL DO NOT PASS ZERO DIM OBJECTS
+  if(templateParams.size() > 0){
+    comm->passStdDoubleVector(templateParams);
+  }
 
   // PASS STRING LIST
   //vector<string> sequenceFileList;

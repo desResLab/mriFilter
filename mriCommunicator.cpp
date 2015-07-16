@@ -257,6 +257,7 @@ void MRICommunicator::passStdIntVector(MRIIntVec& vector){
 void MRICommunicator::passStdDoubleVector(MRIDoubleVec& vector){
   int source = 0;
   int tag = 0;
+  int mpiError = 0;
   if(currProc == 0){
     int vecSize = vector.size();
     double* vecToSend = new double[vecSize];
@@ -264,9 +265,10 @@ void MRICommunicator::passStdDoubleVector(MRIDoubleVec& vector){
       vecToSend[loopA] = vector[loopA];
     }
     for(int loopDest=1;loopDest<totProc;loopDest++){
-      int mpiError = MPI_Send(vecToSend,vecSize,MPI_DOUBLE,loopDest,tag,mpiComm);
+      mpiError = MPI_Send(vecToSend,vecSize,MPI_DOUBLE,loopDest,tag,mpiComm);
       MRIUtils::checkMpiError(mpiError);
     }
+    delete [] vecToSend;
   }else{
     int mpiError = 0;
     int vecSize = 0;
@@ -283,7 +285,6 @@ void MRICommunicator::passStdDoubleVector(MRIDoubleVec& vector){
       mpiError = MPI_Recv(buf,vecSize,MPI_DOUBLE,source,tag,mpiComm,&status);
       MRIUtils::checkMpiError(mpiError);
       vector.clear();
-      //printf("RECV DOUBLE VEC\n");
       for(int loopA=0;loopA<vecSize;loopA++){
         vector.push_back(buf[loopA]);
         //printf("%f\n",buf[loopA]);
@@ -332,23 +333,28 @@ void MRICommunicator::passString(string& msg){
 // ==============
 void MRICommunicator::passCellData(int& totalCellPoints,vector<MRICell>& cellPoints){
   MRIDoubleMat storeMat;
-  MRIDoubleVec temp;
+  MRIDoubleVec temp;  
   if(currProc == 0){
+    temp.resize(7);
     // Create Matrices
     for(int loopA=0;loopA<cellPoints.size();loopA++){
-      temp.clear();
-      temp.push_back(cellPoints[loopA].concentration);
-      temp.push_back(cellPoints[loopA].velocity[0]);
-      temp.push_back(cellPoints[loopA].velocity[1]);
-      temp.push_back(cellPoints[loopA].velocity[2]);
-      temp.push_back(cellPoints[loopA].position[0]);
-      temp.push_back(cellPoints[loopA].position[1]);
-      temp.push_back(cellPoints[loopA].position[2]);
+      //printf("PASSING CELLS: %d\n",loopA);
+      temp[0] = cellPoints[loopA].concentration;
+      temp[1] = cellPoints[loopA].velocity[0];
+      temp[2] = cellPoints[loopA].velocity[1];
+      temp[3] = cellPoints[loopA].velocity[2];
+      temp[4] = cellPoints[loopA].position[0];
+      temp[5] = cellPoints[loopA].position[1];
+      temp[6] = cellPoints[loopA].position[2];
+      //printf("BEFORE STORE_PUSH\n");
       storeMat.push_back(temp);
+      //printf("AFTER STORE_PUSH\n");
     }
   }
+
   // Pass Storage Matrix to other Processes
   passStdDoubleMatrix(storeMat);
+
   // Rebuild Cell Data in other processes
   if(currProc != 0){
     totalCellPoints = storeMat.size();

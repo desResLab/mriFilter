@@ -897,7 +897,6 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
           // READ FROM FILE
           MyMRIScan->ReadPltFile(opts->sequenceFileList[loopA], true);
         }
-
         // ADD TO SEQUENCE
         MyMRISequence->AddScan(MyMRIScan);
       }
@@ -937,6 +936,20 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
     MyMRISequence->applyNoise(opts->noiseIntensity);
   }
 
+  if(comm->currProc == 0){
+    // Open Output File
+    FILE* outFile;
+    outFile = fopen("testGauss.log","w");
+    // Write Header
+
+    for(int loopA=0;loopA<MyMRISequence->GetScan(0)->totalCellPoints;loopA++){
+      fprintf(outFile,"%e %e %e\n",MyMRISequence->GetScan(0)->cellPoints[loopA].velocity[0],MyMRISequence->GetScan(0)->cellPoints[loopA].velocity[1],MyMRISequence->GetScan(0)->cellPoints[loopA].velocity[2]);
+    }
+    // Close Output file
+    fclose(outFile);
+  }
+
+
   // APPLY FULL FILTER
   if (opts->applySMPFilter){
     MyMRISequence->ApplySMPFilter(opts,false,comm);
@@ -950,6 +963,19 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
   // APPLY THRESHOLD
   if(comm->currProc == 0){
     MyMRISequence->ApplyThresholding(opts->thresholdCriteria);
+  }
+
+  if(comm->currProc == 0){
+    // Open Output File
+    FILE* outFile;
+    outFile = fopen("testGauss2.log","w");
+    // Write Header
+
+    for(int loopA=0;loopA<MyMRISequence->GetScan(0)->totalCellPoints;loopA++){
+      fprintf(outFile,"%e %e %e\n",MyMRISequence->GetScan(0)->cellPoints[loopA].velocity[0],MyMRISequence->GetScan(0)->cellPoints[loopA].velocity[1],MyMRISequence->GetScan(0)->cellPoints[loopA].velocity[2]);
+    }
+    // Close Output file
+    fclose(outFile);
   }
 
   // EVAL VORTEX CRITERIA

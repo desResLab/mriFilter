@@ -12,9 +12,11 @@ inline void WriteSchMessage(std::string Msg){
 
 inline void WriteHeader(){
 	WriteSchMessage(std::string("\n"));
-    WriteSchMessage(std::string("------ Flow Manipulation Toolkit\n"));
-    WriteSchMessage(std::string("------ 2013 - Daniele Schiavazzi,Ph.D.\n"));
-    WriteSchMessage(std::string("------ Release: 0.2\n"));
+    WriteSchMessage(std::string("-----------------------------------\n"));
+    WriteSchMessage(std::string(" Flow Manipulation Toolkit\n"));
+    WriteSchMessage(std::string(" 2013 - Daniele Schiavazzi,Ph.D.\n"));
+    WriteSchMessage(std::string(" Release: 0.2\n"));
+    WriteSchMessage(std::string("-----------------------------------\n"));
 	WriteSchMessage(std::string("\n"));
 }
 

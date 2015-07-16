@@ -63,6 +63,9 @@ struct vtkStructuredPointsOptionRecord{
   double spacing[3];
   int numDefined;
   bool isDefined[5];
+  MRIIntVec dataBlockStart;
+  MRIIntVec dataBlockType;
+  MRIBoolVec dataBlockRead;
 };
 
 class MRIScan;

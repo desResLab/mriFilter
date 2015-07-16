@@ -29,29 +29,49 @@ MRIStructuredScan::MRIStructuredScan(double currentTime):MRIScan(currentTime){
 // ==============================================
 // READS TOKENIZED STRING AND ASSIGNS PLT OPTIONS
 // ==============================================
-void assignVTKOptions(std::vector<std::string> tokens, vtkStructuredPointsOptionRecord &vtkOptions){
+void assignVTKOptions(int lineNum, std::vector<std::string> tokens, vtkStructuredPointsOptionRecord &vtkOptions){
   for(size_t loopA=0;loopA<tokens.size();loopA++){
-    if(tokens[loopA] == "ASCII"){
+    if(boost::to_upper_copy(tokens[loopA]) == "ASCII"){
       vtkOptions.isASCII = true;
       vtkOptions.isDefined[0] = true;
-    }else if(tokens[loopA].find("STRUCTURED") != string::npos){
+    }else if(boost::to_upper_copy(tokens[loopA]).find("STRUCTURED") != string::npos){
       vtkOptions.isValidDataset = true;
       vtkOptions.isDefined[1] = true;
-    }else if(tokens[loopA] == "DIMENSIONS"){
+    }else if(boost::to_upper_copy(tokens[loopA]) == "DIMENSIONS"){
       vtkOptions.dimensions[0] = atoi(tokens[loopA+1].c_str());
       vtkOptions.dimensions[1] = atoi(tokens[loopA+2].c_str());
       vtkOptions.dimensions[2] = atoi(tokens[loopA+3].c_str());
       vtkOptions.isDefined[2] = true;
-    }else if(tokens[loopA] == "ORIGIN"){
+    }else if(boost::to_upper_copy(tokens[loopA]) == "ORIGIN"){
       vtkOptions.origin[0] = atof(tokens[loopA+1].c_str());
       vtkOptions.origin[1] = atof(tokens[loopA+2].c_str());
       vtkOptions.origin[2] = atof(tokens[loopA+3].c_str());
       vtkOptions.isDefined[3] = true;
-    }else if(tokens[loopA] == "SPACING"){
+    }else if(boost::to_upper_copy(tokens[loopA]) == "SPACING"){
       vtkOptions.spacing[0] = atof(tokens[loopA+1].c_str());
       vtkOptions.spacing[1] = atof(tokens[loopA+2].c_str());
       vtkOptions.spacing[2] = atof(tokens[loopA+3].c_str());
       vtkOptions.isDefined[4] = true;
+    }else if(boost::to_upper_copy(tokens[loopA]) == "SCALARS"){
+      // Add Starting Point
+      vtkOptions.dataBlockStart.push_back(lineNum + 2);
+      // Add type
+      vtkOptions.dataBlockType.push_back(0);
+      if((boost::to_upper_copy(tokens[loopA + 1]) == "CONCENTRATION")){
+        vtkOptions.dataBlockRead.push_back(true);
+      }else{
+        vtkOptions.dataBlockRead.push_back(false);
+      }
+    }else if(boost::to_upper_copy(tokens[loopA]) == "VECTORS"){
+      // Add Starting Point
+      vtkOptions.dataBlockStart.push_back(lineNum + 1);
+      // Add type
+      vtkOptions.dataBlockType.push_back(1);
+      if((boost::to_upper_copy(tokens[loopA + 1]) == "VELOCITY")){
+        vtkOptions.dataBlockRead.push_back(true);
+      }else{
+        vtkOptions.dataBlockRead.push_back(false);
+      }
     }
   }
 }
@@ -2676,7 +2696,7 @@ void MRIStructuredScan::buildFaceAreasAndNormals(){
         prod += currNormal[loopB] * diff3[loopB];
       }
       if(prod>0.0){
-        printf("FLIPPED!\n");
+        //printf("FLIPPED!\n");
         currNormal[0] = - currNormal[0];
         currNormal[1] = - currNormal[1];
         currNormal[2] = - currNormal[2];
@@ -2778,7 +2798,7 @@ void MRIStructuredScan::CreateGridFromVTKStructuredPoints(vtkStructuredPointsOpt
   domainSizeMax[1] = opts.origin[1] + (opts.dimensions[1]-1) * opts.spacing[1];
   domainSizeMax[2] = opts.origin[2] + (opts.dimensions[2]-1) * opts.spacing[2];
   // Allocate the cells
-  cellPoints.resize(totalCellPoints);
+  //cellPoints.reserve(totalCellPoints);
   MRICell currentCell;
   // Fill the position vectors
   double locCoordX = opts.origin[0];
@@ -2840,16 +2860,83 @@ void InitVTKStructuredPointsOptions(vtkStructuredPointsOptionRecord &opts){
   for(int loopA=0;loopA<opts.numDefined;loopA++){
     opts.isDefined[loopA] = false;
   }
-
 }
 
+// Read Scalars From VTK Legacy
+void readVTKScalar(ifstream& vtkFile, int& lineCount,MRIDoubleVec& vtkScalar){
+  vtkScalar.clear();
+  string buffer;
+  bool finished = false;
+  double value;
+  vector<string> tokenizedString;
+  while(!finished){
+    std::getline(vtkFile,buffer);
+    boost::trim(buffer);
+    lineCount++;
+    //printf("Reading Line: %s\n",buffer.c_str());
+    boost::split(tokenizedString, buffer, boost::is_any_of(" ,"), boost::token_compress_on);
+    if(buffer.find_first_not_of(' ') != std::string::npos){
+      try{
+        for(int loopA=0;loopA<tokenizedString.size();loopA++){
+          value = atof(tokenizedString[loopA].c_str());
+          vtkScalar.push_back(value);
+        }
+      }catch(...){
+        printf("COUGHT...\n");
+        finished = true;
+      }
+    }else{
+      finished = true;
+    }
+  }
+}
+
+// Read Vectors From VTK Legacy
+void readVTKVector(ifstream& vtkFile, int& lineCount,MRIDoubleMat& vtkVector){
+  vtkVector.clear();
+  MRIDoubleVec temp;
+  MRIDoubleVec store;
+  string buffer;
+  bool finished = false;
+  int count = 0;
+  double value;
+  vector<string> tokenizedString;
+  while(!finished){
+    std::getline(vtkFile,buffer);
+    boost::trim(buffer);
+    lineCount++;
+    //printf("Reading Line: %s\n",buffer.c_str());
+    if(buffer.find_first_not_of(' ') != std::string::npos){
+      try{
+        boost::split(tokenizedString, buffer, boost::is_any_of(" ,"), boost::token_compress_on);
+        for(int loopA=0;loopA<tokenizedString.size();loopA++){
+          value = atof(tokenizedString[loopA].c_str());
+          temp.push_back(value);
+        }
+      }catch(...){
+        printf("COUGHT...\n");
+        finished = true;
+      }
+    }else{
+       finished = true;
+    }
+    count++;
+  }
+  // Fill Matrix
+  for(int loopA=0;loopA<temp.size()/3;loopA++){
+    store.clear();
+    for(int loopB=0;loopB<3;loopB++){
+      store.push_back(temp[loopA*3 + loopB]);
+    }
+    vtkVector.push_back(store);
+  }
+}
 
 // ==========================
 // READ VTK STRUCTURED POINTS
 // ==========================
 void MRIStructuredScan::ReadVTKStructuredPoints(std::string vtkFileName, bool DoReorderCells){
-  // Init Line Count
-  int lineCount = 0;
+  // Init totalCellPoints
   totalCellPoints = 0;
 
   // Assign File
@@ -2866,25 +2953,14 @@ void MRIStructuredScan::ReadVTKStructuredPoints(std::string vtkFileName, bool Do
 
   // Read Through and look for options
   std::vector<std::string> tokenizedString;
-  bool foundAllOptions = false;
-  int headerCount = 0;
   WriteSchMessage(std::string("Computing input file size..."));
   int totalLinesInFile = 0;
   std::string Buffer;
   while (std::getline(vtkFile,Buffer)){
-    if(!foundAllOptions){
-      boost::split(tokenizedString, Buffer, boost::is_any_of(" ,"), boost::token_compress_on);
-      // Check if you find options
-      assignVTKOptions(tokenizedString, vtkOptions);
-      // Check if all options were found
-      foundAllOptions = true;
-      for(size_t loopA=0;loopA<vtkOptions.numDefined;loopA++){
-        foundAllOptions = (foundAllOptions && (vtkOptions.isDefined[loopA]));
-      }
-      headerCount++;
-    }
-    // Increase cell and line number
-    totalCellPoints++;
+    boost::split(tokenizedString, Buffer, boost::is_any_of(" ,"), boost::token_compress_on);
+    // Check if you find options
+    assignVTKOptions(totalLinesInFile,tokenizedString, vtkOptions);
+    // Increase line number
     totalLinesInFile++;
   }
 
@@ -2917,69 +2993,56 @@ void MRIStructuredScan::ReadVTKStructuredPoints(std::string vtkFileName, bool Do
   vtkFile.clear();
   vtkFile.seekg(0, std::ios::beg);
 
-  // Skip Comments
-  for(int loopA=0;loopA<headerCount;loopA++){
-    std::getline(vtkFile,Buffer);
-    lineCount++;
+  // Read Concentration and Velocities
+  MRIDoubleVec vtkScalar;
+  MRIDoubleMat vtkVector;
+  totalLinesInFile = 0;
+  for(int loopA=0;loopA<vtkOptions.dataBlockStart.size();loopA++){
+    if(vtkOptions.dataBlockRead[loopA]){
+      // Go to next block start
+      while(totalLinesInFile<vtkOptions.dataBlockStart[loopA]){
+        std::getline(vtkFile,Buffer);
+        totalLinesInFile++;
+      }
+      // Read Scalars Or Vectors
+      if(vtkOptions.dataBlockType[loopA] == 0){
+        // Read Scalars
+        WriteSchMessage(std::string("Reading Scalars...\n"));
+        vtkScalar.clear();
+        readVTKScalar(vtkFile,totalLinesInFile,vtkScalar);
+        if(vtkScalar.size() != totalCellPoints){
+          throw MRIException("ERROR: Total number of scalar differs from number of cells.\n");
+        }
+      }else{
+        // Read Vectors
+        WriteSchMessage(std::string("Reading Vectors...\n"));
+        vtkVector.clear();
+        readVTKVector(vtkFile,totalLinesInFile,vtkVector);
+        if(vtkVector.size() != totalCellPoints){
+          throw MRIException("ERROR: Total number of vectors differs from number of cells.\n");
+        }
+      }
+    }
   }
 
-  // Read All Lines
-  int LocalCount = 0;
-  int precentProgress = 0;
-  int percentCounted = 0;
+  // Transfer Scalars and Vectors to Cells
+  // Scalars
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    cellPoints[loopA].concentration = vtkScalar[loopA];
+  }
+  // Vectors
+  maxVelModule = 0.0;
   double currModulus = 0.0;
-  double vx; double vy; double vz;
-  bool keepProcess;
-
-  // Reading Input File Message
-  WriteSchMessage(std::string("Reading input file...\n"));
-
-  while (std::getline(vtkFile,Buffer)){
-
-    // Read Line
-    lineCount++;
-
-    // Write Progress
-    precentProgress = (int)(((double)lineCount/(double)totalLinesInFile)*100);
-    if (((precentProgress % 10) == 0)&&((precentProgress / 10) != percentCounted)){
-      percentCounted = (precentProgress / 10);
-      WriteSchMessage(std::string("Reading..." + to_string(precentProgress) + "\n"));
-    }
-
-    // Tokenize Line
-    boost::trim(Buffer);
-    boost::split(tokenizedString, Buffer, boost::is_any_of(" ,"), boost::token_compress_on);
-
-    // Store Local Structure
-    try{
-      if(tokenizedString.size()<3){
-        throw "error";
-      }
-      vx = atof(tokenizedString[0].c_str());
-      vy = atof(tokenizedString[1].c_str());
-      vz = atof(tokenizedString[2].c_str());
-      // GO ahead
-      keepProcess = true;
-    }catch (...){
-      std::string outString = "WARNING[*] Error Reading Line: "+to_string(lineCount)+"; Line Skipped.\n";
-      printf("%s",outString.c_str());
-      keepProcess = false;
-    }
-
-    if(keepProcess){
-      cellPoints[LocalCount].velocity[0] = vx;
-      cellPoints[LocalCount].velocity[1] = vy;
-      cellPoints[LocalCount].velocity[2] = vz;
-      currModulus = sqrt((cellPoints[LocalCount].velocity[0]*cellPoints[LocalCount].velocity[0]) +
-                         (cellPoints[LocalCount].velocity[1]*cellPoints[LocalCount].velocity[1]) +
-                         (cellPoints[LocalCount].velocity[2]*cellPoints[LocalCount].velocity[2]));
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+      cellPoints[loopA].velocity[0] = vtkVector[loopA][0];
+      cellPoints[loopA].velocity[1] = vtkVector[loopA][1];
+      cellPoints[loopA].velocity[2] = vtkVector[loopA][2];
+      currModulus = sqrt((cellPoints[loopA].velocity[0]*cellPoints[loopA].velocity[0]) +
+                         (cellPoints[loopA].velocity[1]*cellPoints[loopA].velocity[1]) +
+                         (cellPoints[loopA].velocity[2]*cellPoints[loopA].velocity[2]));
       if(currModulus > maxVelModule){
         maxVelModule = currModulus;
-      }      
-      // Update Counter
-      LocalCount++;
-    }
-    
+      }
   }
 
   // Finished Reading File
@@ -3060,11 +3123,30 @@ void MRIStructuredScan::ExportForPOISSON(string inputFileName){
   // ========================
   // SAVE ELEMENT DIFFUSIVITY
   // ========================
+  double velMod = 0.0;
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     fprintf(outFile,"ELDIFF %d ",loopA+1);
-    fprintf(outFile,"%e ",cellPoints[loopA].concentration);
-    fprintf(outFile,"%e ",cellPoints[loopA].concentration);
-    fprintf(outFile,"%e ",cellPoints[loopA].concentration);
+    velMod = sqrt(cellPoints[loopA].velocity[0] * cellPoints[loopA].velocity[0] +
+                  cellPoints[loopA].velocity[1] * cellPoints[loopA].velocity[1] +
+                  cellPoints[loopA].velocity[2] * cellPoints[loopA].velocity[2]);
+    if(velMod < 1.0e-4){
+      fprintf(outFile,"%e ",1.0e-2);
+      fprintf(outFile,"%e ",1.0e-2);
+      fprintf(outFile,"%e ",1.0e-2);
+    }else{
+      fprintf(outFile,"%e ",cellPoints[loopA].velocity[0]/velMod);
+      fprintf(outFile,"%e ",cellPoints[loopA].velocity[1]/velMod);
+      fprintf(outFile,"%e ",cellPoints[loopA].velocity[2]/velMod);
+    }
+    //fprintf(outFile,"%e ",cellPoints[loopA].concentration);
+    //fprintf(outFile,"%e ",cellPoints[loopA].concentration);
+    //fprintf(outFile,"%e ",cellPoints[loopA].concentration);
+    //if(cellPoints[loopA].concentration < 0.5){
+    //}else{
+    //  fprintf(outFile,"%e ",1.0);
+     // fprintf(outFile,"%e ",1.0);
+     // fprintf(outFile,"%e ",1.0);
+    //}
     fprintf(outFile,"\n");
   }
 
@@ -3166,7 +3248,7 @@ void MRIStructuredScan::ExportForPOISSON(string inputFileName){
         for(int loopB=0;loopB<faceConnections[loopA].size();loopB++){
           fprintf(outFile,"%d ",faceConnections[loopA][loopB] + 1);
         }
-        fprintf(outFile,"%e\n",currValue);
+        fprintf(outFile,"%e\n",currValue/(double)faceConnections[loopA].size());
       }
     }
   }
@@ -3184,7 +3266,16 @@ void MRIStructuredScan::ExportForPOISSON(string inputFileName){
       fprintf(outFile,"NODEDIRBC %d %e\n",loopA + 1,-5.0);
     }
   }*/
-  //fprintf(outFile,"NODEDIRBC 1 30.0\n");
+
+  bool found = false;
+  int count = 0;
+  while(!found){
+    found = (cellPoints[count].concentration > 0.5);
+    if(!found){
+      count++;
+    }
+  }
+  fprintf(outFile,"NODEDIRBC %d 30.0\n",cellConnections[count][0] + 1);
 
   // Close Output file
   fclose(outFile);
@@ -3296,7 +3387,7 @@ void MRIStructuredScan::passScanData(MRICommunicator* comm){
   }
   // Pass Data
   comm->passStdDoubleVector(doubleVec);
-  // Copy Scan Data
+  // Copy Scan Data  
   if(comm->currProc != 0){
     domainSizeMin[0] = doubleVec[0];
     domainSizeMin[1] = doubleVec[1];
@@ -3316,7 +3407,7 @@ void MRIStructuredScan::passScanData(MRICommunicator* comm){
 // DISTRIBUTE SCAN DATA
 // ====================
 void MRIStructuredScan::DistributeScanData(MRICommunicator* comm){
-  // Pass Scan Data
+  // Pass Scan Data  
   passScanData(comm);
   // Exchange Topology Information
   comm->passStdIntVector(cellTotals);

@@ -321,7 +321,6 @@ void MRISequence::applyNoise(double noiseIntensity){
 // =============================
 void MRISequence::DistributeSequenceData(MRICommunicator* comm){
   // Create New Sequence
-  MRISequence* result = new MRISequence(this->isCyclic);
   for(int loopA=0;loopA<this->totalScans;loopA++){
     sequence[loopA]->DistributeScanData(comm);
   }
