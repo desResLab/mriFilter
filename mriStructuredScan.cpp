@@ -1477,6 +1477,24 @@ void MRIStructuredScan::ScalePositions(double factor){
   domainSizeMin[2] = 0.0;  
 }
 
+// ===========================
+// CHECK IF SPACING IS UNIFORM
+// ===========================
+bool MRIStructuredScan::hasUniformSpacing(){
+  double lengthX = cellLengths[0][0];
+  double lengthY = cellLengths[0][1];
+  double lengthZ = cellLengths[0][2];
+  int count = 1;
+  bool result = true;
+  while(result && (count<cellLengths.size())){
+    result = result && (fabs(cellLengths[count][0] - lengthX) < 1.0e-3) &&
+                       (fabs(cellLengths[count][1] - lengthY) < 1.0e-3) &&
+                       (fabs(cellLengths[count][2] - lengthZ) < 1.0e-3);
+    count++;
+  }
+  return result;
+}
+
 // =================
 // Write to VTK File
 // =================
@@ -1492,46 +1510,90 @@ void MRIStructuredScan::ExportToVTK(std::string fileName){
   FILE* outFile;
   outFile = fopen(fileName.c_str(),"w");
   // Write Header
-  fprintf(outFile,"# vtk DataFile Version 2.0\n");
+  fprintf(outFile,"# vtk DataFile Version 3.0\n");
   fprintf(outFile,"Grid Point Model\n");
   fprintf(outFile,"ASCII\n");
 
-  // Write Data Set
-  fprintf(outFile,"DATASET RECTILINEAR_GRID\n");
-  fprintf(outFile,"DIMENSIONS %d %d %d\n",cellTotals[0],cellTotals[1],cellTotals[2]);
+  if(hasUniformSpacing()){
+      printf("Dataset type STRUCTURED_POINTS.\n");
+      // Write Data Set
+      fprintf(outFile,"DATASET STRUCTURED_POINTS\n");
+      fprintf(outFile,"DIMENSIONS %d %d %d\n",cellTotals[0],cellTotals[1],cellTotals[2]);
+      fprintf(outFile,"SPACING %e %e %e\n",cellLengths[0][0],cellLengths[0][1],cellLengths[0][2]);
+      fprintf(outFile,"ORIGIN 0.0 0.0 0.0\n");
+  }else{
+    printf("Dataset type: RECTILINEAR_GRID.\n");
+    // Write Data Set
+    fprintf(outFile,"DATASET RECTILINEAR_GRID\n");
+    fprintf(outFile,"DIMENSIONS %d %d %d\n",cellTotals[0],cellTotals[1],cellTotals[2]);
 
-  // Export X Coordinates
-  fprintf(outFile,"X_COORDINATES %d double\n",(int)cellLengths[0].size());
-  currXCoord = domainSizeMin[0];
-  for(size_t loopA=1;loopA<cellLengths[0].size();loopA++){
-    fprintf(outFile,"%e ",currXCoord);
-    currXCoord += 0.5*(cellLengths[0][loopA-1] + cellLengths[0][loopA]);
-  }
-  fprintf(outFile,"%e\n",currXCoord);
+    // Export X Coordinates
+    fprintf(outFile,"X_COORDINATES %d double\n",(int)cellLengths[0].size());
+    currXCoord = domainSizeMin[0];
+    for(size_t loopA=1;loopA<cellLengths[0].size();loopA++){
+      fprintf(outFile,"%e ",currXCoord);
+      currXCoord += 0.5*(cellLengths[0][loopA-1] + cellLengths[0][loopA]);
+    }
+    fprintf(outFile,"%e\n",currXCoord);
 
-  // Export Y Coordinates
-  fprintf(outFile,"Y_COORDINATES %d double\n",(int)cellLengths[1].size());
-  currYCoord = domainSizeMin[1];
-  for(size_t loopA=1;loopA<cellLengths[1].size();loopA++){
-    fprintf(outFile,"%e ",currYCoord);
-    currYCoord += 0.5*(cellLengths[1][loopA-1] + cellLengths[1][loopA]);
-  }
-  fprintf(outFile,"%e\n",currYCoord);
+    // Export Y Coordinates
+    fprintf(outFile,"Y_COORDINATES %d double\n",(int)cellLengths[1].size());
+    currYCoord = domainSizeMin[1];
+    for(size_t loopA=1;loopA<cellLengths[1].size();loopA++){
+      fprintf(outFile,"%e ",currYCoord);
+      currYCoord += 0.5*(cellLengths[1][loopA-1] + cellLengths[1][loopA]);
+    }
+    fprintf(outFile,"%e\n",currYCoord);
 
-  // Export Z Coordinates
-  fprintf(outFile,"Z_COORDINATES %d double\n",(int)cellLengths[2].size());
-  currZCoord = domainSizeMin[2];
-  for(size_t loopA=1;loopA<cellLengths[2].size();loopA++){
-    fprintf(outFile,"%e ",currZCoord);
-    currZCoord += 0.5*(cellLengths[2][loopA-1] + cellLengths[2][loopA]);
+    // Export Z Coordinates
+    fprintf(outFile,"Z_COORDINATES %d double\n",(int)cellLengths[2].size());
+    currZCoord = domainSizeMin[2];
+    for(size_t loopA=1;loopA<cellLengths[2].size();loopA++){
+      fprintf(outFile,"%e ",currZCoord);
+      currZCoord += 0.5*(cellLengths[2][loopA-1] + cellLengths[2][loopA]);
+    }
+    fprintf(outFile,"%e\n",currZCoord);
   }
-  fprintf(outFile,"%e\n",currZCoord);
 
   // Export Point quantities
   fprintf(outFile,"POINT_DATA %d\n",totalCellPoints);
 
+  // Export Normal sign
+  double normSignX[totalCellPoints];
+  double normSignY[totalCellPoints];
+  double normSignZ[totalCellPoints];
+  int counterVec[totalCellPoints];
+  for (int loopA=0;loopA<totalCellPoints;loopA++){
+    normSignX[loopA] = 0.0;
+    normSignY[loopA] = 0.0;
+    normSignZ[loopA] = 0.0;
+    counterVec[loopA] = 0;
+  }
+  int currCell = 0;
+  for(int loopA=0;loopA<faceConnections.size();loopA++){
+    if(faceCells[loopA].size() == 1){
+      currCell = faceCells[loopA][0];
+      counterVec[currCell]++;
+      normSignX[currCell] += faceNormal[loopA][0];
+      normSignY[currCell] += faceNormal[loopA][1];
+      normSignZ[currCell] += faceNormal[loopA][2];
+    }
+  }
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    if(counterVec[loopA] > 0){
+      normSignX[loopA] /= (double)counterVec[loopA];
+      normSignY[loopA] /= (double)counterVec[loopA];
+      normSignZ[loopA] /= (double)counterVec[loopA];
+    }
+  }
+  fprintf(outFile,"VECTORS faceNormals double\n");
+  // Print velocity components
+  for (int loopA=0;loopA<totalCellPoints;loopA++){
+    fprintf(outFile,"%e %e %e\n",normSignX[loopA],normSignY[loopA],normSignZ[loopA]);
+  }
+
   // Print Scalar Concentration
-  fprintf(outFile,"SCALARS Concentration float 1\n");
+  fprintf(outFile,"SCALARS concentration double\n");
   fprintf(outFile,"LOOKUP_TABLE default\n");
   // Print Concentrations
   for (int loopA=0;loopA<totalCellPoints;loopA++){
@@ -1539,7 +1601,7 @@ void MRIStructuredScan::ExportToVTK(std::string fileName){
   }
 
   //Print velocity
-  fprintf(outFile,"VECTORS Velocity float\n");
+  fprintf(outFile,"VECTORS velocity double\n");
   // Print velocity components
   for (int loopA=0;loopA<totalCellPoints;loopA++){
     fprintf(outFile,"%e %e %e\n",cellPoints[loopA].velocity[0],cellPoints[loopA].velocity[1],cellPoints[loopA].velocity[2]);
@@ -1557,7 +1619,7 @@ void MRIStructuredScan::ExportToVTK(std::string fileName){
 
   // Print Relative Pressure
   if (hasRelativePressure){
-    fprintf(outFile,"SCALARS RelPressure float 1\n");
+    fprintf(outFile,"SCALARS RelPressure double\n");
     fprintf(outFile,"LOOKUP_TABLE default\n");
     // Print Relative Pressure
     for (int loopA=0;loopA<totalCellPoints;loopA++){
@@ -1567,7 +1629,7 @@ void MRIStructuredScan::ExportToVTK(std::string fileName){
 
   // Print Relative Pressure
   if (hasRelativePressure){
-    fprintf(outFile,"SCALARS GradientMonitor float 1\n");
+    fprintf(outFile,"SCALARS GradientMonitor double\n");
     fprintf(outFile,"LOOKUP_TABLE default\n");
     // Print Relative Pressure
     for (int loopA=0;loopA<totalCellPoints;loopA++){
@@ -1577,7 +1639,7 @@ void MRIStructuredScan::ExportToVTK(std::string fileName){
 
   // Print Reynolds Stresses
   if (hasReynoldsStress){
-    fprintf(outFile,"TENSORS ReynoldsStress float\n");
+    fprintf(outFile,"TENSORS ReynoldsStress double\n");
     // Print Reynolds Stress Tensor
     for (int loopA=0;loopA<totalCellPoints;loopA++){
       fprintf(outFile,"%e %e %e\n",cellPoints[loopA].ReStress[0],cellPoints[loopA].ReStress[1],cellPoints[loopA].ReStress[2]);
@@ -1591,14 +1653,14 @@ void MRIStructuredScan::ExportToVTK(std::string fileName){
   for(int loopA=0;loopA<outputs.size();loopA++){
     // Print Header
     if(outputs[loopA].totComponents == 1){
-      fprintf(outFile,string("SCALARS " + outputs[loopA].name + " float 1\n").c_str());
+      fprintf(outFile,string("SCALARS " + outputs[loopA].name + " double\n").c_str());
       fprintf(outFile,"LOOKUP_TABLE default\n");
       for (int loopB=0;loopB<totalCellPoints;loopB++){
         fprintf(outFile,"%e\n",outputs[loopA].values[loopB]);
       }
     }else{
       int count = 0;
-      fprintf(outFile,string("VECTORS " + outputs[loopA].name + " float\n").c_str());
+      fprintf(outFile,string("VECTORS " + outputs[loopA].name + " double\n").c_str());
       for (int loopB=0;loopB<totalCellPoints;loopB++){
         for(int loopC=0;loopC<outputs[loopA].totComponents;loopC++){
           fprintf(outFile,"%e ",outputs[loopA].values[count]);
@@ -2658,48 +2720,66 @@ void MRIStructuredScan::buildFaceAreasAndNormals(){
   double prod = 0.0;
   faceArea.resize(faceConnections.size());
   faceNormal.resize(faceConnections.size());
+  // Declare
+  int node1Coords[3] = {0};
+  int node2Coords[3] = {0};
+  int node3Coords[3] = {0};
+  double node1Pos[3] = {0.0};
+  double node2Pos[3] = {0.0};
+  double node3Pos[3] = {0.0};
+  double diff1[3] = {0.0};
+  double diff2[3] = {0.0};
+  double diff3[3] = {0.0};
+  double d1 = 0.0;
+  double d2 = 0.0;
   double currNormal[3] = {0.0};
+  double innerProd = 0.0;
   for(size_t loopA=0;loopA<faceConnections.size();loopA++){
-    int node1Coords[3] = {0};
-    int node2Coords[3] = {0};
-    int node3Coords[3] = {0};
     // Get the integer coordinates for the first three nodes
     MapIndexToAuxNodeCoords(faceConnections[loopA][0],node1Coords);
     MapIndexToAuxNodeCoords(faceConnections[loopA][1],node2Coords);
     MapIndexToAuxNodeCoords(faceConnections[loopA][2],node3Coords);
     // Get the positions for the first three nodes
-    double node1Pos[3] = {0.0};
-    double node2Pos[3] = {0.0};
-    double node3Pos[3] = {0.0};
     MapAuxCoordsToPosition(node1Coords,node1Pos);
     MapAuxCoordsToPosition(node2Coords,node2Pos);
     MapAuxCoordsToPosition(node3Coords,node3Pos);   
     // Get the difference
-    double diff1[3] = {0.0};
-    double diff2[3] = {0.0};
-    double diff3[3] = {0.0};
     for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
       diff1[loopB] = node2Pos[loopB] - node1Pos[loopB];
       diff2[loopB] = node3Pos[loopB] - node2Pos[loopB];
       diff3[loopB] = node1Pos[loopB] - cellPoints[faceCells[loopA][0]].position[loopB];
     }
-    double d1 = MRIUtils::Do3DEucNorm(diff1);
-    double d2 = MRIUtils::Do3DEucNorm(diff2);
+
+    innerProd = 0.0;
+    for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
+      innerProd += diff1[loopB] * diff2[loopB];
+    }
+    if(fabs(innerProd) > kMathZero){
+      throw MRIException("ERROR: Face sides are not Orthogonal in buildFaceAreasAndNormals\n");
+    }
+    d1 = MRIUtils::Do3DEucNorm(diff1);
+    d2 = MRIUtils::Do3DEucNorm(diff2);
     // Evaluate Face Area
     faceArea[loopA] = d1 * d2;
     // Get the normal
     MRIUtils::Do3DExternalProduct(diff1,diff2,currNormal);
     MRIUtils::Normalize3DVector(currNormal);
+    //printf("NODE 1 POS: %f %f %f\n",node1Pos[0],node1Pos[1],node1Pos[2]);
+    //printf("CELL CENTRE POS: %f %f %f\n",cellPoints[faceCells[loopA][0]].position[0],cellPoints[faceCells[loopA][0]].position[1],cellPoints[faceCells[loopA][0]].position[2]);
+    //getchar();
     if(faceCells[loopA].size() == 1){
       prod = 0.0;
       for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
         prod += currNormal[loopB] * diff3[loopB];
       }
-      if(prod>0.0){
-        //printf("FLIPPED!\n");
-        currNormal[0] = - currNormal[0];
-        currNormal[1] = - currNormal[1];
-        currNormal[2] = - currNormal[2];
+      if(prod > kMathZero){
+        //printf("NODE 1 POS: %f %f %f\n",node1Pos[0],node1Pos[1],node1Pos[2]);
+        //printf("CELL CENTRE POS: %f %f %f\n",cellPoints[faceCells[loopA][0]].position[0],cellPoints[faceCells[loopA][0]].position[1],cellPoints[faceCells[loopA][0]].position[2]);
+        //printf("FLIPPED! Prod: %e, %f %f %f, %f %f %f\n",prod,currNormal[0],currNormal[1],currNormal[2],diff3[0],diff3[1],diff3[2]);
+        //getchar();
+        currNormal[0] *= - 1.0;
+        currNormal[1] *= - 1.0;
+        currNormal[2] *= - 1.0;
       }
     }
     faceNormal[loopA].push_back(currNormal[0]);
@@ -2774,6 +2854,7 @@ void MRIStructuredScan::CreateGridFromVTKStructuredPoints(vtkStructuredPointsOpt
   cellTotals[2] = opts.dimensions[2];
   // Assign total number of cells
   totalCellPoints = cellTotals[0] * cellTotals[1] * cellTotals[2];
+  cellPoints.resize(totalCellPoints);
   // Assign Cell spacing
   cellLengths.resize(3);
   cellLengths[0].resize(cellTotals[0]);
@@ -2799,19 +2880,21 @@ void MRIStructuredScan::CreateGridFromVTKStructuredPoints(vtkStructuredPointsOpt
   domainSizeMax[2] = opts.origin[2] + (opts.dimensions[2]-1) * opts.spacing[2];
   // Allocate the cells
   //cellPoints.reserve(totalCellPoints);
-  MRICell currentCell;
+  int count = 0;
   // Fill the position vectors
   double locCoordX = opts.origin[0];
   double locCoordY = opts.origin[1];
   double locCoordZ = opts.origin[2];
   for(int loopA=0;loopA<cellTotals[2];loopA++){
+    locCoordY = opts.origin[1];
     for(int loopB=0;loopB<cellTotals[1];loopB++){
+      locCoordX = opts.origin[0];
       for(int loopC=0;loopC<cellTotals[0];loopC++){
         // Set Cell positions
-        currentCell.position[0] = locCoordX;
-        currentCell.position[1] = locCoordY;
-        currentCell.position[2] = locCoordZ;
-        cellPoints.push_back(currentCell);
+        cellPoints[count].position[0] = locCoordX;
+        cellPoints[count].position[1] = locCoordY;
+        cellPoints[count].position[2] = locCoordZ;
+        count++;
         locCoordX += opts.spacing[0];
       }
       locCoordY += opts.spacing[1];
@@ -2899,6 +2982,7 @@ void readVTKVector(ifstream& vtkFile, int& lineCount,MRIDoubleMat& vtkVector){
   string buffer;
   bool finished = false;
   int count = 0;
+  int testCount = 0;
   double value;
   vector<string> tokenizedString;
   while(!finished){
@@ -2909,9 +2993,12 @@ void readVTKVector(ifstream& vtkFile, int& lineCount,MRIDoubleMat& vtkVector){
     if(buffer.find_first_not_of(' ') != std::string::npos){
       try{
         boost::split(tokenizedString, buffer, boost::is_any_of(" ,"), boost::token_compress_on);
+        //printf("Line: %d, Number of entries %d\n",lineCount,tokenizedString.size());
+        //getchar();
         for(int loopA=0;loopA<tokenizedString.size();loopA++){
           value = atof(tokenizedString[loopA].c_str());
           temp.push_back(value);
+          testCount++;
         }
       }catch(...){
         printf("COUGHT...\n");
@@ -3019,6 +3106,7 @@ void MRIStructuredScan::ReadVTKStructuredPoints(std::string vtkFileName, bool Do
         vtkVector.clear();
         readVTKVector(vtkFile,totalLinesInFile,vtkVector);
         if(vtkVector.size() != totalCellPoints){
+          printf("Vector Size %d, Total Cells %d\n",vtkVector.size(), totalCellPoints);
           throw MRIException("ERROR: Total number of vectors differs from number of cells.\n");
         }
       }
@@ -3290,6 +3378,264 @@ void MRIStructuredScan::ExportForPOISSON(string inputFileName){
   delete [] secondDerivs;
 }
 
+// ==================================================================
+// EXPORT TO POISSON SOLVER ONLY ELEMENTS WITH POSITIVE CONCENTRATION
+// ==================================================================
+void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double density,double viscosity){
+  // Declare
+  FILE* outFile;
+  outFile = fopen(inputFileName.c_str(),"w");
+  int totAuxNodes = (cellTotals[0] + 1) * (cellTotals[1] + 1) * (cellTotals[2] + 1);
+
+  // Get the mappings for nodes that need to be used
+  MRIIntVec nodeUsageMap;
+  MRIIntVec elUsageMap;
+  for(int loopA=0;loopA<totAuxNodes;loopA++){
+    nodeUsageMap.push_back(-1);
+  }
+  // Mark Used Nodes
+  int currAuxNode = 0;
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    if(cellPoints[loopA].concentration > 0.5){
+      for(int loopB=0;loopB<cellConnections[loopA].size();loopB++){
+        currAuxNode = cellConnections[loopA][loopB];
+        nodeUsageMap[currAuxNode] = 1;
+      }
+    }
+  }
+
+  // Renumber Nodes in nodeUsageMap
+  int usedNodeCount = 0;
+  for(int loopA=0;loopA<totAuxNodes;loopA++){
+    if(nodeUsageMap[loopA] > 0){
+      nodeUsageMap[loopA] = usedNodeCount;
+      usedNodeCount++;
+    }
+  }
+
+  // Build Element Mapping
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    elUsageMap.push_back(-1);
+  }
+  int elCount = 0;
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    if(cellPoints[loopA].concentration > 0.5){
+      elUsageMap[loopA] = elCount;
+      elCount++;
+    }
+  }
+
+  // ==================
+  // SAVE MESH TOPOLOGY
+  // ==================
+  // SAVE NODE COORDS ONLY FOR NODES NUMBERED IN USEDNODEMAP
+  if(totalCellPoints > 0){
+    double pos[3];
+    for(int loopA=0;loopA<totAuxNodes;loopA++){
+      if(nodeUsageMap[loopA] > -1){
+        getAuxNodeCoordinates(loopA,pos);
+        fprintf(outFile,"NODE %d %e %e %e\n",nodeUsageMap[loopA]+1,pos[0],pos[1],pos[2]);
+      }
+    }
+
+    // SAVE ELEMENT CONNECTIONS
+    elCount = 0;
+    for(int loopA=0;loopA<totalCellPoints;loopA++){
+      if(cellPoints[loopA].concentration > 0.5){
+        fprintf(outFile,"ELEMENT HEXA8 %d 1 ",elCount+1);
+        elCount++;
+        for(int loopB=0;loopB<cellConnections[loopA].size();loopB++){
+          fprintf(outFile,"%d ",nodeUsageMap[cellConnections[loopA][loopB]] + 1);
+        }
+        fprintf(outFile,"\n");
+      }
+    }
+  }
+
+  // ========================
+  // SAVE ELEMENT DIFFUSIVITY
+  // ========================
+  elCount = 0;
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    if(cellPoints[loopA].concentration > 0.5){
+      fprintf(outFile,"ELDIFF %d ",elCount+1);
+      //fprintf(outFile,"%e ",cellPoints[loopA].concentration);
+      //fprintf(outFile,"%e ",cellPoints[loopA].concentration);
+      //fprintf(outFile,"%e ",cellPoints[loopA].concentration);
+      fprintf(outFile,"%e ",1.0);
+      fprintf(outFile,"%e ",1.0);
+      fprintf(outFile,"%e ",1.0);
+      fprintf(outFile,"\n");
+      elCount++;
+    }
+  }
+
+  // ================
+  // SAVE SOURCE TERM
+  // ================
+  MRIDoubleMat poissonSourceVec;
+  MRIDoubleMat poissonViscousTerm;
+  MRIDoubleVec temp;
+  MRIDoubleVec tempViscous;
+  double currValue = 0.0;
+  double currValueViscous = 0.0;
+  // First and Second Derivatives
+  double** firstDerivs = new double*[kNumberOfDimensions];
+  double** secondDerivs = new double*[kNumberOfDimensions];
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    firstDerivs[loopA] = new double[kNumberOfDimensions];
+    secondDerivs[loopA] = new double[kNumberOfDimensions];
+  }
+
+  // Loop on cells
+  elCount = 0;
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    // Only Cells with significant Concentration
+    if(cellPoints[loopA].concentration > 0.5){
+      // Eva Spatial Derivatives
+      EvalSpaceDerivs(loopA, firstDerivs, secondDerivs);
+      // Eval the Convective term for the current Cell
+      temp.clear();
+      tempViscous.clear();
+      for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
+        currValue = 0.0;
+        currValueViscous = 0.0;
+        for(int loopC=0;loopC<kNumberOfDimensions;loopC++){
+          // Same velocity component on columns
+          currValue += cellPoints[loopA].velocity[loopC] * firstDerivs[loopC][loopB];
+          currValueViscous += secondDerivs[loopC][loopB];
+          //printf("deriv: %f ",secondDerivs[loopC][loopB]);
+        }
+        //printf("\n");
+        // Add Component
+        // Blood Density in m/s: CAREFULL !!!
+        temp.push_back(currValue);
+        // Blood Viscosity in m/s: CAREFULL !!!!
+        tempViscous.push_back(viscosity * currValueViscous);
+        //printf("Non Linear Term: %f, Viscous Term: %f\n",currValue,currValueViscous);
+      }
+      //printf("---\n");
+      //getchar();
+      // Add to the global Vector: Only Elements with significant concentration
+      poissonSourceVec.push_back(temp);
+      poissonViscousTerm.push_back(tempViscous);
+      elCount++;
+    }else{
+      // Add Zero for the cells with negligible concentration
+      temp.clear();
+      for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
+        temp.push_back(0.0);
+      }
+      poissonSourceVec.push_back(temp);
+      poissonViscousTerm.push_back(temp);
+    }
+  }
+
+  // Convert Cell Vector to Face Vector
+  bool deleteWalls = false;
+  MRIThresholdCriteria* crit = new MRIThresholdCriteria(kCriterionLessThen,kNoQuantity,0.0);
+  MRIDoubleVec poissonSourceFaceVec;
+  cellToFacePartial(elUsageMap,crit,poissonSourceVec,poissonSourceFaceVec);
+
+  // Eval the integral of the divergence over the cell
+  MRIDoubleVec cellDivs;
+  cellDivs = evalCellDivergences(poissonSourceFaceVec);
+
+  // Divide by the volume
+  MRIDoubleVec sourcesToApply;
+  double currVol = 0.0;
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    // Evaluate current cell volume
+    currVol = evalCellVolume(loopA);
+    // Store source term
+    sourcesToApply.push_back(- density * cellDivs[loopA]/currVol);
+  }
+
+  // SAVE ELEMENT SOURCES TO FILE
+  elCount = 0;
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    if(cellPoints[loopA].concentration > 0.5){
+      fprintf(outFile,"ELSOURCE %d %e\n",elCount+1,sourcesToApply[loopA]);
+      elCount++;
+    }
+  }
+
+  // =====================
+  // SAVE NEUMANN BOUNDARY
+  // =====================
+  int currCell = 0;
+  double currVec[3] = {0.0};
+  double normComp = 0.0;
+  int numPos = 0;
+  int numNeg = 0;
+  // Loop on the free faces
+  for(int loopA=0;loopA<faceCells.size();loopA++){
+    // Check if the face is free
+    if(faceCells[loopA].size() == 1){
+      // Get Current element
+      currCell = faceCells[loopA][0];
+      // Only Cells with significant concentration
+      if(cellPoints[currCell].concentration > 0.5){
+        // Get Velocity Component
+        // Check SIGN !!!
+        currVec[0] = density * poissonSourceVec[currCell][0] - poissonViscousTerm[currCell][0];
+        currVec[1] = density * poissonSourceVec[currCell][1] - poissonViscousTerm[currCell][1];
+        currVec[2] = density * poissonSourceVec[currCell][2] - poissonViscousTerm[currCell][2];
+        // Get Normal Component
+        normComp = 0.0;
+        for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
+          normComp += currVec[loopB] * faceNormal[loopA][loopB];
+        }
+        // Multiply by the face area
+        currValue = faceArea[loopA] * normComp;
+        if(currValue > 0.0){
+          numPos++;
+        }else{
+          numNeg++;
+        }
+        // Print Line
+        if(fabs(currValue) > kMathZero){
+          fprintf(outFile,"FACENEUMANN %d ",elUsageMap[currCell] + 1);
+          for(int loopB=0;loopB<faceConnections[loopA].size();loopB++){
+            fprintf(outFile,"%d ",nodeUsageMap[faceConnections[loopA][loopB]] + 1);
+          }
+          fprintf(outFile,"%e\n",currValue);
+        }
+      }
+    }
+  }
+  //printf("Positives: %d, Negatives: %d\n",numPos,numNeg);
+
+  // =====================================================
+  // SAVE DIRICHELET BCS - NO DIRICHELET CONDITIONS NEEDED
+  // BUT RHS SUM MUST BE ZERO
+  // =====================================================
+  /*
+  bool found = false;
+  int count = 0;
+  while(!found){
+    found = (cellPoints[count].concentration > 0.5);
+    if(!found){
+      count++;
+    }
+  }
+  fprintf(outFile,"NODEDIRBC %d 0.0\n",nodeUsageMap[cellConnections[count][0]] + 1);
+  */
+
+  // Close Output file
+  fclose(outFile);
+
+  // Free Memory
+  delete crit;
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    delete [] firstDerivs[loopA];
+    delete [] secondDerivs[loopA];
+  }
+  delete [] firstDerivs;
+  delete [] secondDerivs;
+}
+
+
 // ==========================
 // CONVERT CELL ARRAY TO FACE
 // ==========================
@@ -3353,6 +3699,68 @@ void MRIStructuredScan::cellToFace(bool deleteWalls, MRIThresholdCriteria* thres
     }
   }
 
+  // Divide By the Number Of Faces
+  for(int loopA=0;loopA<totalFaces;loopA++){
+    if(resID[loopA]>0) faceVec[loopA] = ((double)faceVec[loopA]/(double)resID[loopA]);
+    else faceVec[loopA] = 0.0;
+  }
+}
+
+// ====================================================================
+// CONVERT CELL ARRAY TO FACE - ONLY CELLS WITH A CERTAIN CONCENTRATION
+// ====================================================================
+void MRIStructuredScan::cellToFacePartial(MRIIntVec elUsageMap, MRIThresholdCriteria* thresholdCriteria,
+                                          MRIDoubleMat cellVec, MRIDoubleVec &faceVec){
+  bool   continueToProcess = false;
+  double currentValue = 0.0;
+  double faceComponent = 0.0;
+  int    currentFace = 0;
+  double currFaceArea = 0.0;
+  bool   checkNotPassed = false;
+  MRIIntVec resID;
+  double currVel = 0.0;
+
+  // Get Total Number Of Faces
+  int totalFaces = faceConnections.size();
+
+  // Init
+  faceVec.resize(totalFaces);
+  resID.resize(totalFaces);
+  for(int loopA=0;loopA<totalFaces;loopA++){
+    faceVec[loopA] = 0.0;
+    resID[loopA] = 0;
+  }
+
+  // Loop To Assemble Residual Vector
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    // Check for BC
+    if(cellPoints[loopA].concentration > 0.5){
+      // Loop On Faces
+      for(int loopB=0;loopB<k3DNeighbors;loopB++){
+        // Get Current Face
+        currentFace = cellFaces[loopA][loopB];
+        // Get Face Area
+        currFaceArea = faceArea[currentFace];
+        // Get Normal Veclocity
+        faceComponent = 0.0;
+        for(int loopC=0;loopC<kNumberOfDimensions;loopC++){
+          currVel = cellVec[loopA][loopC];
+          faceComponent += currVel * faceNormal[currentFace][loopC];
+        }
+        // Assemble
+        faceVec[currentFace] = faceVec[currentFace] + currFaceArea * faceComponent;
+        resID[currentFace]++;
+      }
+    }
+  }
+  // Check Faces
+  for(int loopA=0;loopA<totalFaces;loopA++){
+    checkNotPassed = (resID[loopA]>2);
+    if(checkNotPassed){
+      std::string currentMsgs = "Internal: Wrong Face Connectivity, Face: " + MRIUtils::IntToStr(loopA)+ "; Connectivity: " + MRIUtils::IntToStr(resID[loopA])+".";
+      throw new MRIMeshCompatibilityException(currentMsgs.c_str());
+    }
+  }
   // Divide By the Number Of Faces
   for(int loopA=0;loopA<totalFaces;loopA++){
     if(resID[loopA]>0) faceVec[loopA] = ((double)faceVec[loopA]/(double)resID[loopA]);

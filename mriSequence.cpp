@@ -181,25 +181,25 @@ void MRISequence::ExportToVOL(std::string outfileName){
 }
 
 // Export to Poisson Solver
-void MRISequence::ExportForPOISSON(string inputFileName){
+void MRISequence::ExportForPOISSON(string inputFileName,double density,double viscosity){
   string name;
   for(int loopA=0;loopA<totalScans;loopA++){
-    name = inputFileName + to_string(loopA);
-    sequence[loopA]->ExportForPOISSON(name);
+    name = inputFileName;
+    //sequence[loopA]->ExportForPOISSON(name);
+    sequence[loopA]->ExportForPOISSONPartial(name,density,viscosity);
   }
 }
 
 // EXPORT TO SEQUENCE OF VTK FILES
 void MRISequence::ExportToVTK(std::string outfileName){
   // Export All Data
-  string outputName;
   int index = 0;
   WriteSchMessage("\n");
   for(int loopA=0;loopA<totalScans;loopA++){
-    outputName = outfileName;
-    index = outputName.size();
-    outputName.insert(index-4,string("_Step" + to_string(loopA)).c_str());
-    sequence[loopA]->ExportToVTK(outputName);
+    //outputName = outfileName;
+    //index = outputName.size();
+    //outputName.insert(index-4,string("_Step" + to_string(loopA)).c_str());
+    sequence[loopA]->ExportToVTK(outfileName);
   }
 }
 
@@ -323,6 +323,16 @@ void MRISequence::DistributeSequenceData(MRICommunicator* comm){
   // Create New Sequence
   for(int loopA=0;loopA<this->totalScans;loopA++){
     sequence[loopA]->DistributeScanData(comm);
+  }
+}
+
+// =============================
+// PERFORM BASIC DATA FILTERING
+// =============================
+void MRISequence::ApplyMedianFilter(int qtyID,int maxIt, bool useMedian){
+  // Create New Sequence
+  for(int loopA=0;loopA<this->totalScans;loopA++){
+    sequence[loopA]->ApplyMedianFilter(qtyID,maxIt,useMedian);
   }
 }
 

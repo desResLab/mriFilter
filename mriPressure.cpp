@@ -209,7 +209,7 @@ void MRIStructuredScan::EvalSpaceDerivs(int currentCell, double** firstDerivs, d
   // Map Index To Coords
   int* currentCellCoords = new int[kNumberOfDimensions];
   MapIndexToCoords(currentCell,currentCellCoords);
-  int firstCell,secondCell;
+  int firstCell,secondCell,currCell;
 
   // Assemble Terms
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
@@ -219,12 +219,22 @@ void MRIStructuredScan::EvalSpaceDerivs(int currentCell, double** firstDerivs, d
         if((currentCellCoords[0]-1)<0){
           firstCell = -1;
         }else{
-          firstCell = MapCoordsToIndex(currentCellCoords[0]-1,currentCellCoords[1],currentCellCoords[2]);
+          currCell = MapCoordsToIndex(currentCellCoords[0]-1,currentCellCoords[1],currentCellCoords[2]);
+          if(cellPoints[currCell].concentration < 0.5){
+            firstCell = -1;
+          }else{
+            firstCell = currCell;
+          }
         }
         if((currentCellCoords[0]+1)>(cellTotals[0]-1)){
           secondCell = -1;
         }else{
-          secondCell = MapCoordsToIndex(currentCellCoords[0]+1,currentCellCoords[1],currentCellCoords[2]);
+          currCell = MapCoordsToIndex(currentCellCoords[0]+1,currentCellCoords[1],currentCellCoords[2]);
+          if(cellPoints[currCell].concentration < 0.5){
+            secondCell = -1;
+          }else{
+            secondCell = currCell;
+          }
         }
         break;
       case 1:
@@ -232,12 +242,22 @@ void MRIStructuredScan::EvalSpaceDerivs(int currentCell, double** firstDerivs, d
         if((currentCellCoords[1]-1)<0){
           firstCell = -1;
         }else{
-          firstCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1]-1,currentCellCoords[2]);
+          currCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1]-1,currentCellCoords[2]);
+          if(cellPoints[currCell].concentration < 0.5){
+            firstCell = -1;
+          }else{
+            firstCell = currCell;
+          }
         }
         if((currentCellCoords[1]+1)>(cellTotals[1]-1)){
           secondCell = -1;
         }else{
-          secondCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1]+1,currentCellCoords[2]);
+          currCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1]+1,currentCellCoords[2]);
+          if(cellPoints[currCell].concentration < 0.5){
+            secondCell = -1;
+          }else{
+            secondCell = currCell;
+          }
         }
         break;
       case 2:
@@ -245,12 +265,22 @@ void MRIStructuredScan::EvalSpaceDerivs(int currentCell, double** firstDerivs, d
         if((currentCellCoords[2]-1)<0){
           firstCell = -1;
         }else{
-          firstCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1],currentCellCoords[2]-1);
+          currCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1],currentCellCoords[2]-1);
+          if(cellPoints[currCell].concentration < 0.5){
+            firstCell = -1;
+          }else{
+            firstCell = currCell;
+          }
         }
         if((currentCellCoords[2]+1)>(cellTotals[2]-1)){
           secondCell = -1;
         }else{
-          secondCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1],currentCellCoords[2]+1);
+          currCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1],currentCellCoords[2]+1);
+          if(cellPoints[currCell].concentration < 0.5){
+            secondCell = -1;
+          }else{
+            secondCell = currCell;
+          }
         }
         break;
     }
@@ -292,13 +322,26 @@ void MRIStructuredScan::EvalSpaceDerivs(int currentCell, double** firstDerivs, d
       // FIRST DERIVS
       if(firstCell<0){
         // Simple Euler Formula
-        firstDerivs[loopA][loopB] = (secondVComponent-currentVComponent)/(deltaPlus);
+        if(fabs(deltaPlus) > kMathZero){
+          firstDerivs[loopA][loopB] = (secondVComponent-currentVComponent)/(deltaPlus);
+        }else{
+          firstDerivs[loopA][loopB] = 0.0;
+        }
       }else if (secondCell<0){
         // Simple Euler Formula
-        firstDerivs[loopA][loopB] = (currentVComponent-firstVComponent)/(deltaMinus);
+        if(fabs(deltaMinus) > kMathZero){
+          firstDerivs[loopA][loopB] = (currentVComponent-firstVComponent)/(deltaMinus);
+        }else{
+          firstDerivs[loopA][loopB] = 0.0;
+        }
       }else if((firstCell>-1)&&(secondCell>-1)){
         // Central Difference Formula: CAREFULL: ONLY FIRST ORDER IF GRID SPACING VARIES SIGNIFICANTLY
-        firstDerivs[loopA][loopB] = (secondVComponent-firstVComponent)/(deltaPlus + deltaMinus);
+        if((deltaPlus + deltaMinus) > kMathZero){
+          firstDerivs[loopA][loopB] = (secondVComponent-firstVComponent)/(deltaPlus + deltaMinus);
+        }else{
+          firstDerivs[loopA][loopB] = 0.0;
+        }
+
       }else{
         // Show Error Message
         throw MRIPressureComputationException("Error: Both First and Second Cells are Zero in EvalFirstSpaceDerivs");
@@ -997,9 +1040,13 @@ void MRIScan::PerformPressureIterations(){
 // ===================
 // APPLY MEDIAN FILTER
 // ===================
-void MRIScan::ApplyMedianFilter(int qtyID,int maxIt){
+void MRIScan::ApplyMedianFilter(int qtyID,int maxIt, bool useMedian){
   // DECLARE
-  WriteSchMessage(std::string("Applying Median Filter...\n"));
+  if(useMedian){
+    WriteSchMessage(std::string("Applying Median Filter...\n"));
+  }else{
+    WriteSchMessage(std::string("Applying Gaussian Filter...\n"));
+  }
   std::vector<double> neighValues;
   double* tempVec = new double[totalCellPoints];
   double currValue = 0.0;
@@ -1030,8 +1077,12 @@ void MRIScan::ApplyMedianFilter(int qtyID,int maxIt){
           neighValues.push_back(currValue);
         }
         // FIND MEDIAN VALUE
-        //currMedian = MRIUtils::GetMedian(neighValues);
-        currMedian = MRIUtils::GetMean(neighValues);
+        if(useMedian){
+          currMedian = MRIUtils::GetMedian(neighValues);
+        }else{
+          currMedian = MRIUtils::GetMean(neighValues);
+        }
+
         // EVAL CHANGE
         if (fabs(centerCellValue)>1.0e-7){
           currError = fabs(((currMedian-centerCellValue)/(double)centerCellValue)*100.0);

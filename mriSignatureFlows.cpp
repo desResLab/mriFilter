@@ -6,7 +6,7 @@
 
 // STAGNATION FLOW SOLUTION
 void MRIStructuredScan::AssignStagnationFlowSignature(MRIDirection dir){
-  double bConst = 1.0;
+  double bConst = -1.0;
   double xCoord,yCoord,zCoord;
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     // Set to Zero
@@ -413,22 +413,26 @@ void MRIStructuredScan::AssignPoiseilleSignature(MRIDirection dir){
       case kdirX:
         currentDistance = sqrt((cellPoints[loopA].position[1] - centerPoint[1])*(cellPoints[loopA].position[1] - centerPoint[1]) +
                                (cellPoints[loopA].position[2] - centerPoint[2])*(cellPoints[loopA].position[2] - centerPoint[2]));
-        totalDistance = 0.6*min(0.5*(domainSizeMax[1]-domainSizeMin[1]),0.5*(domainSizeMax[2]-domainSizeMin[2]));
+        //totalDistance = 0.5*min(0.5*(domainSizeMax[1]-domainSizeMin[1]),0.5*(domainSizeMax[2]-domainSizeMin[2]));
+        totalDistance = 0.00855;
         break;
       case kdirY:
         currentDistance = sqrt((cellPoints[loopA].position[0] - centerPoint[0])*(cellPoints[loopA].position[0] - centerPoint[0]) +
                                (cellPoints[loopA].position[2] - centerPoint[2])*(cellPoints[loopA].position[2] - centerPoint[2]));
-        totalDistance = 0.6*min(0.5*(domainSizeMax[0]-domainSizeMin[0]),0.5*(domainSizeMax[2]-domainSizeMin[2]));
+        //totalDistance = 0.5*min(0.5*(domainSizeMax[0]-domainSizeMin[0]),0.5*(domainSizeMax[2]-domainSizeMin[2]));
+        totalDistance = 0.00855;
         break;
       case kdirZ:
         currentDistance = sqrt((cellPoints[loopA].position[0] - centerPoint[0])*(cellPoints[loopA].position[0] - centerPoint[0]) +
                                (cellPoints[loopA].position[1] - centerPoint[1])*(cellPoints[loopA].position[1] - centerPoint[1]));
-        totalDistance = 0.6*min(0.5*(domainSizeMax[0]-domainSizeMin[0]),0.5*(domainSizeMax[1]-domainSizeMin[1]));
+        //totalDistance = 0.5*min(0.5*(domainSizeMax[0]-domainSizeMin[0]),0.5*(domainSizeMax[1]-domainSizeMin[1]));
+        totalDistance = 0.00855;
         break;
     }
+    double peakVel = 0.22938;
     // Apply a threshold
     if(currentDistance<totalDistance){
-      currentVelocity = -(4.0/(totalDistance*totalDistance))*(currentDistance*currentDistance)+4.0;
+      currentVelocity = -(peakVel/(totalDistance*totalDistance))*(currentDistance*currentDistance) + peakVel;
       conc = 1.0;
     }else{
       currentVelocity = 0.0;
@@ -607,11 +611,12 @@ void MRIStructuredScan::AssignTimeDependentPoiseilleSignature(double omega, doub
     normRadius = (localRadius/radius);
     bValue = (1.0 - normRadius)*sqrt(omegaMod/2.0);
     // Assign Velocity
+    double peakVel = 4.0;
     if (normRadius<=1.0){
       if (normRadius>kMathZero){
-        cellPoints[loopA].velocity[0] = maxVel*((4.0/omegaMod)*(sin(omega*currtime)-((exp(-bValue))/(sqrt(normRadius)))*sin(omega*currtime-bValue)));
+        cellPoints[loopA].velocity[0] = maxVel*((peakVel/omegaMod)*(sin(omega*currtime)-((exp(-bValue))/(sqrt(normRadius)))*sin(omega*currtime-bValue)));
       }else{
-        cellPoints[loopA].velocity[0] = maxVel*((4.0/omegaMod)*(sin(omega*currtime)));
+        cellPoints[loopA].velocity[0] = maxVel*((peakVel/omegaMod)*(sin(omega*currtime)));
       }
       cellPoints[loopA].velocity[1] = 0.0;
       cellPoints[loopA].velocity[2] = 0.0;

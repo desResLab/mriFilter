@@ -86,6 +86,16 @@ public:
   bool evalPressure;
   // Export to Poisson Solver
   bool exportToPoisson;
+  string poissonFileName;
+
+  // Options for the material properties
+  double density;
+  double viscosity;
+
+  // Filtering Options
+  bool applyMedianFilter;
+  int filterNumIterations;
+  bool filterUseMedian;
 
   // CONSTRUCTOR
   MRIOptions();

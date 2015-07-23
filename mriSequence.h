@@ -37,7 +37,7 @@ class MRISequence{
     void ExportToVOL(std::string outfileName);
     void ExportToVTK(std::string outfileName);
     void WriteExpansionFile(string fileName);
-    void ExportForPOISSON(string inputFileName);
+    void ExportForPOISSON(string inputFileName,double density,double viscosity);
 
     // SAVE QUANTITIES TO OUTPUTS
     void saveVelocity();
@@ -60,6 +60,9 @@ class MRISequence{
 
     // ADD NOISE
     void applyNoise(double noiseIntensity);
+
+    // FILTER DATA
+    void ApplyMedianFilter(int qtyID,int maxIt, bool useMedian);
     
     // File List Printing
     void PrintSequenceFiles(std::string outFIleName);

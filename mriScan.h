@@ -97,7 +97,7 @@ class MRIScan{
     void EvalPressureIterative(int currentCell, double currentValue, bool* visitedCell, std::vector<int> &cellStack,int& cellCount);
 
     // FILTERING
-    void ApplyMedianFilter(int qtyID,int maxIt);
+    virtual void ApplyMedianFilter(int qtyID,int maxIt, bool useMedian);
     void ApplyThresholding(MRIThresholdCriteria* thresholdCriteria);
     void ApplySmoothingFilter();
     void ApplyGaussianNoise(double stDev);
@@ -129,6 +129,7 @@ class MRIScan{
     virtual void ExportToVTK(std::string fileName){throw MRIException("Error: Not Implemented!");}
     virtual void ExportToTECPLOT(std::string FileName, bool isFirstFile){throw MRIException("Error: Not Implemented!");}
     virtual void ExportForPOISSON(string inputFileName){throw MRIException("Error: Not Implemented!");}
+    virtual void ExportForPOISSONPartial(string inputFileName,double density,double viscosity){throw MRIException("Error: Not Implemented!");}
     virtual void WriteExpansionFile(std::string fileName){throw MRIException("Error: Not Implemented!");}
 
     // MODEL MANIPULATION

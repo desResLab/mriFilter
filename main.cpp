@@ -931,6 +931,15 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
     }
   }
 
+  // FILTER DATA IF REQUIRED
+  if(comm->currProc == 0){
+    if (opts->applyMedianFilter){
+      MyMRISequence->ApplyMedianFilter(kQtyVelocityX,opts->filterNumIterations,opts->filterUseMedian);
+      MyMRISequence->ApplyMedianFilter(kQtyVelocityY,opts->filterNumIterations,opts->filterUseMedian);
+      MyMRISequence->ApplyMedianFilter(kQtyVelocityZ,opts->filterNumIterations,opts->filterUseMedian);
+    }
+  }
+
   // APPLY NOISE
   if (opts->applyNoise){
     MyMRISequence->applyNoise(opts->noiseIntensity);
@@ -1016,8 +1025,7 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
   // SAVE FILE FOR POISSON COMPUTATION
   if(comm->currProc == 0){
     if (opts->exportToPoisson){
-      string inputFileName("poissonExport.dat");
-      MyMRISequence->ExportForPOISSON(inputFileName);
+      MyMRISequence->ExportForPOISSON(opts->poissonFileName,opts->density,opts->viscosity);
     }
   }
 
@@ -1244,6 +1252,7 @@ int main(int argc, char **argv){
       WriteSchMessage(std::string("Program Terminated.\n"));
     }
     // Finalize MPI
+    delete options;
     MPI::Finalize();
     return -1;
   }

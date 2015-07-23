@@ -121,6 +121,8 @@ void MRIScan::ApplySmoothingFilter(){
 
 // APPLY GAUSSIAN NOISE
 void MRIScan::ApplyGaussianNoise(double stDev){
+  // Multiply by the velocity module
+  stDev = stDev * maxVelModule / 100.0;
   // Apply Gaussian Noise
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
     // Loop On Cells

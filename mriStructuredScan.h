@@ -137,7 +137,10 @@ class MRIStructuredScan: public MRIScan{
     virtual void ExportToTECPLOT(std::string FileName, bool isFirstFile);
     virtual void ExportToVTK(std::string fileName);
     virtual void WriteExpansionFile(std::string fileName);
-    void         ExportForPOISSON(string inputFileName);
+    // Export all elements to Poisson Solver
+    virtual void ExportForPOISSON(string inputFileName);
+    // Export to Poisson Solver Only element with significant concentration
+    virtual void ExportForPOISSONPartial(string inputFileName,double density,double viscosity);
 
     // ========
     // VOL DATA
@@ -176,6 +179,7 @@ class MRIStructuredScan: public MRIScan{
     double evalCellVolume(int cellNumber);
     // OTHER
     int GetCellFaceID(int CellId,int FaceId);
+    bool hasUniformSpacing();
 
     // =============================
     // TRANSFORMATIONS AND THRESHOLD
@@ -228,6 +232,8 @@ class MRIStructuredScan: public MRIScan{
 
     // Map cell vector to face vector
     void cellToFace(bool deleteWalls, MRIThresholdCriteria* thresholdCriteria,MRIDoubleMat cellVec, MRIDoubleVec &faceVec);
+    void cellToFacePartial(MRIIntVec elUsageMap, MRIThresholdCriteria* thresholdCriteria,
+                           MRIDoubleMat cellVec, MRIDoubleVec &faceVec);
 
     // =========
     // MP FILTER
@@ -291,8 +297,7 @@ class MRIStructuredScan: public MRIScan{
     // APPLY SMOOTHING FILTER - LAVISION
     void ApplySmoothingFilter();
 
-    // APPLY MEDIAN FILTER
-    void ApplyMedianFilter(int qtyID,int maxIt);
+    // THRESHOLD
     void ThresholdQuantity(int qtyID,double threshold);
     void EvalNoisyPressureGradientPoints();
   

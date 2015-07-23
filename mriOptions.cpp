@@ -44,9 +44,17 @@ MRIOptions::MRIOptions(){
   evalPressure = false;
   // Export to Poisson
   exportToPoisson = false;
+  poissonFileName = "solution.vtk";
   // Add Noise
   applyNoise = false;
   noiseIntensity = 0.0;
+  // Init with Water Density and Viscosity
+  density = 1000.0;
+  viscosity = 1.0e-3;
+  // Init with No Median Filter
+  applyMedianFilter = false;
+  filterNumIterations = 1;
+  filterUseMedian = false;
 }
 
 MRIOptions::~MRIOptions(){
@@ -293,6 +301,32 @@ int MRIOptions::getOptionsFromCommandFile(string commandFile){
       }catch(...){
         throw MRIException("ERROR: Invalid Statistics File.\n");
       }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("DENSITY")){
+        try{
+          density = atof(tokenizedString[1].c_str());
+        }catch(...){
+          throw MRIException("ERROR: Invalid Density Value.\n");
+        }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("APPLYMEDIANFILTER")){
+        try{
+          applyMedianFilter = true;
+          filterNumIterations = atoi(tokenizedString[1].c_str());
+          if(boost::to_upper_copy(tokenizedString[2]) == std::string("MEDIAN")){
+            filterUseMedian = true;
+          }else if(boost::to_upper_copy(tokenizedString[2]) == std::string("GAUSSIAN")){
+            filterUseMedian = false;
+          }else{
+            throw MRIException("ERROR: Invalid Filter Type.\n");
+          }
+        }catch(...){
+          throw MRIException("ERROR: Invalid Density Value.\n");
+        }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("VISCOSITY")){
+        try{
+          viscosity = atof(tokenizedString[1].c_str());
+        }catch(...){
+          throw MRIException("ERROR: Invalid Density Value.\n");
+        }
     }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("SMPITERATIONTOLERANCE")){
       try{
         itTol = atof(tokenizedString[1].c_str());
@@ -443,6 +477,8 @@ int MRIOptions::getOptionsFromCommandFile(string commandFile){
       }else{
         throw MRIException("ERROR: Invalid logical value for exportToPoisson.\n");
       }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("POISSONFILE")){
+      poissonFileName = tokenizedString[1];
     }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("ADDNOISE")){
       applyNoise = true;
       try{
