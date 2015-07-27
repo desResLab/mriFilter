@@ -414,22 +414,26 @@ void MRIStructuredScan::AssignPoiseilleSignature(MRIDirection dir){
         currentDistance = sqrt((cellPoints[loopA].position[1] - centerPoint[1])*(cellPoints[loopA].position[1] - centerPoint[1]) +
                                (cellPoints[loopA].position[2] - centerPoint[2])*(cellPoints[loopA].position[2] - centerPoint[2]));
         //totalDistance = 0.5*min(0.5*(domainSizeMax[1]-domainSizeMin[1]),0.5*(domainSizeMax[2]-domainSizeMin[2]));
-        totalDistance = 0.00855;
+        //totalDistance = 0.00855;
+        totalDistance = 0.01;
         break;
       case kdirY:
         currentDistance = sqrt((cellPoints[loopA].position[0] - centerPoint[0])*(cellPoints[loopA].position[0] - centerPoint[0]) +
                                (cellPoints[loopA].position[2] - centerPoint[2])*(cellPoints[loopA].position[2] - centerPoint[2]));
         //totalDistance = 0.5*min(0.5*(domainSizeMax[0]-domainSizeMin[0]),0.5*(domainSizeMax[2]-domainSizeMin[2]));
-        totalDistance = 0.00855;
+        //totalDistance = 0.00855;
+        totalDistance = 0.01;
         break;
       case kdirZ:
         currentDistance = sqrt((cellPoints[loopA].position[0] - centerPoint[0])*(cellPoints[loopA].position[0] - centerPoint[0]) +
                                (cellPoints[loopA].position[1] - centerPoint[1])*(cellPoints[loopA].position[1] - centerPoint[1]));
         //totalDistance = 0.5*min(0.5*(domainSizeMax[0]-domainSizeMin[0]),0.5*(domainSizeMax[1]-domainSizeMin[1]));
-        totalDistance = 0.00855;
+        //totalDistance = 0.00855;
+        totalDistance = 0.01;
         break;
     }
-    double peakVel = 0.22938;
+    //double peakVel = 0.22938;
+    double peakVel = 0.4265;
     // Apply a threshold
     if(currentDistance<totalDistance){
       currentVelocity = -(peakVel/(totalDistance*totalDistance))*(currentDistance*currentDistance) + peakVel;

@@ -97,11 +97,14 @@ public:
   int filterNumIterations;
   bool filterUseMedian;
 
+  // Clean Boundary Velocities
+  bool cleanBoundaryVelocities;
+  bool interpolateBoundaryVelocities;
+
   // CONSTRUCTOR
   MRIOptions();
   // Distructor
   ~MRIOptions();
-
 
   // Get Command Options from input Arguments
   int getCommadLineOptions(int argc, char **argv);

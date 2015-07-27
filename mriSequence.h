@@ -82,6 +82,10 @@ class MRISequence{
 
     // MESSAGE PASSING
     void DistributeSequenceData(MRICommunicator* comm);
+
+    // CLEAN COMPONENTS ON BOUNDARY
+    void cleanNormalComponentOnBoundary();
+    void InterpolateBoundaryVelocities();
 };
 
 #endif // MRISEQUENCE_H

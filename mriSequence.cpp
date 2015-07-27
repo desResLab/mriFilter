@@ -336,6 +336,25 @@ void MRISequence::ApplyMedianFilter(int qtyID,int maxIt, bool useMedian){
   }
 }
 
+// ===========================
+// CLEAN COMPONENT ON BOUNDARY
+// ===========================
+void MRISequence::cleanNormalComponentOnBoundary(){
+  for(int loopA=0;loopA<this->totalScans;loopA++){
+    sequence[loopA]->cleanNormalComponentOnBoundary();
+  }
+}
+
+// ===============================
+// INTERPOLATE BOUNDARY VELOCITIES
+// ===============================
+void MRISequence::InterpolateBoundaryVelocities(){
+  printf("Interpolating Boundary Velocities...\n");
+  for(int loopA=0;loopA<this->totalScans;loopA++){
+    sequence[loopA]->InterpolateBoundaryVelocities();
+  }
+}
+
 
 
 

@@ -44,6 +44,7 @@ class MRIScan{
     // Velocities And Concentrations for all Measure Points
     int totalCellPoints;
     vector<MRICell> cellPoints;
+    MRIIntVec mriCellTags;
     // Output Quantities
     vector<MRIOutput> outputs;
     // Utility Functions
@@ -172,6 +173,10 @@ class MRIScan{
 
     // MESSAGE PASSING
     virtual void DistributeScanData(MRICommunicator* comm);
+
+    // CLEAN VELOCITIES ON BOUNDARY
+    virtual void cleanNormalComponentOnBoundary(){throw MRIException("Error: Not Implemented!");}
+    virtual void InterpolateBoundaryVelocities(){throw MRIException("Error: Not Implemented!");}
 };
 
 #endif // MRISCAN_H

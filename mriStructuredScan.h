@@ -356,6 +356,14 @@ class MRIStructuredScan: public MRIScan{
    void formVortexList(int totVortex,int* minFace,int* maxFace,MRIIntVec& innerVortexList,MRIIntVec& boundaryVortexList,MRICommunicator* comm);
    void passScanData(MRICommunicator* comm);
    virtual void DistributeScanData(MRICommunicator* comm);
+
+   // BOUNDARY CLEANING
+   virtual void cleanNormalComponentOnBoundary();
+   virtual void InterpolateBoundaryVelocities();
+   void projectCellVelocity(int cell,double* normal);
+   int getOppositeCell(int cell, double* normal);
+   void tagByNeighbour(int tag,int* cellTags, bool* isTaggable,int startingCell);
+   bool hasUntaggedNeighbours(int cell,int* cellTags, bool* isTaggable);
 };
 
 #endif // MRISTRUCTUREDSCAN_H

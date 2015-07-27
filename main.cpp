@@ -931,6 +931,11 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
     }
   }
 
+  // APPLY NOISE
+  if (opts->applyNoise){
+    MyMRISequence->applyNoise(opts->noiseIntensity);
+  }
+
   // FILTER DATA IF REQUIRED
   if(comm->currProc == 0){
     if (opts->applyMedianFilter){
@@ -940,9 +945,18 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
     }
   }
 
-  // APPLY NOISE
-  if (opts->applyNoise){
-    MyMRISequence->applyNoise(opts->noiseIntensity);
+  // CLEAN VELOCITY COMPONENTS ON BOUNDARY
+  if(comm->currProc == 0){
+    if (opts->cleanBoundaryVelocities){
+      MyMRISequence->cleanNormalComponentOnBoundary();
+    }
+  }
+
+  // INTERPOLATE BOUNDARY VELOCITIES WITH POLYNOMIALS
+  if(comm->currProc == 0){
+    if (opts->interpolateBoundaryVelocities){
+      MyMRISequence->InterpolateBoundaryVelocities();
+    }
   }
 
   if(comm->currProc == 0){

@@ -55,6 +55,9 @@ MRIOptions::MRIOptions(){
   applyMedianFilter = false;
   filterNumIterations = 1;
   filterUseMedian = false;
+  // Clean Velocity Components
+  cleanBoundaryVelocities = false;
+  interpolateBoundaryVelocities = false;
 }
 
 MRIOptions::~MRIOptions(){
@@ -430,6 +433,22 @@ int MRIOptions::getOptionsFromCommandFile(string commandFile){
         applyBCFilter = false;
       }else{
         throw MRIException("ERROR: Invalid logical value for applyBCFilter.\n");
+      }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("CLEANBOUNDARYVELOCITIES")){
+      if(boost::to_upper_copy(tokenizedString[1]) == std::string("TRUE")){
+        cleanBoundaryVelocities = true;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("FALSE")){
+        cleanBoundaryVelocities = false;
+      }else{
+        throw MRIException("ERROR: Invalid logical value for CLEANBOUNDARYVELOCITIES.\n");
+      }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("INTERPOLATEBOUNDARYVELOCITY")){
+      if(boost::to_upper_copy(tokenizedString[1]) == std::string("TRUE")){
+        interpolateBoundaryVelocities = true;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("FALSE")){
+        interpolateBoundaryVelocities = false;
+      }else{
+        throw MRIException("ERROR: Invalid logical value for CLEANBOUNDARYVELOCITIES.\n");
       }
     }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("USECONSTANTPATTERNS")){
       if(boost::to_upper_copy(tokenizedString[1]) == std::string("TRUE")){

@@ -285,6 +285,8 @@ void MRIStructuredScan::EvalSpaceDerivs(int currentCell, double** firstDerivs, d
         break;
     }
 
+    //printf("CELLS: FIRST %d, CURRENT %d, SECOND %d\n",firstCell,currentCell,secondCell);
+
     // Get Deltas
     double deltaMinus = 0.0;
     double deltaPlus = 0.0;
@@ -327,6 +329,7 @@ void MRIStructuredScan::EvalSpaceDerivs(int currentCell, double** firstDerivs, d
         }else{
           firstDerivs[loopA][loopB] = 0.0;
         }
+        //printf("FORWARD DIFF: Comp 1: %f, Comp2: %f, delta: %f, Deriv: %f\n",secondVComponent,currentVComponent,deltaPlus,firstDerivs[loopA][loopB]);
       }else if (secondCell<0){
         // Simple Euler Formula
         if(fabs(deltaMinus) > kMathZero){
@@ -334,6 +337,7 @@ void MRIStructuredScan::EvalSpaceDerivs(int currentCell, double** firstDerivs, d
         }else{
           firstDerivs[loopA][loopB] = 0.0;
         }
+        //printf("BACKWARD DIFF: Comp 1: %f, Comp2: %f, delta: %f, Deriv: %f\n",currentVComponent,firstVComponent,deltaMinus,firstDerivs[loopA][loopB]);
       }else if((firstCell>-1)&&(secondCell>-1)){
         // Central Difference Formula: CAREFULL: ONLY FIRST ORDER IF GRID SPACING VARIES SIGNIFICANTLY
         if((deltaPlus + deltaMinus) > kMathZero){
@@ -341,7 +345,7 @@ void MRIStructuredScan::EvalSpaceDerivs(int currentCell, double** firstDerivs, d
         }else{
           firstDerivs[loopA][loopB] = 0.0;
         }
-
+        //printf("CENTRAL DIFF: Comp 1: %f, Comp2: %f, delta: %f, Deriv: %f\n",secondVComponent,firstVComponent,deltaPlus + deltaMinus,firstDerivs[loopA][loopB]);
       }else{
         // Show Error Message
         throw MRIPressureComputationException("Error: Both First and Second Cells are Zero in EvalFirstSpaceDerivs");
