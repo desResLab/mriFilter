@@ -1,0 +1,21 @@
+# INCLUDE SOURCES
+aux_source_directory(. SRC_LIST)
+include_directories(".")
+
+# INCLUDE BOOST AND MPI LIBS
+find_package(Boost REQUIRED)
+find_package(MPI REQUIRED)
+
+# INCLUDE LIBRARY PATH
+include_directories(${Boost_INCLUDE_DIR})
+include_directories(${MPI_INCLUDE_PATH})
+
+# SET COMPILER FLAGS
+add_definitions("-g -O3")
+
+# CREATE EXECUTABLE
+ADD_EXECUTABLE(${PROJECT_NAME} ${SRC_LIST})
+
+# LINK LIBRARIES
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${Boost_LIBRARIES} ${MPI_LIBRARIES})
+

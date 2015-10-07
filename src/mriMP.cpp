@@ -873,8 +873,8 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
 
   // INITIALIZATION
   int totalFaces = faceConnections.size();
-  double* resVec = nullptr;
-  double* filteredVec = nullptr;
+  double* resVec = NULL;
+  double* filteredVec = NULL;
   std::vector<int> facesID;
   std::vector<double> facesCoeffs;
   MRIIntVec innerVortexList;
@@ -1158,7 +1158,7 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
 
     // WRITE MESSAGE AT EVERY INTERATION
     if(comm->currProc == 0){
-      WriteSchMessage("[" + to_string(comm->currProc) + "] It: " + MRIUtils::IntToStr(itCount) + "; ABS Res: "+MRIUtils::FloatToStr(resNorm)+"; Rel: " + MRIUtils::FloatToStr(relResNorm) +
+      WriteSchMessage("[" + MRIUtils::IntToStr(comm->currProc) + "] It: " + MRIUtils::IntToStr(itCount) + "; ABS Res: "+MRIUtils::FloatToStr(resNorm)+"; Rel: " + MRIUtils::FloatToStr(relResNorm) +
                       "; Coeff 2-Norm: "+MRIUtils::FloatToStr(twoNorm)+"; Rel 2-Norm: " + MRIUtils::FloatToStr(relTwoNorm)+"\n");
     }
 

@@ -157,7 +157,7 @@ class MRIStructuredScan: public MRIScan{
     void CreateTopology();
     // CELLS
     void buildCellConnections();
-    int addToFaceConnections(std::vector<std::vector<mriFace* >> &AuxFirstNodeFaceList, std::vector<int> faceIds);
+    int addToFaceConnections(std::vector<std::vector<mriFace* > > &AuxFirstNodeFaceList, std::vector<int> faceIds);
     // FACES
     void buildFaceConnections();
     void buildFaceCells();
@@ -165,7 +165,7 @@ class MRIStructuredScan: public MRIScan{
     void getExternalFaceNormal(int cellID, int localFaceID, double* extNormal);
     // EDGES
     void buildEdgeConnections();
-    int  addToEdgeConnections(std::vector<std::vector<mriEdge*>> &AuxFirstNodeEdgeList, std::vector<int> edgeIds);
+    int  addToEdgeConnections(std::vector<std::vector<mriEdge*> > &AuxFirstNodeEdgeList, std::vector<int> edgeIds);
     void assembleEdgeToFaceConnectivity(std::vector<int> &vortexBottomFaces,std::vector<int> &vortexTopFaces,std::vector<int> &vortexLeftFaces,std::vector<int> &vortexRightFaces);
     // VORTEX COEFFICIENTS
     double getEdgeFaceVortexCoeff(int edgeID, int faceID);
@@ -364,6 +364,7 @@ class MRIStructuredScan: public MRIScan{
    int getOppositeCell(int cell, double* normal);
    void tagByNeighbour(int tag,int* cellTags, bool* isTaggable,int startingCell);
    bool hasUntaggedNeighbours(int cell,int* cellTags, bool* isTaggable);
+   void setWallFluxesToZero(bool* isFaceOnWalls, MRIDoubleVec& poissonSourceFaceVec);
 };
 
 #endif // MRISTRUCTUREDSCAN_H

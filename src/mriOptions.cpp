@@ -262,7 +262,7 @@ int MRIOptions::getOptionsFromCommandFile(string commandFile){
 
   // Declare input File
   std::ifstream infile;
-  infile.open(commandFile);
+  infile.open(commandFile.c_str());
 
   // Declare
   vector<string> tokenizedString;

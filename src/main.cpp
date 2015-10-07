@@ -41,7 +41,7 @@ void ConvertTECPLOToVTK(MRIOptions* opts){
   MyMRIScan->ReadPltFile(opts->inputFileName,true);
 
   WriteSchMessage(std::string("ECCOLO\n"));
-  WriteSchMessage(std::to_string(MyMRIScan->cellPoints[300].velocity[1]) + std::string("\n"));
+  WriteSchMessage(MRIUtils::FloatToStr(MyMRIScan->cellPoints[300].velocity[1]) + std::string("\n"));
 
   // Export to VTK
   MyMRIScan->ExportToVTK(opts->outputFileName);
@@ -346,7 +346,7 @@ void TEST_ExpansionCoefficients(MRIOptions* opts, MRICommunicator* comm){
 
   // REBUILD FROM EXPANSION
   MRISequence* ReconstructedSequence = new MRISequence(MyMRISequence);
-  MRIScan* currScan = nullptr;
+  MRIScan* currScan = NULL;
   for(int loopA=0;loopA<ReconstructedSequence->GetTotalScans();loopA++){
     currScan = ReconstructedSequence->GetScan(loopA);
     currScan->RebuildFromExpansion(firstMRIScan->expansion,false);
@@ -354,8 +354,8 @@ void TEST_ExpansionCoefficients(MRIOptions* opts, MRICommunicator* comm){
 
   // COMPARE THE TWO SCANS
   double currDiffNorm = 0.0;
-  MRIScan* currScan1 = nullptr;
-  MRIScan* currScan2 = nullptr;
+  MRIScan* currScan1 = NULL;
+  MRIScan* currScan2 = NULL;
   for(int loopA=0;loopA<MyMRISequence->GetTotalScans();loopA++){
     currScan1 = MyMRISequence->GetScan(loopA);
     currScan2 = ReconstructedSequence->GetScan(loopA);
@@ -589,7 +589,7 @@ void PerformRandomTest(MRIOptions* opts,MRICommunicator* comm){
 
     // Deallocate
     delete MyMRIScan;
-    MyMRIScan = nullptr;
+    MyMRIScan = NULL;
   }
 }
 

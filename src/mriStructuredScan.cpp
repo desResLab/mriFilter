@@ -2427,10 +2427,10 @@ void getEdgeConnections(int EdgeID, std::vector<int> faceConnections, std::vecto
 // =====================
 // ADD FACE TO FACE LIST
 // =====================
-int MRIStructuredScan::addToFaceConnections(std::vector<std::vector<mriFace* >> &AuxFirstNodeFaceList, std::vector<int> faceIds){
+int MRIStructuredScan::addToFaceConnections(std::vector<std::vector<mriFace* > > &AuxFirstNodeFaceList, std::vector<int> faceIds){
   mriFace* newFace;
   // Get first node in connectivity
-  int firstConnectivityNode = *min_element(std::begin(faceIds), std::end(faceIds));
+  int firstConnectivityNode = MRIUtils::getMinInt(faceIds);
   // Try to find with the first node list
   bool found = false;
   size_t count = 0;
@@ -2461,10 +2461,10 @@ int MRIStructuredScan::addToFaceConnections(std::vector<std::vector<mriFace* >> 
 // =====================
 // ADD EDGE TO FACE LIST
 // =====================
-int MRIStructuredScan::addToEdgeConnections(std::vector<std::vector<mriEdge*>> &AuxFirstNodeEdgeList, std::vector<int> edgeIds){
+int MRIStructuredScan::addToEdgeConnections(vector<vector<mriEdge*> > &AuxFirstNodeEdgeList, std::vector<int> edgeIds){
   mriEdge* newEdge;
   // Get first node in connectivity
-  int firstConnectivityNode = *min_element(std::begin(edgeIds), std::end(edgeIds));
+  int firstConnectivityNode = MRIUtils::getMinInt(edgeIds);
   // Find it in First Node List
   bool found = false;
   size_t count = 0;
@@ -2497,7 +2497,7 @@ int MRIStructuredScan::addToEdgeConnections(std::vector<std::vector<mriEdge*>> &
 // =======================
 void MRIStructuredScan::buildFaceConnections(){
   std::vector<int> faceIds;
-  std::vector<std::vector<mriFace* >> AuxFirstNodeFaceList;
+  std::vector<std::vector<mriFace* > > AuxFirstNodeFaceList;
   int currFace = 0;
   cellFaces.resize(totalCellPoints);
   AuxFirstNodeFaceList.resize(getTotalAuxNodes());
@@ -2532,7 +2532,7 @@ void MRIStructuredScan::buildFaceCells(){
 // =======================
 void MRIStructuredScan::buildEdgeConnections(){
   std::vector<int> edgeIds;
-  std::vector<std::vector<mriEdge*>> AuxFirstNodeEdgeList;
+  std::vector<std::vector<mriEdge*> > AuxFirstNodeEdgeList;
   int currEdge = 0;
   double coeff = 0.0;
   faceEdges.resize(faceConnections.size());
@@ -3405,6 +3405,18 @@ void MRIStructuredScan::ExportForPOISSON(string inputFileName){
   delete [] secondDerivs;
 }
 
+// =======================================
+// SET TO ZERO THE FACES NOT ON THE BORDER
+// =======================================
+void MRIStructuredScan::setWallFluxesToZero(bool* isFaceOnWalls, MRIDoubleVec& poissonSourceFaceVec){
+  for(int loopA=0;loopA<faceConnections.size();loopA++){
+    if((faceCells[loopA].size() > 1)&&(isFaceOnWalls[loopA])){
+      poissonSourceFaceVec[loopA] = 0.0;
+    }
+  }
+}
+
+
 // ==================================================================
 // EXPORT TO POISSON SOLVER ONLY ELEMENTS WITH POSITIVE CONCENTRATION
 // ==================================================================
@@ -3559,23 +3571,55 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
     }
   }
 
+  // ================================================
+  // SUM THE CONTRIBUTIONS OF ADVECTION AND DIFFUSION
+  // ================================================
   MRIDoubleMat termSum;
   for(int loopA=0;loopA<poissonSourceVec.size();loopA++){
     temp.clear();
     for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
       // CHECK SIGN !!!
-      //temp.push_back(poissonSourceVec[loopA][loopB] - poissonViscousTerm[loopA][loopB]);
+      temp.push_back(poissonSourceVec[loopA][loopB] - poissonViscousTerm[loopA][loopB]);
       //temp.push_back(-poissonViscousTerm[loopA][loopB]);
-      temp.push_back(poissonSourceVec[loopA][loopB]);
+      //temp.push_back(poissonSourceVec[loopA][loopB]);
     }
     termSum.push_back(temp);
   }
+
+  // ===================
+  // FIND FACES ON WALLS
+  // ===================
+  int* faceCount = new int[faceConnections.size()];
+  for(int loopA=0;loopA<faceConnections.size();loopA++){
+    faceCount[loopA] = 0;
+  }
+  bool* isFaceOnWalls = new bool[faceConnections.size()];
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    // Only Cells with Reasonable Concentration
+    if(cellPoints[loopA].concentration > 0.5){
+      for(int loopB=0;loopB<cellFaces[loopA].size();loopB++){
+        faceCount[cellFaces[loopA][loopB]]++;
+      }
+    }
+  }
+  for(int loopA=0;loopA<faceConnections.size();loopA++){
+    if(faceCount[loopA] == 1){
+      isFaceOnWalls[loopA] = true;
+    }else{
+      isFaceOnWalls[loopA] = false;
+    }
+  }
+  delete [] faceCount;
+
 
   // Convert Cell Vector to Face Vector
   MRIThresholdCriteria* crit = new MRIThresholdCriteria(kCriterionLessThen,kNoQuantity,0.0);
   MRIDoubleVec poissonSourceFaceVec;
   //cellToFacePartial(elUsageMap,crit,poissonSourceVec,poissonSourceFaceVec);
   cellToFacePartial(elUsageMap,crit,termSum,poissonSourceFaceVec);
+
+  // SET TO ZERO THE FACES NOT ON THE BORDER
+  setWallFluxesToZero(isFaceOnWalls,poissonSourceFaceVec);
 
   // Eval the integral of the divergence over the cell
   MRIDoubleVec cellDivs;
@@ -3606,31 +3650,6 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
       elCount++;
     }
   }
-
-  // ===================
-  // FIND FACES ON WALLS
-  // ===================
-  int* faceCount = new int[faceConnections.size()];
-  for(int loopA=0;loopA<faceConnections.size();loopA++){
-    faceCount[loopA] = 0;
-  }
-  bool* isFaceOnWalls = new bool[faceConnections.size()];
-  for(int loopA=0;loopA<totalCellPoints;loopA++){
-    // Only Cells with Reasonable Concentration
-    if(cellPoints[loopA].concentration > 0.5){
-      for(int loopB=0;loopB<cellFaces[loopA].size();loopB++){
-        faceCount[cellFaces[loopA][loopB]]++;
-      }
-    }
-  }
-  for(int loopA=0;loopA<faceConnections.size();loopA++){
-    if(faceCount[loopA] == 1){
-      isFaceOnWalls[loopA] = true;
-    }else{
-      isFaceOnWalls[loopA] = false;
-    }
-  }
-  delete [] faceCount;
 
   // ============================
   // CHECK THE DIVERGENCE THEOREM
