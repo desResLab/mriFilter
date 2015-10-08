@@ -6,6 +6,9 @@ include_directories(".")
 find_package(Boost REQUIRED)
 find_package(MPI REQUIRED)
 
+# WRITE EXECUTABLE IN BIN
+SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
 # INCLUDE LIBRARY PATH
 include_directories(${Boost_INCLUDE_DIR})
 include_directories(${MPI_INCLUDE_PATH})

@@ -1,7 +1,7 @@
 #include <iostream>
 #include "mriStructuredScan.h"
 #include "mpi.h"
-#include "metis.h"
+// #include "metis.h"
 #include "schMessages.h"
 #include "mriCommunicator.h"
 
