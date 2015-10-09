@@ -297,7 +297,7 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
   bool foundheader = false;
   bool areAllFloats = false;
   int headerCount = 0;
-  WriteSchMessage(std::string("Computing input file size..."));
+  WriteSchMessage(std::string("Computing input file size...\n"));
   int totalLinesInFile = 0;
   std::string Buffer;
   while (std::getline(PltFile,Buffer)){
@@ -306,19 +306,19 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
       boost::split(tokenizedString, Buffer, boost::is_any_of(" ,"), boost::token_compress_on);
       areAllFloats = true;
       assignPLTOptions(tokenizedString, pltOptions);
-      //for(size_t loopA=0;loopA<tokenizedString.size();loopA++){
-      //  areAllFloats = (areAllFloats && (MRIUtils::isFloat(tokenizedString[loopA])));
-      //}
-      //foundheader = areAllFloats;
-      foundheader = headerCount > 100;
+      for(size_t loopA=0;loopA<tokenizedString.size();loopA++){
+        areAllFloats = (areAllFloats && (MRIUtils::isFloat(tokenizedString[loopA])));
+      }
+      foundheader = areAllFloats;
       headerCount++;
     }
     // Increase cell and line number
-    totalCellPoints++;
     totalLinesInFile++;
   }
   
   // Done: Computing Input File Size
+  WriteSchMessage(string("Header Size: " + MRIUtils::IntToStr(headerCount) + "\n"));
+  WriteSchMessage(string("Total Lines: " + MRIUtils::IntToStr(totalLinesInFile) + "\n"));
   WriteSchMessage(std::string("Done.\n"));
 
   // Reset File
@@ -358,6 +358,7 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
   int neededValues = 7;
   double* LocalVal = new double[neededValues];
   double* TempVal = new double[neededValues];
+  vector<string> ResultArray;
   
   // Reading Input File Message
   WriteSchMessage(std::string("Reading input file...\n"));
@@ -372,13 +373,18 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
     }
 
     // Tokenize Line
-    std::vector<std::string> ResultArray = MRIUtils::ExctractSubStringFromBufferMS(Buffer);
+
+
+    printf("ECCOLO 1, buffer: %s\n",Buffer.c_str());
+
+    ResultArray = MRIUtils::ExctractSubStringFromBufferMS(Buffer);
     // Store Local Structure
-	try{
+
+	  try{
       // Set Continue
       Continue = true;
       // Check Ratio between ResultArray.size, valueCounter, neededValues
-      if(ResultArray.size()+valueCounter < neededValues){
+      /*if(ResultArray.size()+valueCounter < neededValues){
         // Read the whole Result Array
         for(int loopA=0;loopA<ResultArray.size();loopA++){
           LocalVal[loopA] = atof(ResultArray[loopA].c_str());
@@ -404,7 +410,28 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
         LocalXVel = LocalVal[4];
         LocalYVel = LocalVal[5];
         LocalZVel = LocalVal[6];
+      } */
+      for(int loopA=0;loopA<neededValues;loopA++){
+        printf("Result Array: %s\n",ResultArray[loopA].c_str());
+        LocalVal[loopA] = atof(ResultArray[loopA].c_str());
       }
+
+      printf("ECCOLO 3\n");
+
+      Continue = true;
+      // Coords
+      LocalXCoord = LocalVal[0];
+      LocalYCoord = LocalVal[1];
+      LocalZCoord = LocalVal[2];
+      // Concentration
+      LocalConc = LocalVal[3];
+      // Velocity
+      LocalXVel = LocalVal[4];
+      LocalYVel = LocalVal[5];
+      LocalZVel = LocalVal[6];
+
+      printf("ADDED: %d\n",lineCount);
+
       // Update valueCounter
       valueCounter = ((ResultArray.size() + valueCounter) % neededValues);
       // Check Module
@@ -473,6 +500,13 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
 
   // Complete To Full Grid: Set To Zero
   totalCellPoints = TotalXCoords * TotalYCoords * TotalZCoords;
+
+    // Print totals
+  WriteSchMessage(std::string("Total number of cells in X: " + MRIUtils::IntToStr(TotalXCoords) + "\n"));
+  WriteSchMessage(std::string("Total number of cells in Y: " + MRIUtils::IntToStr(TotalYCoords) + "\n"));
+  WriteSchMessage(std::string("Total number of cells in Z: " + MRIUtils::IntToStr(TotalZCoords) + "\n"));
+  WriteSchMessage(std::string("Total number of cells: " + MRIUtils::IntToStr(totalCellPoints) + "\n"));
+
 
   // Set a Zero mtCellPoint
   myCellPoint.position[0] = 0.0;
@@ -688,15 +722,16 @@ int MRIStructuredScan::ReadBinVolFile(std::string FileName, MRIVolData &VolData)
     return -1;
   }
   // Read Dimensions
-  fread(&VolData.GridX, sizeof(int), 1, fp);
-  fread(&VolData.GridY, sizeof(int), 1, fp);
-  fread(&VolData.GridZ, sizeof(int), 1, fp);
+  size_t fres;
+  fres = fread(&VolData.GridX, sizeof(int), 1, fp);
+  fres = fread(&VolData.GridY, sizeof(int), 1, fp);
+  fres = fread(&VolData.GridZ, sizeof(int), 1, fp);
 	
   // Read information on Space, Slice Space and Thickness
-  fread(&VolData.SpaceX, sizeof(float), 1, fp);
-  fread(&VolData.SpaceY, sizeof(float), 1, fp);
-  fread(&VolData.SpaceSlice, sizeof(float), 1, fp);
-  fread(&VolData.SpaceThick, sizeof(float), 1, fp);
+  fres = fread(&VolData.SpaceX, sizeof(float), 1, fp);
+  fres = fread(&VolData.SpaceY, sizeof(float), 1, fp);
+  fres = fread(&VolData.SpaceSlice, sizeof(float), 1, fp);
+  fres = fread(&VolData.SpaceThick, sizeof(float), 1, fp);
 
   // Set the size of the voxel information
   int	size = VolData.GridX*VolData.GridY*VolData.GridZ;
@@ -1656,14 +1691,14 @@ void MRIStructuredScan::ExportToVTK(std::string fileName){
   for(int loopA=0;loopA<outputs.size();loopA++){
     // Print Header
     if(outputs[loopA].totComponents == 1){
-      fprintf(outFile,string("SCALARS " + outputs[loopA].name + " double\n").c_str());
+      fprintf(outFile,"%s\n",string("SCALARS " + outputs[loopA].name + " double").c_str());
       fprintf(outFile,"LOOKUP_TABLE default\n");
       for (int loopB=0;loopB<totalCellPoints;loopB++){
         fprintf(outFile,"%e\n",outputs[loopA].values[loopB]);
       }
     }else{
       int count = 0;
-      fprintf(outFile,string("VECTORS " + outputs[loopA].name + " double\n").c_str());
+      fprintf(outFile,"%s\n",string("VECTORS " + outputs[loopA].name + " double").c_str());
       for (int loopB=0;loopB<totalCellPoints;loopB++){
         for(int loopC=0;loopC<outputs[loopA].totComponents;loopC++){
           fprintf(outFile,"%e ",outputs[loopA].values[count]);
@@ -1688,7 +1723,7 @@ void MRIStructuredScan::ExportToVTK(std::string fileName){
     fprintf(outFile,"SCALARS Tags double\n");
     fprintf(outFile,"LOOKUP_TABLE default\n");
     for (int loopA=0;loopA<totalCellPoints;loopA++){
-      fprintf(outFile,"%e\n",mriCellTags[loopA]);
+      fprintf(outFile,"%d\n",mriCellTags[loopA]);
     }
   }
 
@@ -1795,12 +1830,13 @@ void ReadRawFileHeader(int &sizeX,int &sizeY,int &numberOfBytes,FILE *fp){
   // Read Dimensions
   int wordCount = 0;
   int currentByte = 0;
+  size_t fres;
   std::string fileWord = "";
   while(wordCount<4){
     currentByte = 0;
     fileWord = "";
     while((currentByte != 10)&&(currentByte != 32)){
-      fread(&currentByte, 1, 1, fp);
+      fres = fread(&currentByte, 1, 1, fp);
       if((currentByte != 10)&&(currentByte != 32)){
         fileWord = fileWord + char(currentByte);
       }
@@ -3133,7 +3169,7 @@ void MRIStructuredScan::ReadVTKStructuredPoints(std::string vtkFileName, bool Do
         vtkVector.clear();
         readVTKVector(vtkFile,totalLinesInFile,vtkVector);
         if(vtkVector.size() != totalCellPoints){
-          printf("Vector Size %d, Total Cells %d\n",vtkVector.size(), totalCellPoints);
+          printf("Vector Size %d, Total Cells %d\n",(int)vtkVector.size(), totalCellPoints);
           throw MRIException("ERROR: Total number of vectors differs from number of cells.\n");
         }
       }

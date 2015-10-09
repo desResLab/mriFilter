@@ -2,6 +2,13 @@
 PROJECT(mpFilterApp)
 cmake_minimum_required(VERSION 2.6)
 
+OPTION(IN_DANSCHI_DESKTOP "MPI Compiler" OFF)
+
+if(IN_DANSCHI_DESKTOP)
+  SET(CMAKE_C_COMPILER "/usr/bin/mpicc")
+  SET(CMAKE_CXX_COMPILER "/usr/bin/mpicxx")  
+endif(IN_DANSCHI_DESKTOP)
+
 # ADD SUBDIRS
 ADD_SUBDIRECTORY("./src/")
 

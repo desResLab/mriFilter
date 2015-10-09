@@ -805,5 +805,17 @@ inline int getMinInt(vector<int> vec){
   return minVal;
 }
 
+// ===================================
+// CHECK IF STRING IS A FLOATING POINT
+// ===================================
+inline bool isFloat(string token){
+  std::istringstream iss(token);
+  float f;
+  iss >> noskipws >> f; // noskipws considers leading whitespace invalid
+  // Check the entire string was consumed and if either failbit or badbit is set
+  return iss.eof() && !iss.fail(); 
+}
+
+
 }
 #endif //MRIUTILS_H
