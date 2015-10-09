@@ -241,23 +241,27 @@ void MRIStructuredScan::ReorderScan(){
 // ====================================
 void assignPLTOptions(std::vector<std::string> tokens, PLTOptionRecord &pltOptions){
   for(size_t loopA=0;loopA<tokens.size();loopA++){
-    if(tokens[loopA] == "I"){
+    if(boost::to_upper_copy(tokens[loopA]) == "I"){
       pltOptions.type = pltUNIFORM;
       pltOptions.i = atoi(tokens[loopA+1].c_str());
-    }else if(tokens[loopA] == "J"){
+    }else if(boost::to_upper_copy(tokens[loopA]) == "J"){
       pltOptions.type = pltUNIFORM;
       pltOptions.j = atoi(tokens[loopA+1].c_str());
-    }else if(tokens[loopA] == "K"){
+    }else if(boost::to_upper_copy(tokens[loopA]) == "K"){
       pltOptions.type = pltUNIFORM;
       pltOptions.k = atoi(tokens[loopA+1].c_str());
-    }else if(tokens[loopA] == "N"){
+    }else if(boost::to_upper_copy(tokens[loopA]) == "N"){
       pltOptions.type = pltSTRUCTURED;
       pltOptions.N = atoi(tokens[loopA+1].c_str());
-    }else if(tokens[loopA] == "E"){
+    }else if(boost::to_upper_copy(tokens[loopA]) == "E"){
       pltOptions.type = pltSTRUCTURED;
       pltOptions.E = atoi(tokens[loopA+1].c_str());
-    }else if(tokens[loopA] == "FEBLOCK"){
+    }else if(boost::to_upper_copy(tokens[loopA]) == "FEBLOCK"){
       pltOptions.type = pltSTRUCTURED;
+    }else if(boost::to_upper_copy(tokens[loopA]) == "DATAPACKING"){
+      if(boost::to_upper_copy(tokens[loopA+1]) != "POINT"){
+        throw MRIException("Error: invalid DATAPACKING format");
+      }
     }
   }
 }
@@ -303,7 +307,7 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
   while (std::getline(PltFile,Buffer)){
     if(!foundheader){
       boost::trim(Buffer);
-      boost::split(tokenizedString, Buffer, boost::is_any_of(" ,"), boost::token_compress_on);
+      boost::split(tokenizedString, Buffer, boost::is_any_of("= ,"), boost::token_compress_on);
       areAllFloats = true;
       assignPLTOptions(tokenizedString, pltOptions);
       for(size_t loopA=0;loopA<tokenizedString.size();loopA++){
@@ -373,18 +377,14 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
     }
 
     // Tokenize Line
-
-
-    printf("ECCOLO 1, buffer: %s\n",Buffer.c_str());
-
     ResultArray = MRIUtils::ExctractSubStringFromBufferMS(Buffer);
+    
     // Store Local Structure
-
 	  try{
       // Set Continue
       Continue = true;
       // Check Ratio between ResultArray.size, valueCounter, neededValues
-      /*if(ResultArray.size()+valueCounter < neededValues){
+      if(ResultArray.size()+valueCounter < neededValues){
         // Read the whole Result Array
         for(int loopA=0;loopA<ResultArray.size();loopA++){
           LocalVal[loopA] = atof(ResultArray[loopA].c_str());
@@ -410,14 +410,7 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
         LocalXVel = LocalVal[4];
         LocalYVel = LocalVal[5];
         LocalZVel = LocalVal[6];
-      } */
-      for(int loopA=0;loopA<neededValues;loopA++){
-        printf("Result Array: %s\n",ResultArray[loopA].c_str());
-        LocalVal[loopA] = atof(ResultArray[loopA].c_str());
       }
-
-      printf("ECCOLO 3\n");
-
       Continue = true;
       // Coords
       LocalXCoord = LocalVal[0];
@@ -429,9 +422,6 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
       LocalXVel = LocalVal[4];
       LocalYVel = LocalVal[5];
       LocalZVel = LocalVal[6];
-
-      printf("ADDED: %d\n",lineCount);
-
       // Update valueCounter
       valueCounter = ((ResultArray.size() + valueCounter) % neededValues);
       // Check Module
