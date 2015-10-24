@@ -2556,8 +2556,6 @@ void MRIStructuredScan::buildFaceCells(){
 // BUILD EDGE CONNECTIVITY
 // =======================
 void MRIStructuredScan::buildEdgeConnections(){
-  float edgeConn1_BeginTime,edgeConn1_TotalTime;
-  float edgeConn2_BeginTime,edgeConn2_TotalTime;
 
   int edgeIds[2];
   std::vector<std::vector<mriEdge*> > AuxFirstNodeEdgeList;
@@ -3512,6 +3510,7 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
   FILE* outFile;
   outFile = fopen(inputFileName.c_str(),"w");
   int totAuxNodes = (cellTotals[0] + 1) * (cellTotals[1] + 1) * (cellTotals[2] + 1);
+  double qty = 0.0;
 
   // Get the mappings for nodes that need to be used
   MRIIntVec nodeUsageMap;
@@ -3522,7 +3521,8 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
   // Mark Used Nodes
   int currAuxNode = 0;
   for(int loopA=0;loopA<totalCellPoints;loopA++){
-    if(cellPoints[loopA].concentration > 0.5){
+    qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
+    if(threshold->MeetsCriteria(qty)){
       for(int loopB=0;loopB<cellConnections[loopA].size();loopB++){
         currAuxNode = cellConnections[loopA][loopB];
         nodeUsageMap[currAuxNode] = 1;
@@ -3545,7 +3545,8 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
   }
   int elCount = 0;
   for(int loopA=0;loopA<totalCellPoints;loopA++){
-    if(cellPoints[loopA].concentration > 0.5){
+    qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
+    if(threshold->MeetsCriteria(qty)){
       elUsageMap[loopA] = elCount;
       elCount++;
     }
@@ -3567,7 +3568,8 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
     // SAVE ELEMENT CONNECTIONS
     elCount = 0;
     for(int loopA=0;loopA<totalCellPoints;loopA++){
-      if(cellPoints[loopA].concentration > 0.5){
+      qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
+      if(threshold->MeetsCriteria(qty)){
         fprintf(outFile,"ELEMENT HEXA8 %d 1 ",elCount+1);
         elCount++;
         for(int loopB=0;loopB<cellConnections[loopA].size();loopB++){
@@ -3583,7 +3585,8 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
   // ========================
   elCount = 0;
   for(int loopA=0;loopA<totalCellPoints;loopA++){
-    if(cellPoints[loopA].concentration > 0.5){
+    qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
+    if(threshold->MeetsCriteria(qty)){
       fprintf(outFile,"ELDIFF %d ",elCount+1);
       //fprintf(outFile,"%e ",cellPoints[loopA].concentration);
       //fprintf(outFile,"%e ",cellPoints[loopA].concentration);
@@ -3617,7 +3620,8 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
   elCount = 0;
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     // Only Cells with significant Concentration
-    if(cellPoints[loopA].concentration > 0.5){
+    qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
+    if(threshold->MeetsCriteria(qty)){
       // Eva Spatial Derivatives
       EvalSpaceDerivs(loopA, threshold, firstDerivs, secondDerivs);
       // Eval the Convective term for the current Cell
@@ -3683,7 +3687,8 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
   bool* isFaceOnWalls = new bool[faceConnections.size()];
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     // Only Cells with Reasonable Concentration
-    if(cellPoints[loopA].concentration > 0.5){
+    qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
+    if(threshold->MeetsCriteria(qty)){
       for(int loopB=0;loopB<cellFaces[loopA].size();loopB++){
         faceCount[cellFaces[loopA][loopB]]++;
       }
@@ -3720,7 +3725,8 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
     // Evaluate current cell volume
     currVol = evalCellVolume(loopA);
     // Add Source Term
-    if(cellPoints[loopA].concentration > 0.5){
+    qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
+    if(threshold->MeetsCriteria(qty)){
       SourceSum += cellDivs[loopA];
     }
     // Store source term
@@ -3732,7 +3738,8 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
   // SAVE ELEMENT SOURCES TO FILE
   elCount = 0;
   for(int loopA=0;loopA<totalCellPoints;loopA++){
-    if(cellPoints[loopA].concentration > 0.5){
+    qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
+    if(threshold->MeetsCriteria(qty)){
       fprintf(outFile,"ELSOURCE %d %e\n",elCount+1,sourcesToApply[loopA]);
       elCount++;
     }
@@ -3747,14 +3754,16 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
   double sign = 0.0;
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     // Sum Source Contribution
-    if(cellPoints[loopA].concentration > 0.5){
+    qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
+    if(threshold->MeetsCriteria(qty)){
       divSource += cellDivs[loopA];
     }
   }
   double extNormal[3] = {0.0};
   int currFace = 0;
   for(int loopA=0;loopA<totalCellPoints;loopA++){
-    if(cellPoints[loopA].concentration > 0.5){
+    qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
+    if(threshold->MeetsCriteria(qty)){
       for(int loopB=0;loopB<cellFaces[loopA].size();loopB++){
         currFace = cellFaces[loopA][loopB];
         if(isFaceOnWalls[currFace]){
