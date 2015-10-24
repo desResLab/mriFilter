@@ -200,11 +200,14 @@ void MRISequence::EvalTimeDerivs(int currentScan, int currentCell,double* &timeD
 // ==========================================
 // EVAL FIRST AND SECOND DERIVATIVES IN SPACE
 // ==========================================
-void MRIStructuredScan::EvalSpaceDerivs(int currentCell, double** firstDerivs, double** secondDerivs){
+void MRIStructuredScan::EvalSpaceDerivs(int currentCell, MRIThresholdCriteria* threshold, double** firstDerivs, double** secondDerivs){
   // FirstDerivs
   // DVX/DX DVY/DX DVZ/DX
   // DVX/DY DVY/DY DVZ/DY
   // DVX/DZ DVY/DZ DVZ/DZ
+
+  // Get quantity for threshold evaluation
+  double cellQty = cellPoints[currentCell].getQuantity(threshold->thresholdQty);
 
   // Map Index To Coords
   int* currentCellCoords = new int[kNumberOfDimensions];
@@ -220,7 +223,7 @@ void MRIStructuredScan::EvalSpaceDerivs(int currentCell, double** firstDerivs, d
           firstCell = -1;
         }else{
           currCell = MapCoordsToIndex(currentCellCoords[0]-1,currentCellCoords[1],currentCellCoords[2]);
-          if(cellPoints[currCell].concentration < 0.5){
+          if(threshold->MeetsCriteria(cellQty)){
             firstCell = -1;
           }else{
             firstCell = currCell;
@@ -230,7 +233,7 @@ void MRIStructuredScan::EvalSpaceDerivs(int currentCell, double** firstDerivs, d
           secondCell = -1;
         }else{
           currCell = MapCoordsToIndex(currentCellCoords[0]+1,currentCellCoords[1],currentCellCoords[2]);
-          if(cellPoints[currCell].concentration < 0.5){
+          if(threshold->MeetsCriteria(cellQty)){
             secondCell = -1;
           }else{
             secondCell = currCell;
@@ -243,7 +246,7 @@ void MRIStructuredScan::EvalSpaceDerivs(int currentCell, double** firstDerivs, d
           firstCell = -1;
         }else{
           currCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1]-1,currentCellCoords[2]);
-          if(cellPoints[currCell].concentration < 0.5){
+          if(threshold->MeetsCriteria(cellQty)){
             firstCell = -1;
           }else{
             firstCell = currCell;
@@ -253,7 +256,7 @@ void MRIStructuredScan::EvalSpaceDerivs(int currentCell, double** firstDerivs, d
           secondCell = -1;
         }else{
           currCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1]+1,currentCellCoords[2]);
-          if(cellPoints[currCell].concentration < 0.5){
+          if(threshold->MeetsCriteria(cellQty)){
             secondCell = -1;
           }else{
             secondCell = currCell;
@@ -266,7 +269,7 @@ void MRIStructuredScan::EvalSpaceDerivs(int currentCell, double** firstDerivs, d
           firstCell = -1;
         }else{
           currCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1],currentCellCoords[2]-1);
-          if(cellPoints[currCell].concentration < 0.5){
+          if(threshold->MeetsCriteria(cellQty)){
             firstCell = -1;
           }else{
             firstCell = currCell;
@@ -276,7 +279,7 @@ void MRIStructuredScan::EvalSpaceDerivs(int currentCell, double** firstDerivs, d
           secondCell = -1;
         }else{
           currCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1],currentCellCoords[2]+1);
-          if(cellPoints[currCell].concentration < 0.5){
+          if(threshold->MeetsCriteria(cellQty)){
             secondCell = -1;
           }else{
             secondCell = currCell;
@@ -659,7 +662,7 @@ void PrintDerivatives(double** firstDerivs, double** secondDerivs){
 }
 
 // EVAL PRESSURE GRADIENTS
-void MRISequence::ComputePressureGradients(){
+void MRISequence::ComputePressureGradients(MRIThresholdCriteria* threshold){
   
   // Allocate Local Velocity Gradients
   double* timeDerivs = new double[kNumberOfDimensions];
@@ -692,7 +695,7 @@ void MRISequence::ComputePressureGradients(){
     WriteSchMessage(std::string("Computing Pressure Gradient: Step "+MRIUtils::IntToStr(loopA+1)+"/"+MRIUtils::IntToStr(totalScans)+"..."));
 
     // EVALUATE REYNOLDS STRESSES
-    sequence[loopA]->EvalReynoldsStressComponent();
+    sequence[loopA]->EvalReynoldsStressComponent(threshold);
 
     //Loop Through the Cells}
     for(int loopB=0;loopB<sequence[loopA]->totalCellPoints;loopB++){
@@ -701,7 +704,7 @@ void MRISequence::ComputePressureGradients(){
       EvalTimeDerivs(loopA/*Scan*/,loopB/*Cell*/,timeDerivs);
 
       // Eval First Derivatives in space
-      sequence[loopA]->EvalSpaceDerivs(loopB/*Cell*/,firstDerivs,secondDerivs);
+      sequence[loopA]->EvalSpaceDerivs(loopB/*Cell*/,threshold,firstDerivs,secondDerivs);
 
       // EVAL REYNOLDS STRESS GRADIENTS
       if(sequence[loopA]->hasReynoldsStress){

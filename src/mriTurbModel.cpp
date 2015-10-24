@@ -22,7 +22,7 @@ void MRITurbBoussinesq::EvalTurbulentViscosity(MRIScan* currScan, double* nuT){
   }
 }
 // EVAL TURBULENT KINETIC ENERGY
-void MRITurbBoussinesq::EvalTurbulentKineticEnergy(MRIScan* currScan, double* kTurb){
+void MRITurbBoussinesq::EvalTurbulentKineticEnergy(MRIScan* currScan, MRIThresholdCriteria* threshold, double* kTurb){
   // First and Second Cell Derivatives
   double** firstDerivs = new double*[3];
   double** secondDerivs = new double*[3];
@@ -34,7 +34,7 @@ void MRITurbBoussinesq::EvalTurbulentKineticEnergy(MRIScan* currScan, double* kT
   double tensorProduct = 0.0;
   for(int loopA=0;loopA<currScan->totalCellPoints;loopA++){
     // Eval First and Derivative Tensor
-    currScan->EvalSpaceDerivs(loopA,firstDerivs,secondDerivs);
+    currScan->EvalSpaceDerivs(loopA,threshold,firstDerivs,secondDerivs);
     // Eval Tensor Product
     tensorProduct = 0.0;
     for(int loopB=0;loopB<3;loopB++){

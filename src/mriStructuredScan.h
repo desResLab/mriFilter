@@ -93,6 +93,8 @@ class MRIStructuredScan: public MRIScan{
     // Edge Topology
     MRIIntMat edgeConnections;
     MRIIntMat edgeFaces;
+    // Auxiliary
+    MRIDoubleMat auxNodesCoords;
 
     // ================
     // MEMBER FUNCTIONS
@@ -138,9 +140,9 @@ class MRIStructuredScan: public MRIScan{
     virtual void ExportToVTK(std::string fileName);
     virtual void WriteExpansionFile(std::string fileName);
     // Export all elements to Poisson Solver
-    virtual void ExportForPOISSON(string inputFileName);
+    virtual void ExportForPOISSON(string inputFileName, MRIThresholdCriteria* threshold);
     // Export to Poisson Solver Only element with significant concentration
-    virtual void ExportForPOISSONPartial(string inputFileName,double density,double viscosity);
+    virtual void ExportForPOISSONPartial(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold);
 
     // ========
     // VOL DATA
@@ -165,16 +167,17 @@ class MRIStructuredScan: public MRIScan{
     void getExternalFaceNormal(int cellID, int localFaceID, double* extNormal);
     // EDGES
     void buildEdgeConnections();
-    int  addToEdgeConnections(std::vector<std::vector<mriEdge*> > &AuxFirstNodeEdgeList, std::vector<int> edgeIds);
+    int  addToEdgeConnections(vector<vector<mriEdge*> > &AuxFirstNodeEdgeList, int* edgeIds);
     void assembleEdgeToFaceConnectivity(std::vector<int> &vortexBottomFaces,std::vector<int> &vortexTopFaces,std::vector<int> &vortexLeftFaces,std::vector<int> &vortexRightFaces);
     // VORTEX COEFFICIENTS
     double getEdgeFaceVortexCoeff(int edgeID, int faceID);
     // AUXILIARY GEOMETRY
     void   getAuxNodeCoordinates(int nodeNum, double* pos);
-    void   getEdgeDirection(int edgeID, std::vector<double> &edgeDirVector);
+    void   getEdgeDirection(int edgeID, double* edgeDirVector);
     void   getEdgeCenter(int edgeID, double* ec);
     void   getFaceCenter(int faceID, double* fc);
-    void   getEdgeToFaceDirection(int edgeID, int faceID, std::vector<double> &edgeFaceVector);
+    void   getEdgeToFaceDirection(int edgeID, int faceID, double* edgeFaceVector);
+    void   buildAuxNodesCoords();
     // VOLUME
     double evalCellVolume(int cellNumber);
     // OTHER
@@ -272,7 +275,7 @@ class MRIStructuredScan: public MRIScan{
     void SampleVelocities(MRISamplingOptions SamplingOptions);
 
     // GRADIENTS AND DERIVATIVES
-    virtual void EvalSpaceDerivs(int currentCell, double** firstDerivs, double** secondDerivs);
+    virtual void EvalSpaceDerivs(int currentCell, MRIThresholdCriteria* threshold, double** firstDerivs, double** secondDerivs);
     virtual void EvalSpaceGradient(int currentCell,int qtyID, double* gradient);
     void ComputeQuantityGradient(int qtyID);
 
@@ -323,9 +326,9 @@ class MRIStructuredScan: public MRIScan{
     virtual double EvalCellL2Criterion(int currentCell, double** deformation, double** rotation);
     virtual double EvalCellDeltaCriterion(int currentCell, double** deformation, double** rotation, double** velGradient);
     virtual double EvalCellVortexCriteria(int currentCell,int criteriaType, double** deformation, double** rotation, double** velGradient);
-    virtual void   EvalVortexCriteria();
-    virtual void   EvalVorticity();
-    virtual void   EvalEnstrophy();
+    virtual void   EvalVortexCriteria(MRIThresholdCriteria* threshold);
+    virtual void   EvalVorticity(MRIThresholdCriteria* threshold);
+    virtual void   EvalEnstrophy(MRIThresholdCriteria* threshold);
     virtual void   EvalSMPVortexCriteria(MRIExpansion* exp);
 
     // SPATIAL REPRESENTATION OF VORTEX COEFFICIENTS

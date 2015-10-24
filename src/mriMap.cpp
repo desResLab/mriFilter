@@ -266,7 +266,7 @@ int MRIStructuredScan::GetAdjacentFace(int globalNodeNumber /*Already Ordered Gl
 void MRIStructuredScan::getNeighborVortexes(int cellNumber,int dim,MRIIntVec& idx){
   // Loop through the edges
   MRIIntVec ElEdgeList;
-  MRIDoubleVec currEdgeDirVector;
+  double currEdgeDirVector[3];
   int currFace = 0;
   int currEdge = 0;
   for(int loopA=0;loopA<cellFaces[cellNumber].size();loopA++){

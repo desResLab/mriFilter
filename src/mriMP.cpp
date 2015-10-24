@@ -835,7 +835,7 @@ void MRIStructuredScan::formVortexList(int totVortex,int* minFace,int* maxFace,M
 }
 
 // =========================================
-// Communicate Residual and Filtered Vectors
+// COMMUNICATE RESIDUAL AND FILTERED VECTORS
 // =========================================
 void communicateResFilt2(int totalFaces,double* resVec,double* filteredVels,MRICommunicator* comm,int* minFaceGlob,int* maxFaceGlob,double& resNorm){
   int size = maxFaceGlob[comm->currProc] - minFaceGlob[comm->currProc];
@@ -865,6 +865,21 @@ void communicateResFilt2(int totalFaces,double* resVec,double* filteredVels,MRIC
   delete [] recvcounts;
   delete [] displs;
 }
+
+// =========================================
+// SYNC TEMPORARY EXPANSION AMONG PROCESSORS
+// =========================================
+void SyncExpansion(int totalVortexes, double* currentExp, MRICommunicator* comm){
+  double* target = new double[totalVortexes];
+  MPI_Reduce(&currentExp[0],&target[0],totalVortexes,MPI_DOUBLE,MPI_SUM,0,comm->mpiComm);
+  if(comm->currProc == 0){
+    for(int loopA=0;loopA<totalVortexes;loopA++){
+      currentExp[loopA] = target[loopA];
+    }
+  }
+  delete [] target;
+}
+
 
 // =================
 // PHYSICS FILTERING
@@ -969,6 +984,9 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
   MRIExpansion* bcExpansion = NULL;
   int totalVortexes = EvalTotalVortex();
 
+  // Allocate Temporary Expansion coefficient place holder
+  double* currentExp = new double[totalVortexes];
+
   // Form List of Vortexes Including Faces for MPI
   if(comm->totProc > 1){
     formVortexList(totalVortexes,minFaceGlob,maxFaceGlob,innerVortexList,boundaryVortexList,comm);
@@ -1057,6 +1075,10 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
     componentCount = -1;
 
     int currVortex = 0;
+    // Clean expansion
+    for(int loopB=0;loopB<totalVortexes;loopB++){
+      currentExp[loopB] = 0.0;
+    }
     for(int loopB=0;loopB<innerVortexList.size();loopB++){
       // Increment the current component
       componentCount++;
@@ -1076,18 +1098,27 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
       correlateStar_TotalTime += float( clock () - correlateStar_BeginTime ) /  CLOCKS_PER_SEC;
 
       // Store Correlation coefficient in Expansion
-      if(comm->currProc == 0){
-        if(!isBC){
-          expansion->vortexCoeff[componentCount] += corrCoeff;
-        }else{
-          bcExpansion->vortexCoeff[componentCount] += corrCoeff;
-        }
-      }
+      currentExp[currVortex] += corrCoeff;
 
       // UPDATE RESIDUAL
       updateStar_BeginTime = clock();
       UpdateResidualAndFilter(corrCoeff,totalStarFaces,facesID,facesCoeffs,resVec,filteredVec,resNorm);
       updateStar_TotalTime += float( clock () - updateStar_BeginTime ) /  CLOCKS_PER_SEC;
+    }
+
+    // Sync Expansion for main and boundary filter
+    if(comm->totProc > 1){
+      SyncExpansion(totalVortexes,currentExp,comm);
+    }
+    // Add to stored expansion
+    if(comm->currProc == 0){
+      for(int loopB=0;loopB<totalVortexes;loopB++){
+        if(!isBC){
+          expansion->vortexCoeff[loopB] += currentExp[loopB];
+        }else{
+          bcExpansion->vortexCoeff[loopB] += currentExp[loopB];
+        }
+      }
     }
 
     // IF MPI then Communicate Residual Vector
@@ -1117,9 +1148,9 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
       // Store Correlation coefficient in Expansion
       if(comm->currProc == 0){
         if(!isBC){
-          expansion->vortexCoeff[componentCount] += corrCoeff;
+          expansion->vortexCoeff[currVortex] += corrCoeff;
         }else{
-          bcExpansion->vortexCoeff[componentCount] += corrCoeff;
+          bcExpansion->vortexCoeff[currVortex] += corrCoeff;
         }
       }
 
@@ -1230,6 +1261,7 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
   //AreVelocityFiltered:=TRUE;
 
   // Deallocate
+  delete [] currentExp;
   delete [] resVec;
   delete [] filteredVec;
 }

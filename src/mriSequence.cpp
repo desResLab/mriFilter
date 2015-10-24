@@ -181,12 +181,12 @@ void MRISequence::ExportToVOL(std::string outfileName){
 }
 
 // Export to Poisson Solver
-void MRISequence::ExportForPOISSON(string inputFileName,double density,double viscosity){
+void MRISequence::ExportForPOISSON(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold){
   string name;
   for(int loopA=0;loopA<totalScans;loopA++){
     name = inputFileName;
     //sequence[loopA]->ExportForPOISSON(name);
-    sequence[loopA]->ExportForPOISSONPartial(name,density,viscosity);
+    sequence[loopA]->ExportForPOISSONPartial(name,density,viscosity,threshold);
   }
 }
 
@@ -236,29 +236,29 @@ void MRISequence::ApplyThresholding(MRIThresholdCriteria* thresholdCriteria){
 }
 
 // EVAL VORTEX CRITERIA
-void MRISequence::EvalVortexCriteria(){
+void MRISequence::EvalVortexCriteria(MRIThresholdCriteria* thresholdCriteria){
   // Export All Data
   WriteSchMessage("\n");
   for(int loopA=0;loopA<totalScans;loopA++){
-    sequence[loopA]->EvalVortexCriteria();
+    sequence[loopA]->EvalVortexCriteria(thresholdCriteria);
   }
 }
 
 // EVAL VORTICITY
-void MRISequence::EvalVorticity(){
+void MRISequence::EvalVorticity(MRIThresholdCriteria* thresholdCriteria){
   // Export All Data
   WriteSchMessage("\n");
   for(int loopA=0;loopA<totalScans;loopA++){
-    sequence[loopA]->EvalVorticity();
+    sequence[loopA]->EvalVorticity(thresholdCriteria);
   }
 }
 
 // EVAL ENSTROPHY
-void MRISequence::EvalEnstrophy(){
+void MRISequence::EvalEnstrophy(MRIThresholdCriteria* thresholdCriteria){
   // Export All Data
   WriteSchMessage("\n");
   for(int loopA=0;loopA<totalScans;loopA++){
-    sequence[loopA]->EvalEnstrophy();
+    sequence[loopA]->EvalEnstrophy(thresholdCriteria);
   }
 }
 

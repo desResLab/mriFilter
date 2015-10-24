@@ -24,10 +24,10 @@ class MRITurbBoussinesq: public MRITurbModel{
     MRITurbBoussinesq():MRITurbModel(){}
     // Distructor
     virtual ~MRITurbBoussinesq(){}
-    // Eval Turbulent Viscosity
+    // Eval Turbulent Viscosity    
     virtual void EvalTurbulentViscosity(MRIScan* currScan, double* nuT);
     // Eval Turbulent Kinetic Energy
-    virtual void EvalTurbulentKineticEnergy(MRIScan* currScan, double* kTurb);
+    virtual void EvalTurbulentKineticEnergy(MRIScan* currScan, MRIThresholdCriteria* threshold, double* kTurb);
 };
 
 #endif // MRITURBMODEL_H

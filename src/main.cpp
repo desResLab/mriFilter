@@ -83,7 +83,7 @@ void EvalSequencePressure(MRIOptions* opts, MRICommunicator* comm){
   MyMRISequence->ApplyThresholding(opts->thresholdCriteria);
 
   // Compute Pressure Gradient
-  MyMRISequence->ComputePressureGradients();
+  MyMRISequence->ComputePressureGradients(opts->thresholdCriteria);
 
   // Compute Relative Pressure
   MyMRISequence->ComputeRelativePressure(false);
@@ -127,7 +127,7 @@ void EvalPressureFromSignatureFlow(MRIOptions* opts){
   // =========================
   // Compute Pressure Gradient
   // =========================
-  MyMRISequence->ComputePressureGradients();
+  MyMRISequence->ComputePressureGradients(opts->thresholdCriteria);
 
   // =========================
   // Compute Relative Pressure
@@ -449,7 +449,7 @@ void TEST03_EvalReynoldsStresses(MRIOptions* opts, MRICommunicator* comm){
 
     // EVAL REYNOLDS STRESSES
     WriteSchMessage("Evaluating Reynolds Stresses...");
-    myScan->EvalReynoldsStressComponent();
+    myScan->EvalReynoldsStressComponent(opts->thresholdCriteria);
     WriteSchMessage("Done.\n");
 
     // ADD SCAN TO RECONSTRUCTION
@@ -463,7 +463,7 @@ void TEST03_EvalReynoldsStresses(MRIOptions* opts, MRICommunicator* comm){
 // ===========================================
 // EVAL REYNOLDS STRESSES FROM EXPANSION FILES
 // ===========================================
-void EvalPressureFromExpansion(MRIOptions* options){
+void EvalPressureFromExpansion(MRIOptions* opts){
 
   // SET PARAMETERS
   bool applyThreshold = true;
@@ -476,7 +476,7 @@ void EvalPressureFromExpansion(MRIOptions* options){
   // ADD FILE TO SEQUENCE
   MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
   //MyMRIScan->ReadFromExpansionFile(inFileName,applyThreshold,thresholdRatio);
-  MyMRIScan->ReadPltFile(options->inputFileName,true);
+  MyMRIScan->ReadPltFile(opts->inputFileName,true);
   MyMRISequence->AddScan(MyMRIScan);
   // APPLY MEDIAN FILTER TO VELOCITIES
   //MyMRISequence->GetScan(0)->ApplyMedianFilter(kQtyVelocityX,1);
@@ -486,7 +486,7 @@ void EvalPressureFromExpansion(MRIOptions* options){
   //MyMRISequence->GetScan(0)->ThresholdQuantity(kQtyVelocityZ,1.0e10);
 
   // EVAL REYNOLDS STRESSES AND PRESSURE GRADIENTS
-  MyMRISequence->ComputePressureGradients();
+  MyMRISequence->ComputePressureGradients(opts->thresholdCriteria);
 
   // APPLY MEDIAN FILTER TO PRESSURE GRADIENT COMPONENTS
   // JET FILIPPO
@@ -506,12 +506,12 @@ void EvalPressureFromExpansion(MRIOptions* options){
   // EVAL RELATIVE PRESSURE
   MyMRISequence->ComputeRelativePressure(doPressureSmoothing);
 
-  if(options->outputFormatType == otFILETECPLOT){
+  if(opts->outputFormatType == otFILETECPLOT){
     // WRITE OUTPUT FILES TO TECPLOT
-    MyMRISequence->ExportToTECPLOT(options->outputFileName);
+    MyMRISequence->ExportToTECPLOT(opts->outputFileName);
   }else{
     // WRITE OUTPUT FILES TO VTK
-    MyMRISequence->ExportToVTK(options->outputFileName);
+    MyMRISequence->ExportToVTK(opts->outputFileName);
   }
 }
 
@@ -659,7 +659,7 @@ void CropAndComputeVol(MRIOptions* opts, MRICommunicator* comm){
   // -------------------------
   // Compute Pressure Gradient
   // -------------------------
-  MyMRISequence->ComputePressureGradients();
+  MyMRISequence->ComputePressureGradients(opts->thresholdCriteria);
 
   // -------------------------
   // Compute Relative Pressure
@@ -831,7 +831,7 @@ void EvalVortexCriteria(MRIOptions* opts){
   // EVAL VORTEX CRITERIA
   // MyMRISequence->GetScan(0)->EvalVortexCriteria();
   // MyMRISequence->GetScan(0)->EvalVorticity();
-  MyMRISequence->GetScan(0)->EvalEnstrophy();
+  MyMRISequence->GetScan(0)->EvalEnstrophy(opts->thresholdCriteria);
 
 
   // WRITE OUTPUT FILES TO VTK
@@ -988,25 +988,12 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
     MyMRISequence->ApplyThresholding(opts->thresholdCriteria);
   }
 
-  if(comm->currProc == 0){
-    // Open Output File
-    FILE* outFile;
-    outFile = fopen("testGauss2.log","w");
-    // Write Header
-
-    for(int loopA=0;loopA<MyMRISequence->GetScan(0)->totalCellPoints;loopA++){
-      fprintf(outFile,"%e %e %e\n",MyMRISequence->GetScan(0)->cellPoints[loopA].velocity[0],MyMRISequence->GetScan(0)->cellPoints[loopA].velocity[1],MyMRISequence->GetScan(0)->cellPoints[loopA].velocity[2]);
-    }
-    // Close Output file
-    fclose(outFile);
-  }
-
   // EVAL VORTEX CRITERIA
   if(comm->currProc == 0){
     if(opts->evalPopVortexCriteria){
-      MyMRISequence->EvalVortexCriteria();
-      MyMRISequence->EvalVorticity();
-      MyMRISequence->EvalEnstrophy();
+      MyMRISequence->EvalVortexCriteria(opts->thresholdCriteria);
+      MyMRISequence->EvalVorticity(opts->thresholdCriteria);
+      MyMRISequence->EvalEnstrophy(opts->thresholdCriteria);
     }
   }
 
@@ -1023,7 +1010,7 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
 
   if(opts->evalPressure){
     // Compute Pressure Gradient
-    MyMRISequence->ComputePressureGradients();
+    MyMRISequence->ComputePressureGradients(opts->thresholdCriteria);
 
     // Compute Relative Pressure
     MyMRISequence->ComputeRelativePressure(false);
@@ -1039,7 +1026,7 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
   // SAVE FILE FOR POISSON COMPUTATION
   if(comm->currProc == 0){
     if (opts->exportToPoisson){
-      MyMRISequence->ExportForPOISSON(opts->poissonFileName,opts->density,opts->viscosity);
+      MyMRISequence->ExportForPOISSON(opts->poissonFileName,opts->density,opts->viscosity,opts->thresholdCriteria);
     }
   }
 

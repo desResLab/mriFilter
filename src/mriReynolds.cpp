@@ -5,7 +5,7 @@
 // ========================
 // EVAL TURBULENT VISCOSITY
 // ========================
-void MRIScan::EvalReynoldsStressComponent(){
+void MRIScan::EvalReynoldsStressComponent(MRIThresholdCriteria* threshold){
   // Allocate
   double* turbNu = new double[totalCellPoints];
   double* turbK = new double[totalCellPoints];
@@ -30,13 +30,13 @@ void MRIScan::EvalReynoldsStressComponent(){
   turbModel->EvalTurbulentViscosity(this,turbNu);
 
   // Eval Turbulent Kinetic Energy in current Scan
-  turbModel->EvalTurbulentKineticEnergy(this,turbK);
+  turbModel->EvalTurbulentKineticEnergy(this,threshold,turbK);
 
   // Cycle through all cells
   for(int loopA=0;loopA<totalCellPoints;loopA++){
 
     // Eval First Derivative Tensor
-    EvalSpaceDerivs(loopA,firstDerivs,secondDerivs);
+    EvalSpaceDerivs(loopA,threshold,firstDerivs,secondDerivs);
 
     if(ReynoldsCriterion == 0){
       // COMPLETE STRESSES

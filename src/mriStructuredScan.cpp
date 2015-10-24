@@ -119,51 +119,53 @@ void PrintFileListLog(int totalFiles,std::string* fileNames){
   }
   // Close Output file
   fclose(outFile);
-};
+}
 
+// ========================
+// FILL TECPLOT FILE HEADER
+// ========================
 void MRIStructuredScan::FillPLTHeader(std::vector<std::string> &pltHeader, bool isFirstFile){
   // Clear Vector
   pltHeader.clear();
   if (isFirstFile){
-    pltHeader.push_back("TITLE = ""film_cooling.plt""");
-    pltHeader.push_back("VARIABLES = ""X/D""");
-    pltHeader.push_back("""Y/D""");
-    pltHeader.push_back("""Z/D""");
-    pltHeader.push_back("""Conc%""");
-    pltHeader.push_back("""Vx/Ubulk""");
-    pltHeader.push_back("""Vy/Ubulk""");
-    pltHeader.push_back("""Vz/Ubulk""");
-    if (hasPressureGradient){
-      pltHeader.push_back("""pGradx""");
-      pltHeader.push_back("""pGrady""");
-      pltHeader.push_back("""pGradz""");   
-    }
-    if (hasRelativePressure){
-      pltHeader.push_back("""relPress""");
-    }
-    if (hasReynoldsStress){
-      pltHeader.push_back("""reyXX""");
-      pltHeader.push_back("""reyXY""");
-      pltHeader.push_back("""reyXZ""");
-      pltHeader.push_back("""reyYY""");
-      pltHeader.push_back("""reyYZ""");
-      pltHeader.push_back("""reyZZ""");
+    pltHeader.push_back("TITLE = \"smpFilterOutput\"");
+    pltHeader.push_back("VARIABLES = \"X/D\"");
+    pltHeader.push_back("\"Y/D\"");
+    pltHeader.push_back("\"Z/D\"");
+    pltHeader.push_back("\"Conc%\"");
+    pltHeader.push_back("\"Vx/Ubulk\"");
+    pltHeader.push_back("\"Vy/Ubulk\"");
+    pltHeader.push_back("\"Vz/Ubulk\"");
+    // Print all outputs
+    for(size_t loopA=0;loopA<outputs.size();loopA++){
+      // Add output Name
+      if(outputs[loopA].totComponents == 1){
+        pltHeader.push_back("\"" + outputs[loopA].name + "\"");
+      }else if(outputs[loopA].totComponents == 2){
+        pltHeader.push_back("\"" + outputs[loopA].name + "x\"");
+        pltHeader.push_back("\"" + outputs[loopA].name + "y\"");
+      }else if(outputs[loopA].totComponents == 3){
+        pltHeader.push_back("\"" + outputs[loopA].name + "x\"");
+        pltHeader.push_back("\"" + outputs[loopA].name + "y\"");
+        pltHeader.push_back("\"" + outputs[loopA].name + "z\"");
+      }else{
+        throw MRIException("Too many components for TECPLOT result.\n");
+      }
     }
   }
-  pltHeader.push_back("ZONE T=""SubZone""");
+  pltHeader.push_back("ZONE T=\"SubZone\"");
   pltHeader.push_back(" STRANDID=0, SOLUTIONTIME="+MRIUtils::FloatToStr(scanTime));
   pltHeader.push_back(" I=35, J=113, K=155, ZONETYPE=Ordered");
   pltHeader.push_back(" DATAPACKING=POINT");
-  if ((hasPressureGradient)&&(!hasRelativePressure)&&(!hasReynoldsStress)){
-    pltHeader.push_back(" DT=(SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE )");
-  }else if ((hasPressureGradient)&&(hasRelativePressure)&&(!hasReynoldsStress)){
-    pltHeader.push_back(" DT=(SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE )");
-  }else if ((hasPressureGradient)&&(hasRelativePressure)&&(hasReynoldsStress)){
-    pltHeader.push_back(" DT=(SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE)");
-  }else{
-    pltHeader.push_back(" DT=(SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE )");
+  string singleString = string(" DT=(SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE ");
+  for(size_t loopA=0;loopA<outputs.size();loopA++){
+    for(size_t loopB=0;loopB<outputs[loopA].totComponents;loopB++){
+      singleString += "SINGLE ";
+    }
   }
-};
+  singleString += ")";
+  pltHeader.push_back(singleString);
+}
 
 // returns file size in bytes or -1 if not found.
 std::ifstream::pos_type GetFileSize(const char* filename)
@@ -171,7 +173,7 @@ std::ifstream::pos_type GetFileSize(const char* filename)
     std::ifstream in(filename, std::ifstream::in | std::ifstream::binary);
     in.seekg(0, std::ifstream::end);
     return in.tellg(); 
-};
+}
 
 // Get Statistic String
 std::string MRIStructuredScan::WriteStatistics(){
@@ -630,9 +632,9 @@ void MRIStructuredScan::ExportToCSV(std::string FileName)
   printf("Done\n");
 }
 
-// =================
-// Export To TECPLOT
-// =================
+// ============================
+// EXPORT TO TECPLOT ASCII FILE
+// ============================
 void MRIStructuredScan::ExportToTECPLOT(std::string FileName, bool isFirstFile)
 {
   // Write Progress Message 
@@ -645,14 +647,15 @@ void MRIStructuredScan::ExportToTECPLOT(std::string FileName, bool isFirstFile)
   }else{
     outFile = fopen(FileName.c_str(),"a");
   }
+
   // Fill Header
   std::vector<std::string> PltFileHeader;
   FillPLTHeader(PltFileHeader,isFirstFile);
+
   // Write Header
-	std::string LineString;
-	std::string compString = "I";
-  for(unsigned int loopA=0;loopA<PltFileHeader.size();loopA++)
-  {
+  std::string LineString;
+  std::string compString = "I";
+  for(unsigned int loopA=0;loopA<PltFileHeader.size();loopA++){
     boost::trim(PltFileHeader[loopA]);
     LineString = PltFileHeader[loopA];
     if (LineString.substr(0,1) != compString){
@@ -662,36 +665,23 @@ void MRIStructuredScan::ExportToTECPLOT(std::string FileName, bool isFirstFile)
     }
   }
   // Loop On Cells
-  for(int loopA=0;loopA<totalCellPoints;loopA++)
-  {
-    if ((hasPressureGradient)&&(!hasRelativePressure)&&(!hasReynoldsStress)){
-      fprintf(outFile,"%-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e\n",
-                      cellPoints[loopA].position[0],cellPoints[loopA].position[1],cellPoints[loopA].position[2],
-                      cellPoints[loopA].concentration,
-                      cellPoints[loopA].velocity[0],cellPoints[loopA].velocity[1],cellPoints[loopA].velocity[2],
-                      cellPoints[loopA].pressGrad[0],cellPoints[loopA].pressGrad[1],cellPoints[loopA].pressGrad[2]);
-    }else if ((hasPressureGradient)&&(hasRelativePressure)&&(!hasReynoldsStress)){
-      fprintf(outFile,"%-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e\n",
-                      cellPoints[loopA].position[0],cellPoints[loopA].position[1],cellPoints[loopA].position[2],
-                      cellPoints[loopA].concentration,
-                      cellPoints[loopA].velocity[0],cellPoints[loopA].velocity[1],cellPoints[loopA].velocity[2],
-                      cellPoints[loopA].pressGrad[0],cellPoints[loopA].pressGrad[1],cellPoints[loopA].pressGrad[2],
-                      cellPoints[loopA].relPressure);
-    }else if ((hasPressureGradient)&&(hasRelativePressure)&&(hasReynoldsStress)){
-      fprintf(outFile,"%-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e\n",
-                      cellPoints[loopA].position[0],cellPoints[loopA].position[1],cellPoints[loopA].position[2],
-                      cellPoints[loopA].concentration,
-                      cellPoints[loopA].velocity[0],cellPoints[loopA].velocity[1],cellPoints[loopA].velocity[2],
-                      cellPoints[loopA].pressGrad[0],cellPoints[loopA].pressGrad[1],cellPoints[loopA].pressGrad[2],
-                      cellPoints[loopA].relPressure,
-                      cellPoints[loopA].ReStress[0],cellPoints[loopA].ReStress[1],cellPoints[loopA].ReStress[2],
-                      cellPoints[loopA].ReStress[3],cellPoints[loopA].ReStress[4],cellPoints[loopA].ReStress[5]);
-    }else{
-      fprintf(outFile,"%-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e\n",
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+
+    // Write position, concentration and velocity
+    fprintf(outFile,"%-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e %-15.6e ",
                       cellPoints[loopA].position[0],cellPoints[loopA].position[1],cellPoints[loopA].position[2],
                       cellPoints[loopA].concentration,
                       cellPoints[loopA].velocity[0],cellPoints[loopA].velocity[1],cellPoints[loopA].velocity[2]);
+
+    // Add result quantities
+    for(size_t loopB=0;loopB<outputs.size();loopB++){
+      for(size_t loopC=0;loopC<outputs[loopB].totComponents;loopC++){
+        fprintf(outFile,"%-15.6e ",outputs[loopB].values[loopA*outputs[loopB].totComponents + loopC]);
+      }
     }
+
+    // New Line
+    fprintf(outFile,"\n");
   }
 
   // Close Output file
@@ -2153,7 +2143,6 @@ void MRIStructuredScan::EvalSMPVortexCriteria(MRIExpansion* exp){
     for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
       // Determine the idexes for the adjacent vortices
       getNeighborVortexes(loopA,loopB,idx);
-      printf("%d %d %d %d\n",idx[0],idx[1],idx[2],idx[3]);
       // Average the values
       avVortexIndex = 0.25*(exp->vortexCoeff[idx[0]] +
                             exp->vortexCoeff[idx[1]] +
@@ -2428,24 +2417,23 @@ void MRIStructuredScan::getExternalFaceNormal(int cellID, int localFaceID, doubl
 // ====================================
 // GET LOCAL EDGE CONNECTIONS FROM FACE
 // ====================================
-void getEdgeConnections(int EdgeID, std::vector<int> faceConnections, std::vector<int> &edgeIds){
-    edgeIds.clear();
+void getEdgeConnections(int EdgeID, std::vector<int> faceConnections, int* edgeIds){
     switch(EdgeID){
       case 0:
-        edgeIds.push_back(faceConnections[0]);
-        edgeIds.push_back(faceConnections[1]);
+        edgeIds[0] = faceConnections[0];
+        edgeIds[1] = faceConnections[1];
         break;
       case 1:
-        edgeIds.push_back(faceConnections[1]);
-        edgeIds.push_back(faceConnections[2]);
+        edgeIds[0] = faceConnections[1];
+        edgeIds[1] = faceConnections[2];
         break;
       case 2:
-        edgeIds.push_back(faceConnections[2]);
-        edgeIds.push_back(faceConnections[3]);
+        edgeIds[0] = faceConnections[2];
+        edgeIds[1] = faceConnections[3];
         break;
       case 3:
-        edgeIds.push_back(faceConnections[3]);
-        edgeIds.push_back(faceConnections[0]);
+        edgeIds[0] = faceConnections[3];
+        edgeIds[1] = faceConnections[0];
         break;
     }
 }
@@ -2487,15 +2475,26 @@ int MRIStructuredScan::addToFaceConnections(std::vector<std::vector<mriFace* > >
 // =====================
 // ADD EDGE TO FACE LIST
 // =====================
-int MRIStructuredScan::addToEdgeConnections(vector<vector<mriEdge*> > &AuxFirstNodeEdgeList, std::vector<int> edgeIds){
+int MRIStructuredScan::addToEdgeConnections(vector<vector<mriEdge*> > &AuxFirstNodeEdgeList, int* edgeIds){
   mriEdge* newEdge;
+  vector<int> tmp;
+  tmp.resize(2);
+  tmp[0] = edgeIds[0];
+  tmp[1] = edgeIds[1];
+  int firstConnectivityNode = 0;
+
   // Get first node in connectivity
-  int firstConnectivityNode = MRIUtils::getMinInt(edgeIds);
+  if(edgeIds[0] < edgeIds[1]){
+    firstConnectivityNode = edgeIds[0];
+  }else{
+    firstConnectivityNode = edgeIds[1];
+  }
+
   // Find it in First Node List
   bool found = false;
   size_t count = 0;
   while((!found)&&(count<AuxFirstNodeEdgeList[firstConnectivityNode].size())){
-    found = MRIUtils::isSameIntVector(edgeIds,AuxFirstNodeEdgeList[firstConnectivityNode][count]->connections);
+    found = MRIUtils::isSameIntVector(tmp,AuxFirstNodeEdgeList[firstConnectivityNode][count]->connections);
     // Update
     if(!found){
       count++;
@@ -2503,11 +2502,11 @@ int MRIStructuredScan::addToEdgeConnections(vector<vector<mriEdge*> > &AuxFirstN
   }
   if(!found){
     // Add to Edge List
-    edgeConnections.push_back(edgeIds);
+    edgeConnections.push_back(tmp);
     // Add to AuxFirstNodeEdgeList
     newEdge = new mriEdge;
     newEdge->number = edgeConnections.size()-1;
-    for(size_t loopA=0;loopA<edgeIds.size();loopA++){
+    for(size_t loopA=0;loopA<2;loopA++){
       newEdge->connections.push_back(edgeIds[loopA]);
     }
     AuxFirstNodeEdgeList[firstConnectivityNode].push_back(newEdge);
@@ -2557,17 +2556,18 @@ void MRIStructuredScan::buildFaceCells(){
 // BUILD EDGE CONNECTIVITY
 // =======================
 void MRIStructuredScan::buildEdgeConnections(){
-  std::vector<int> edgeIds;
+  float edgeConn1_BeginTime,edgeConn1_TotalTime;
+  float edgeConn2_BeginTime,edgeConn2_TotalTime;
+
+  int edgeIds[2];
   std::vector<std::vector<mriEdge*> > AuxFirstNodeEdgeList;
   int currEdge = 0;
   double coeff = 0.0;
   faceEdges.resize(faceConnections.size());
   AuxFirstNodeEdgeList.resize(getTotalAuxNodes());
+  // Loop on the total number of faces
   for(size_t loopA=0;loopA<faceConnections.size();loopA++){
     for(int loopB=0;loopB<4;loopB++){
-      //if((loopA % 500) == 0){
-      //  WriteSchMessage(std::string("Count: ") + std::to_string(loopA) + std::string("\n"));
-      //}
       // Get Face Connections
       getEdgeConnections(loopB,faceConnections[loopA],edgeIds);
       // Add to Face Connections
@@ -2576,6 +2576,7 @@ void MRIStructuredScan::buildEdgeConnections(){
       faceEdges[loopA].push_back(currEdge);
     }
   }
+
   // Build edgeFaces
   edgeFaces.resize(edgeConnections.size());
   for(size_t loopA=0;loopA<faceConnections.size();loopA++){
@@ -2596,57 +2597,62 @@ void MRIStructuredScan::buildEdgeConnections(){
 // GET VORTEX COEFFICIENT
 // ======================
 double MRIStructuredScan::getEdgeFaceVortexCoeff(int edgeID, int faceID){
-  std::vector<double> edgeDirVector(3);
-  std::vector<double> edgeFaceVector(3);
-  std::vector<double> resVec(3);
+  double edgeDirVector[3];
+  double edgeFaceVector[3];
+  double resVec[3];
   double res = 0.0;
   // Get Vectors
   getEdgeDirection(edgeID,edgeDirVector);
   getEdgeToFaceDirection(edgeID,faceID,edgeFaceVector);
+
   // Eval Vector Product
-  MRIUtils::Do3DExternalProduct(edgeDirVector,edgeFaceVector,resVec);
-  MRIUtils::Normalize3DVector(resVec);
+  resVec[0] = edgeDirVector[1] * edgeFaceVector[2] - edgeFaceVector[1] * edgeDirVector[2];
+  resVec[1] = edgeDirVector[2] * edgeFaceVector[0] - edgeFaceVector[2] * edgeDirVector[0];
+  resVec[2] = edgeDirVector[0] * edgeFaceVector[1] - edgeFaceVector[0] * edgeDirVector[1];
+  double modulus = (resVec[0] * resVec[0] + resVec[1] * resVec[1] + resVec[2] * resVec[2]);
+  resVec[0] = resVec[0]/modulus;
+  resVec[1] = resVec[1]/modulus;
+  resVec[2] = resVec[2]/modulus;
   // Get Sign
-  res = 0.0;
-  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
-    res = res + resVec[loopA] * faceNormal[faceID][loopA];
-  }
+  res = resVec[0] * faceNormal[faceID][0] + resVec[1] * faceNormal[faceID][1] + resVec[2] * faceNormal[faceID][2];
   return round(res);
 }
 
 // ==================
 // GET EDGE DIRECTION
 // ==================
-void MRIStructuredScan::getEdgeDirection(int edgeID, std::vector<double> &edgeDirVector){
+void MRIStructuredScan::getEdgeDirection(int edgeID, double* edgeDirVector){
   int node1 = 0;
   int node2 = 0;
   double node1Pos[3] = {0.0};
   double node2Pos[3] = {0.0};
-  edgeDirVector.resize(3);
 
   // Get The Two Nodes
   node1 = edgeConnections[edgeID][0];
   node2 = edgeConnections[edgeID][1];
 
   // Eval Auxiliary Node Coordinates
-  getAuxNodeCoordinates(node1,node1Pos);
-  getAuxNodeCoordinates(node2,node2Pos);
+  node1Pos[0] = auxNodesCoords[node1][0];
+  node1Pos[1] = auxNodesCoords[node1][1];
+  node1Pos[2] = auxNodesCoords[node1][2];
+  node2Pos[0] = auxNodesCoords[node2][0];
+  node2Pos[1] = auxNodesCoords[node2][1];
+  node2Pos[2] = auxNodesCoords[node2][2];
 
   // Get the versor
-  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
-    edgeDirVector[loopA] = node1Pos[loopA] - node2Pos[loopA];
-  }
-  MRIUtils::Normalize3DVector(edgeDirVector);
-  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
-    edgeDirVector[loopA] = fabs(edgeDirVector[loopA]);
-  }
-
+  edgeDirVector[0] = node1Pos[0] - node2Pos[0];
+  edgeDirVector[1] = node1Pos[1] - node2Pos[1];
+  edgeDirVector[2] = node1Pos[2] - node2Pos[2];
+  double modulus = (edgeDirVector[0] * edgeDirVector[0] + edgeDirVector[1] * edgeDirVector[1] + edgeDirVector[2] * edgeDirVector[2]);
+  edgeDirVector[0] = fabs(edgeDirVector[0]/modulus);
+  edgeDirVector[1] = fabs(edgeDirVector[1]/modulus);
+  edgeDirVector[2] = fabs(edgeDirVector[2]/modulus);
 }
 
 // ==========================
 // GET EDGE TO FACE DIRECTION
 // ==========================
-void MRIStructuredScan::getEdgeToFaceDirection(int edgeID, int faceID, std::vector<double> &edgeFaceVector){
+void MRIStructuredScan::getEdgeToFaceDirection(int edgeID, int faceID, double* edgeFaceVector){
   // Declare
   double ec[3] = {0.0};
   double fc[3] = {0.0};
@@ -2658,10 +2664,13 @@ void MRIStructuredScan::getEdgeToFaceDirection(int edgeID, int faceID, std::vect
   getFaceCenter(faceID,fc);
 
   // Get the versor
-  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
-    edgeFaceVector[loopA] = fc[loopA] - ec[loopA];
-  }
-  MRIUtils::Normalize3DVector(edgeFaceVector);
+  edgeFaceVector[0] = fc[0] - ec[0];
+  edgeFaceVector[1] = fc[1] - ec[1];
+  edgeFaceVector[2] = fc[2] - ec[2];
+  double modulus = (edgeFaceVector[0] * edgeFaceVector[0] + edgeFaceVector[1] * edgeFaceVector[1] + edgeFaceVector[2] * edgeFaceVector[2]);
+  edgeFaceVector[0] = edgeFaceVector[0]/modulus;
+  edgeFaceVector[1] = edgeFaceVector[1]/modulus;
+  edgeFaceVector[2] = edgeFaceVector[2]/modulus;
 }
 
 // ====================================
@@ -2689,8 +2698,12 @@ void MRIStructuredScan::getEdgeCenter(int edgeID, double* ec){
   node2 = edgeConnections[edgeID][1];
 
   // Eval Auxiliary Node Coordinates
-  getAuxNodeCoordinates(node1,node1Pos);
-  getAuxNodeCoordinates(node2,node2Pos);
+  node1Pos[0] = auxNodesCoords[node1][0];
+  node1Pos[1] = auxNodesCoords[node1][1];
+  node1Pos[2] = auxNodesCoords[node1][2];
+  node2Pos[0] = auxNodesCoords[node2][0];
+  node2Pos[1] = auxNodesCoords[node2][1];
+  node2Pos[2] = auxNodesCoords[node2][2];
 
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
     ec[loopA] = 0.5*(node1Pos[loopA] + node2Pos[loopA]);
@@ -2710,7 +2723,9 @@ void MRIStructuredScan::getFaceCenter(int faceID, double* fc){
 
   for(size_t loopA=0;loopA<faceConnections[faceID].size();loopA++){
     currNode = faceConnections[faceID][loopA];
-    getAuxNodeCoordinates(currNode,pos);
+    pos[0] = auxNodesCoords[currNode][0];
+    pos[1] = auxNodesCoords[currNode][1];
+    pos[2] = auxNodesCoords[currNode][2];
     for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
       fc[loopA] += pos[loopA];
     }
@@ -2841,23 +2856,69 @@ void MRIStructuredScan::buildFaceAreasAndNormals(){
   }
 }
 
+// ===================================
+// CREATE MATRIX WITH AUX NODES COORDS
+// ===================================
+void MRIStructuredScan::buildAuxNodesCoords(){
+  double nodePos[3] = {0.0};
+  MRIDoubleVec nodePosVec(3);
+  int totAuxNodes = getTotalAuxNodes();
+  for(int loopA=0;loopA<totAuxNodes;loopA++){
+    getAuxNodeCoordinates(loopA,nodePos);
+    nodePosVec[0] = nodePos[0];
+    nodePosVec[1] = nodePos[1];
+    nodePosVec[2] = nodePos[2];
+    auxNodesCoords.push_back(nodePosVec);
+  }
+}
+
 // ===============================
 // CREATE STRUCTURED MESH TOPOLOGY
 // ===============================
 void MRIStructuredScan::CreateTopology(){
+  // Take Time
+  float cellConn_BeginTime,cellConn_TotalTime;
+  float faceConn_BeginTime,faceConn_TotalTime;
+  float faceArea_BeginTime,faceArea_TotalTime;
+  float edgeConn_BeginTime,edgeConn_TotalTime;
+  float auxNodes_BeginTime,auxNodes_TotalTime;
+
   // Build Cell Connections
   WriteSchMessage(std::string("Build Cell Connection...\n"));
-  buildCellConnections();
+  cellConn_BeginTime = clock();
+  buildCellConnections();  
+  cellConn_TotalTime = float( clock () - cellConn_BeginTime ) /  CLOCKS_PER_SEC;
+  printf("Executed in %f [s]\n",cellConn_TotalTime);
+
+  WriteSchMessage(std::string("Build Aux Node Coords...\n"));
+  auxNodes_BeginTime = clock();
+  buildAuxNodesCoords();
+  auxNodes_TotalTime = float( clock () - auxNodes_BeginTime ) /  CLOCKS_PER_SEC;
+  printf("Executed in %f [s]\n",auxNodes_TotalTime);
+
   // Build Face Connections
   WriteSchMessage(std::string("Build Face Connection...\n"));
+  faceConn_BeginTime = clock();
   buildFaceConnections();
   buildFaceCells();
+  faceConn_TotalTime = float( clock () - faceConn_BeginTime ) /  CLOCKS_PER_SEC;
+  printf("Executed in %f [s]\n",faceConn_TotalTime);
+
   // Build Face Area and Face Normal Vector
   WriteSchMessage(std::string("Build Areas and Normals...\n"));
+  faceArea_BeginTime = clock();
   buildFaceAreasAndNormals();
+  faceArea_TotalTime = float( clock () - faceArea_BeginTime ) /  CLOCKS_PER_SEC;
+  printf("Executed in %f [s]\n",faceArea_TotalTime);
+
   // Build Edge Connections
   WriteSchMessage(std::string("Build Edge Connections...\n"));
+  edgeConn_BeginTime = clock();
   buildEdgeConnections();
+  edgeConn_TotalTime = float( clock () - edgeConn_BeginTime ) /  CLOCKS_PER_SEC;
+  printf("Executed in %f [s]\n",edgeConn_TotalTime);
+
+  // Completed
   WriteSchMessage(std::string("Topology Creation Completed.\n"));
 }
 
@@ -3234,7 +3295,7 @@ int MRIStructuredScan::GetCellFaceID(int CellId,int FaceId){
 // ========================
 // EXPORT TO POISSON SOLVER
 // ========================
-void MRIStructuredScan::ExportForPOISSON(string inputFileName){
+void MRIStructuredScan::ExportForPOISSON(string inputFileName, MRIThresholdCriteria* threshold){
   // Declare
   FILE* outFile;
   outFile = fopen(inputFileName.c_str(),"w");
@@ -3311,7 +3372,7 @@ void MRIStructuredScan::ExportForPOISSON(string inputFileName){
   // Loop on cells
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     // Eva Spatial Derivatives
-    EvalSpaceDerivs(loopA, firstDerivs, secondDerivs);
+    EvalSpaceDerivs(loopA,threshold,firstDerivs,secondDerivs);
     // Eval the Convective term for the current Cell
     temp.clear();
     tempViscous.clear();
@@ -3446,7 +3507,7 @@ void MRIStructuredScan::setWallFluxesToZero(bool* isFaceOnWalls, MRIDoubleVec& p
 // ==================================================================
 // EXPORT TO POISSON SOLVER ONLY ELEMENTS WITH POSITIVE CONCENTRATION
 // ==================================================================
-void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double density,double viscosity){
+void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold){
   // Declare
   FILE* outFile;
   outFile = fopen(inputFileName.c_str(),"w");
@@ -3558,7 +3619,7 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
     // Only Cells with significant Concentration
     if(cellPoints[loopA].concentration > 0.5){
       // Eva Spatial Derivatives
-      EvalSpaceDerivs(loopA, firstDerivs, secondDerivs);
+      EvalSpaceDerivs(loopA, threshold, firstDerivs, secondDerivs);
       // Eval the Convective term for the current Cell
       temp.clear();
       tempViscous.clear();

@@ -108,7 +108,7 @@ double MRIStructuredScan::EvalCellVortexCriteria(int currentCell,int criteriaTyp
 // =============================
 // EVALUATION OF VORTEX CRITERIA
 // =============================
-void MRIStructuredScan::EvalVortexCriteria(){
+void MRIStructuredScan::EvalVortexCriteria(MRIThresholdCriteria* threshold){
   // Velocity Gradient and Hessian
   // First and Second Derivatives
   double** deformation = new double*[kNumberOfDimensions];
@@ -127,7 +127,7 @@ void MRIStructuredScan::EvalVortexCriteria(){
   MRIOutput out3("DeltaCriterion",1);
   // Loop on cells
   for(int loopA=0;loopA<totalCellPoints;loopA++){
-    EvalSpaceDerivs(loopA,firstDerivs,secondDerivs);
+    EvalSpaceDerivs(loopA,threshold,firstDerivs,secondDerivs);
     EvalCellVelocityGradientDecomposition(loopA,deformation,rotation,firstDerivs);
     // Store Criteria
     out1.values.push_back(EvalCellVortexCriteria(loopA,kVortexQ,deformation,rotation,firstDerivs));
@@ -161,7 +161,7 @@ void ComputeVorticity(double** firstDerivs,double* auxVector){
 // ==============
 // EVAL VORTICITY
 // ==============
-void MRIStructuredScan::EvalVorticity(){
+void MRIStructuredScan::EvalVorticity(MRIThresholdCriteria* threshold){
   // Allocate derivatives
   double** firstDerivs = new double*[kNumberOfDimensions];
   double** secondDerivs = new double*[kNumberOfDimensions];
@@ -173,7 +173,7 @@ void MRIStructuredScan::EvalVorticity(){
   MRIOutput out1("Vorticity",3);
   // Loop on cells
   for(int loopA=0;loopA<totalCellPoints;loopA++){
-    EvalSpaceDerivs(loopA,firstDerivs,secondDerivs);
+    EvalSpaceDerivs(loopA,threshold,firstDerivs,secondDerivs);
     // Store Criteria
     ComputeVorticity(firstDerivs,vort);
     out1.values.push_back(vort[0]);
@@ -194,7 +194,7 @@ void MRIStructuredScan::EvalVorticity(){
 // ==============
 // EVAL ENSTROPHY
 // ==============
-void MRIStructuredScan::EvalEnstrophy(){
+void MRIStructuredScan::EvalEnstrophy(MRIThresholdCriteria* threshold){
   // Allocate derivatives  
   double** firstDerivs = new double*[kNumberOfDimensions];
   double** secondDerivs = new double*[kNumberOfDimensions];
@@ -207,7 +207,7 @@ void MRIStructuredScan::EvalEnstrophy(){
   MRIOutput out1("Enstrophy",1);
   // Loop on cells
   for(int loopA=0;loopA<totalCellPoints;loopA++){
-    EvalSpaceDerivs(loopA,firstDerivs,secondDerivs);
+    EvalSpaceDerivs(loopA,threshold,firstDerivs,secondDerivs);
     // Store Criteria
     ComputeVorticity(firstDerivs,vec);
     // Square Modulus

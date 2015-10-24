@@ -94,7 +94,7 @@ class MRIScan{
     void EvalNoisyPressureGradientPoints();
 
     // TURBULENCE MODELLING
-    void EvalReynoldsStressComponent();
+    void EvalReynoldsStressComponent(MRIThresholdCriteria* threshold);
     void EvalPressureIterative(int currentCell, double currentValue, bool* visitedCell, std::vector<int> &cellStack,int& cellCount);
 
     // FILTERING
@@ -116,9 +116,9 @@ class MRIScan{
     virtual double EvalCellL2Criterion(int currentCell, double** deformation, double** rotation){throw MRIException("Error: Not Implemented!");}
     virtual double EvalCellDeltaCriterion(int currentCell, double** deformation, double** rotation, double** velGradient){throw MRIException("Error: Not Implemented!");}
     virtual double EvalCellVortexCriteria(int currentCell,int criteriaType, double** deformation, double** rotation, double** velGradient){throw MRIException("Error: Not Implemented!");}
-    virtual void   EvalVortexCriteria(){throw MRIException("Error: Not Implemented!");}
-    virtual void   EvalVorticity(){throw MRIException("Error: Not Implemented!");}
-    virtual void   EvalEnstrophy(){throw MRIException("Error: Not Implemented!");}
+    virtual void   EvalVortexCriteria(MRIThresholdCriteria* threshold){throw MRIException("Error: Not Implemented!");}
+    virtual void   EvalVorticity(MRIThresholdCriteria* threshold){throw MRIException("Error: Not Implemented!");}
+    virtual void   EvalEnstrophy(MRIThresholdCriteria* threshold){throw MRIException("Error: Not Implemented!");}
 
     // =================
     // VIRTUAL FUNCTIONS
@@ -129,8 +129,8 @@ class MRIScan{
     virtual void ExportToVOL(std::string FileName){throw MRIException("Error: Not Implemented!");}
     virtual void ExportToVTK(std::string fileName){throw MRIException("Error: Not Implemented!");}
     virtual void ExportToTECPLOT(std::string FileName, bool isFirstFile){throw MRIException("Error: Not Implemented!");}
-    virtual void ExportForPOISSON(string inputFileName){throw MRIException("Error: Not Implemented!");}
-    virtual void ExportForPOISSONPartial(string inputFileName,double density,double viscosity){throw MRIException("Error: Not Implemented!");}
+    virtual void ExportForPOISSON(string inputFileName, MRIThresholdCriteria* threshold){throw MRIException("Error: ExportForPOISSON Not Implemented!");}
+    virtual void ExportForPOISSONPartial(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold){throw MRIException("Error: ExportForPOISSONPartial Not Implemented!");}
     virtual void WriteExpansionFile(std::string fileName){throw MRIException("Error: Not Implemented!");}
 
     // MODEL MANIPULATION
@@ -149,7 +149,7 @@ class MRIScan{
 
     // EVAL DERIVATIVES
     virtual void EvalSpaceGradient(int currentCell,int qtyID, double* gradient){throw MRIException("Error: Not Implemented!");}
-    virtual void EvalSpaceDerivs(int currentCell, double** firstDerivs, double** secondDerivs){throw MRIException("Error: Not Implemented!");}
+    virtual void EvalSpaceDerivs(int currentCell, MRIThresholdCriteria* threshold, double** firstDerivs, double** secondDerivs){throw MRIException("Error: Not Implemented!");}
 
     // EVAL REYNOLDS STRESSES
     virtual void EvalReynoldsStressGradient(int currentCell, double** ReynoldsStressGradient){throw MRIException("Error: Not Implemented!");}

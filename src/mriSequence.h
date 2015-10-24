@@ -37,7 +37,7 @@ class MRISequence{
     void ExportToVOL(std::string outfileName);
     void ExportToVTK(std::string outfileName);
     void WriteExpansionFile(string fileName);
-    void ExportForPOISSON(string inputFileName,double density,double viscosity);
+    void ExportForPOISSON(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold);
 
     // SAVE QUANTITIES TO OUTPUTS
     void saveVelocity();
@@ -49,13 +49,13 @@ class MRISequence{
     void ApplyThresholding(MRIThresholdCriteria* thresholdCriteria);
 
     // EVAL VORTEX CRITERIA
-    void EvalVortexCriteria();
-    void EvalVorticity();
-    void EvalEnstrophy();
+    void EvalVortexCriteria(MRIThresholdCriteria* thresholdCriteria);
+    void EvalVorticity(MRIThresholdCriteria* thresholdCriteria);
+    void EvalEnstrophy(MRIThresholdCriteria* thresholdCriteria);
     void EvalSMPVortexCriteria();
     
     // PRESSURE COMPUTATION
-    void ComputePressureGradients();
+    void ComputePressureGradients(MRIThresholdCriteria* threshold);
     void ComputeRelativePressure(bool doPressureSmoothing);
 
     // ADD NOISE
