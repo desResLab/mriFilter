@@ -136,7 +136,8 @@ void MRIScan::EvalNoisyPressureGradientPoints(){
       currPressGradY = cellPoints[loopA].pressGrad[1];
       currPressGradZ = cellPoints[loopA].pressGrad[2];
       // GET NEIGHBOURS
-      GetNeighbourCells(loopA,neighbours);
+      // Should I use all neighbors including the current cell!!!
+      GetCartesianNeighbourCells(loopA,neighbours,true);
       // INIT AVERAGE PRESSURE GRADIENT
       avPressGradX = 0.0;
       avPressGradY = 0.0;

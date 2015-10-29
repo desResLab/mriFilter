@@ -15,11 +15,11 @@ bool MRIScan::IsInnerCell(int Cell){
   bool isInside = true; 
   std::vector<int> others;
 	// Get Neighbors
-  GetNeighbourCells(Cell,others);
+  GetCartesianNeighbourCells(Cell,others,false);
   // If There Are Zero then False
   for(int loopA=0;loopA<k3DNeighbors;loopA++){
-		isInside = ((isInside)&&(others[loopA]>-1));
-	} 
+    isInside = ((isInside)&&(others[loopA]>-1));
+  }
   // RETURN
   return isInside;
 }

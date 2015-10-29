@@ -207,12 +207,12 @@ void MRIStructuredScan::EvalSpaceDerivs(int currentCell, MRIThresholdCriteria* t
   // DVX/DZ DVY/DZ DVZ/DZ
 
   // Get quantity for threshold evaluation
-  double cellQty = cellPoints[currentCell].getQuantity(threshold->thresholdQty);
+  double cellQty = 0.0;
 
   // Map Index To Coords
   int* currentCellCoords = new int[kNumberOfDimensions];
   MapIndexToCoords(currentCell,currentCellCoords);
-  int firstCell,secondCell,currCell;
+  int firstCell,secondCell,thirdCell,fourthCell,nextCell;
 
   // Assemble Terms
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
@@ -222,21 +222,45 @@ void MRIStructuredScan::EvalSpaceDerivs(int currentCell, MRIThresholdCriteria* t
         if((currentCellCoords[0]-1)<0){
           firstCell = -1;
         }else{
-          currCell = MapCoordsToIndex(currentCellCoords[0]-1,currentCellCoords[1],currentCellCoords[2]);
+          nextCell = MapCoordsToIndex(currentCellCoords[0]-1,currentCellCoords[1],currentCellCoords[2]);
+          cellQty = cellPoints[nextCell].getQuantity(threshold->thresholdQty);
           if(threshold->MeetsCriteria(cellQty)){
             firstCell = -1;
           }else{
-            firstCell = currCell;
+            firstCell = nextCell;
           }
         }
         if((currentCellCoords[0]+1)>(cellTotals[0]-1)){
           secondCell = -1;
         }else{
-          currCell = MapCoordsToIndex(currentCellCoords[0]+1,currentCellCoords[1],currentCellCoords[2]);
+          nextCell = MapCoordsToIndex(currentCellCoords[0]+1,currentCellCoords[1],currentCellCoords[2]);
+          cellQty = cellPoints[nextCell].getQuantity(threshold->thresholdQty);
           if(threshold->MeetsCriteria(cellQty)){
             secondCell = -1;
           }else{
-            secondCell = currCell;
+            secondCell = nextCell;
+          }
+        }
+        if((currentCellCoords[0]-2)<0){
+          thirdCell = -1;
+        }else{
+          nextCell = MapCoordsToIndex(currentCellCoords[0]-2,currentCellCoords[1],currentCellCoords[2]);
+          cellQty = cellPoints[nextCell].getQuantity(threshold->thresholdQty);
+          if(threshold->MeetsCriteria(cellQty)){
+            thirdCell = -1;
+          }else{
+            thirdCell = nextCell;
+          }
+        }
+        if((currentCellCoords[0]+2)>(cellTotals[0]-1)){
+          fourthCell = -1;
+        }else{
+          nextCell = MapCoordsToIndex(currentCellCoords[0]+2,currentCellCoords[1],currentCellCoords[2]);
+          cellQty = cellPoints[nextCell].getQuantity(threshold->thresholdQty);
+          if(threshold->MeetsCriteria(cellQty)){
+            fourthCell = -1;
+          }else{
+            fourthCell = nextCell;
           }
         }
         break;
@@ -245,21 +269,45 @@ void MRIStructuredScan::EvalSpaceDerivs(int currentCell, MRIThresholdCriteria* t
         if((currentCellCoords[1]-1)<0){
           firstCell = -1;
         }else{
-          currCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1]-1,currentCellCoords[2]);
+          nextCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1]-1,currentCellCoords[2]);
+          cellQty = cellPoints[nextCell].getQuantity(threshold->thresholdQty);
           if(threshold->MeetsCriteria(cellQty)){
             firstCell = -1;
           }else{
-            firstCell = currCell;
+            firstCell = nextCell;
           }
         }
         if((currentCellCoords[1]+1)>(cellTotals[1]-1)){
           secondCell = -1;
         }else{
-          currCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1]+1,currentCellCoords[2]);
+          nextCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1]+1,currentCellCoords[2]);
+          cellQty = cellPoints[nextCell].getQuantity(threshold->thresholdQty);
           if(threshold->MeetsCriteria(cellQty)){
             secondCell = -1;
           }else{
-            secondCell = currCell;
+            secondCell = nextCell;
+          }
+        }
+        if((currentCellCoords[1]-2)<0){
+          thirdCell = -1;
+        }else{
+          nextCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1]-2,currentCellCoords[2]);
+          cellQty = cellPoints[nextCell].getQuantity(threshold->thresholdQty);
+          if(threshold->MeetsCriteria(cellQty)){
+            thirdCell = -1;
+          }else{
+            thirdCell = nextCell;
+          }
+        }
+        if((currentCellCoords[1]+2)>(cellTotals[1]-1)){
+          fourthCell = -1;
+        }else{
+          nextCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1]+2,currentCellCoords[2]);
+          cellQty = cellPoints[nextCell].getQuantity(threshold->thresholdQty);
+          if(threshold->MeetsCriteria(cellQty)){
+            fourthCell = -1;
+          }else{
+            fourthCell = nextCell;
           }
         }
         break;
@@ -268,31 +316,55 @@ void MRIStructuredScan::EvalSpaceDerivs(int currentCell, MRIThresholdCriteria* t
         if((currentCellCoords[2]-1)<0){
           firstCell = -1;
         }else{
-          currCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1],currentCellCoords[2]-1);
+          nextCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1],currentCellCoords[2]-1);
+          cellQty = cellPoints[nextCell].getQuantity(threshold->thresholdQty);
           if(threshold->MeetsCriteria(cellQty)){
             firstCell = -1;
           }else{
-            firstCell = currCell;
+            firstCell = nextCell;
           }
         }
         if((currentCellCoords[2]+1)>(cellTotals[2]-1)){
           secondCell = -1;
         }else{
-          currCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1],currentCellCoords[2]+1);
+          nextCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1],currentCellCoords[2]+1);
+          cellQty = cellPoints[nextCell].getQuantity(threshold->thresholdQty);
           if(threshold->MeetsCriteria(cellQty)){
             secondCell = -1;
           }else{
-            secondCell = currCell;
+            secondCell = nextCell;
+          }
+        }
+        if((currentCellCoords[2]-2)<0){
+          thirdCell = -1;
+        }else{
+          nextCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1],currentCellCoords[2]-2);
+          cellQty = cellPoints[nextCell].getQuantity(threshold->thresholdQty);
+          if(threshold->MeetsCriteria(cellQty)){
+            thirdCell = -1;
+          }else{
+            thirdCell = nextCell;
+          }
+        }
+        if((currentCellCoords[2]+2)>(cellTotals[2]-1)){
+          fourthCell = -1;
+        }else{
+          nextCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1],currentCellCoords[2]+2);
+          cellQty = cellPoints[nextCell].getQuantity(threshold->thresholdQty);
+          if(threshold->MeetsCriteria(cellQty)){
+            fourthCell = -1;
+          }else{
+            fourthCell = nextCell;
           }
         }
         break;
     }
 
-    //printf("CELLS: FIRST %d, CURRENT %d, SECOND %d\n",firstCell,currentCell,secondCell);
-
     // Get Deltas
     double deltaMinus = 0.0;
     double deltaPlus = 0.0;
+    double deltaPlusPlus = 0.0;
+    double deltaMinusMinus = 0.0;
     if(firstCell>-1){
       deltaMinus = 0.5*(cellLengths[loopA][currentCellCoords[loopA]] + cellLengths[loopA][currentCellCoords[loopA]-1]);
     }else{
@@ -303,11 +375,23 @@ void MRIStructuredScan::EvalSpaceDerivs(int currentCell, MRIThresholdCriteria* t
     }else{
       deltaPlus = 0.0;
     }
+    if(thirdCell>-1){
+      deltaMinusMinus = 0.5*(cellLengths[loopA][currentCellCoords[loopA]-1] + cellLengths[loopA][currentCellCoords[loopA]-2]);
+    }else{
+      deltaMinusMinus = 0.0;
+    }
+    if(fourthCell>-1){
+      deltaPlusPlus = 0.5*(cellLengths[loopA][currentCellCoords[loopA]+1] + cellLengths[loopA][currentCellCoords[loopA]+2]);
+    }else{
+      deltaPlusPlus = 0.0;
+    }
 
     // Find Components
+    double currentVComponent = 0.0;
     double firstVComponent = 0.0;
     double secondVComponent = 0.0;
-    double currentVComponent = 0.0;
+    double thirdVComponent = 0.0;
+    double fourthVComponent = 0.0;
     for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
       // First Component
       if(firstCell>-1){
@@ -321,54 +405,75 @@ void MRIStructuredScan::EvalSpaceDerivs(int currentCell, MRIThresholdCriteria* t
       }else{
         secondVComponent = 0.0;
       }
-      // Current Component
-      currentVComponent = cellPoints[currentCell].velocity[loopB];
-
-      // FIRST DERIVS
-      if(firstCell<0){
-        // Simple Euler Formula
-        if(fabs(deltaPlus) > kMathZero){
-          firstDerivs[loopA][loopB] = (secondVComponent-currentVComponent)/(deltaPlus);
-        }else{
-          firstDerivs[loopA][loopB] = 0.0;
-        }
-        //printf("FORWARD DIFF: Comp 1: %f, Comp2: %f, delta: %f, Deriv: %f\n",secondVComponent,currentVComponent,deltaPlus,firstDerivs[loopA][loopB]);
-      }else if (secondCell<0){
-        // Simple Euler Formula
-        if(fabs(deltaMinus) > kMathZero){
-          firstDerivs[loopA][loopB] = (currentVComponent-firstVComponent)/(deltaMinus);
-        }else{
-          firstDerivs[loopA][loopB] = 0.0;
-        }
-        //printf("BACKWARD DIFF: Comp 1: %f, Comp2: %f, delta: %f, Deriv: %f\n",currentVComponent,firstVComponent,deltaMinus,firstDerivs[loopA][loopB]);
-      }else if((firstCell>-1)&&(secondCell>-1)){
-        // Central Difference Formula: CAREFULL: ONLY FIRST ORDER IF GRID SPACING VARIES SIGNIFICANTLY
-        if((deltaPlus + deltaMinus) > kMathZero){
-          firstDerivs[loopA][loopB] = (secondVComponent-firstVComponent)/(deltaPlus + deltaMinus);
-        }else{
-          firstDerivs[loopA][loopB] = 0.0;
-        }
-        //printf("CENTRAL DIFF: Comp 1: %f, Comp2: %f, delta: %f, Deriv: %f\n",secondVComponent,firstVComponent,deltaPlus + deltaMinus,firstDerivs[loopA][loopB]);
+      // Third Component
+      if(thirdCell>-1){
+        thirdVComponent = cellPoints[thirdCell].velocity[loopB];
       }else{
-        // Show Error Message
-        throw MRIPressureComputationException("Error: Both First and Second Cells are Zero in EvalFirstSpaceDerivs");
+        thirdVComponent = 0.0;
+      }
+      // Fourth Component
+      if(fourthCell>-1){
+        fourthVComponent = cellPoints[fourthCell].velocity[loopB];
+      }else{
+        fourthVComponent = 0.0;
       }
 
-      // SECOND DERIVS
-      if(firstCell<0){
-        // Simple Euler Formula
-        // TODO: Find a better formula for the boundary!!!
+      // Check if the current Cell has a
+      cellQty = cellPoints[currentCell].getQuantity(threshold->thresholdQty);
+      if(threshold->MeetsCriteria(cellQty)){
+        firstDerivs[loopA][loopB] = 0.0;
         secondDerivs[loopA][loopB] = 0.0;
-      }else if (secondCell<0){
-        // Simple Euler Formula
-        // TODO: Find a better formula for the boundary!!!
-        secondDerivs[loopA][loopB] = 0.0;
-      }else if((firstCell>-1)&&(secondCell>-1)){
-        // Central Difference Formula: CAREFULL: IS THIS ACCURATE !!!
-        secondDerivs[loopA][loopB] = (secondVComponent-2.0*currentVComponent+firstVComponent)/(deltaPlus*deltaMinus);
       }else{
-        // Show Error Message
-        throw MRIPressureComputationException("Error: Both First and Second Cells are Zero in EvalFirstSpaceDerivs");
+        // Current Component
+        currentVComponent = cellPoints[currentCell].velocity[loopB];
+
+        // FIRST DERIVS
+        if(firstCell<0){
+          // Simple Euler Formula
+          if(fabs(deltaPlus) > kMathZero){
+            firstDerivs[loopA][loopB] = (secondVComponent-currentVComponent)/(deltaPlus);
+          }else{
+            firstDerivs[loopA][loopB] = 0.0;
+          }
+        }else if (secondCell<0){
+          // Simple Euler Formula
+          if(fabs(deltaMinus) > kMathZero){
+            firstDerivs[loopA][loopB] = (currentVComponent-firstVComponent)/(deltaMinus);
+          }else{
+            firstDerivs[loopA][loopB] = 0.0;
+          }
+        }else if((firstCell>-1)&&(secondCell>-1)){
+          // Central Difference Formula: CAREFULL: ONLY FIRST ORDER IF GRID SPACING VARIES SIGNIFICANTLY
+          if((deltaPlus + deltaMinus) > kMathZero){
+            firstDerivs[loopA][loopB] = (secondVComponent-firstVComponent)/(deltaPlus + deltaMinus);
+          }else{
+            firstDerivs[loopA][loopB] = 0.0;
+          }
+        }else{
+          // Show Error Message
+          throw MRIPressureComputationException("Error: Both First and Second Cells are Zero in EvalFirstSpaceDerivs");
+        }
+
+        // SECOND DERIVS
+        if(firstCell<0){
+          if((secondCell>-1)&&(fourthCell>-1)){
+            secondDerivs[loopA][loopB] = (currentVComponent-2.0*secondVComponent+fourthVComponent)/(deltaPlus*deltaPlusPlus);
+          }else{
+            secondDerivs[loopA][loopB] = 0.0;
+          }
+        }else if (secondCell<0){
+          if((firstCell>-1)&&(thirdCell>-1)){
+            secondDerivs[loopA][loopB] = (thirdVComponent-2.0*firstVComponent+currentVComponent)/(deltaMinus*deltaMinusMinus);
+          }else{
+            secondDerivs[loopA][loopB] = 0.0;
+          }
+        }else if((firstCell>-1)&&(secondCell>-1)){
+          // Central Difference Formula
+          secondDerivs[loopA][loopB] = (secondVComponent-2.0*currentVComponent+firstVComponent)/(deltaPlus*deltaMinus);
+        }else{
+          // Show Error Message
+          throw MRIPressureComputationException("Error: Both First and Second Cells are Zero in EvalFirstSpaceDerivs");
+        }
       }
     }
   }
@@ -745,7 +850,8 @@ void MRIScan::EvalPressureIterative(int currentCell, double currentValue, bool* 
   // Eval Neighbours
   bool useCount = false;
   int cell = 0;
-  GetNeighbourCells(currentCell,otherCells);
+  // Should I visit also diagonal neighbor!!!
+  GetCartesianNeighbourCells(currentCell,otherCells,true);
   double diff[3] = {0.0};
   double avGradient[3] = {0.0};
   // Loop through Neighbours
@@ -782,7 +888,8 @@ void MRIScan::EvalPressureIterative(int currentCell, double currentValue, bool* 
 // CHECK IF NEIGHBOR ARE NOT VISITED
 bool MRIScan::AreThereNotVisitedNeighbor(int cell, bool* visitedCell){
   std::vector<int> otherCells;
-  GetNeighbourCells(cell,otherCells);
+  // Should I consider also the diagonal neighbors!!!
+  GetCartesianNeighbourCells(cell,otherCells,false);
   bool areThereVisited = false;
   for(size_t loopA=0;loopA<otherCells.size();loopA++){
     if((otherCells[loopA]>-1)&&(IsInnerCell(otherCells[loopA]))){
@@ -796,7 +903,8 @@ bool MRIScan::AreThereNotVisitedNeighbor(int cell, bool* visitedCell){
 // CHECK IF NEIGHBOR ARE VISITED
 bool MRIScan::AreThereVisitedNeighbor(int cell, bool* visitedCell, bool* isBoundaryCell, int &visitedNeighbor){
   std::vector<int> otherCells;
-  GetNeighbourCells(cell,otherCells);
+  // Should I consider also the diagonal neighbors!!!
+  GetCartesianNeighbourCells(cell,otherCells,false);
   bool areThereVisited = false;
   for(size_t loopA=0;loopA<otherCells.size();loopA++){
     if((otherCells[loopA]>-1)&&(IsInnerCell(otherCells[loopA]))){
@@ -1001,7 +1109,8 @@ void MRIScan::PerformPressureIterations(){
         // Eval Current Pressure
         currentPressure = cellPoints[loopA].relPressure;
         // Eval The Avergage Of Neighbor Pressures
-        GetNeighbourCells(loopA,neighbours);
+        // Should I consider also diagonal neighbor!!!
+        GetCartesianNeighbourCells(loopA,neighbours,false);
         avPressure = 0.0;
         avCount = 0;
         for(int loopB=0;loopB<k3DNeighbors;loopB++){
@@ -1063,47 +1172,40 @@ void MRIScan::ApplyMedianFilter(int qtyID,int maxIt, bool useMedian){
   int currCell = 0;
   std::vector<int> neighbours;
   // PERFORM ITERATIONS
-  for(int loop0=0;loop0<maxIt;loop0++){
+  for(int loop0=0;loop0<maxIt;loop0++){    
     // LOOP ON ALL CELLS
     double maxError = 0.0;
     for(int loopA=0;loopA<totalCellPoints;loopA++){
-      // CHECK IF THE CELL IS INTERNAL
-      if(IsInnerCell(loopA)){
-        // Get Value in Current Cell
-        centerCellValue = cellPoints[loopA].getQuantity(qtyID);
-        // Clear Values
-        neighValues.clear();
-        // GET NEIGHBOURS
-        GetNeighbourCells(loopA,neighbours);
-        // GET THE VALUES ON NEIGHBOR CELLS
-        for(size_t loopB=0;loopB<neighbours.size();loopB++){
-          currCell = neighbours[loopB];
+      // Get Value in Current Cell
+      centerCellValue = cellPoints[loopA].getQuantity(qtyID);
+      // Clear Values
+      neighValues.clear();
+      // GET NEIGHBOURS
+      GetCartesianNeighbourCells(loopA,neighbours,true);
+      // GET THE VALUES ON NEIGHBOR CELLS
+      for(size_t loopB=0;loopB<neighbours.size();loopB++){
+        currCell = neighbours[loopB];
+        if(currCell>-1){
           // Get Quantity for Neighbor Cell
           currValue = cellPoints[currCell].getQuantity(qtyID);
           // Store value
           neighValues.push_back(currValue);
         }
-        // FIND MEDIAN VALUE
-        if(useMedian){
-          currMedian = MRIUtils::GetMedian(neighValues);
-        }else{
-          currMedian = MRIUtils::GetMean(neighValues);
-        }
-
-        // EVAL CHANGE
-        if (fabs(centerCellValue)>1.0e-7){
-          currError = fabs(((currMedian-centerCellValue)/(double)centerCellValue)*100.0);
-        }else{
-          currError = 0.0;
-        }
-        if(currError>maxError){
-          maxError = currError;
-        }
-        // ASSIGN MEDIAN
-        tempVec[loopA] = currMedian;
-      }else{
-        tempVec[loopA] = 0.0;
       }
+      // FIND MEDIAN VALUE
+      if(useMedian){
+        currMedian = MRIUtils::GetMedian(neighValues);
+      }else{
+        currMedian = MRIUtils::GetMean(neighValues);
+      }
+
+      // EVAL CHANGE
+      currError = fabs(((currMedian-centerCellValue)/(double)maxVelModule)*100.0);
+      if(currError>maxError){
+        maxError = currError;
+      }
+      // ASSIGN MEDIAN
+      tempVec[loopA] = currMedian;
     }
     // ASSIGN VALUES
     for(int loopA=0;loopA<totalCellPoints;loopA++){

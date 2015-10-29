@@ -1513,7 +1513,7 @@ bool MRIStructuredScan::hasUniformSpacing(){
 // =================
 // Write to VTK File
 // =================
-void MRIStructuredScan::ExportToVTK(std::string fileName){
+void MRIStructuredScan::ExportToVTK(std::string fileName, MRIThresholdCriteria* threshold){
 
   // Declare
   bool printAux = true;
@@ -1667,6 +1667,40 @@ void MRIStructuredScan::ExportToVTK(std::string fileName){
     }
   }
 
+  // ==================
+  // EXPORT REDIVATIVES
+  // ==================
+
+  // First and Second Derivatives
+  double** firstDerivs = new double*[kNumberOfDimensions];
+  double** secondDerivs = new double*[kNumberOfDimensions];
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    firstDerivs[loopA] = new double[kNumberOfDimensions];
+    secondDerivs[loopA] = new double[kNumberOfDimensions];
+  }
+
+  // Print the Velocity Gradient
+  fprintf(outFile,"TENSORS VelocityGradient double\n");
+  // Print Reynolds Stress Tensor
+  for (int loopA=0;loopA<totalCellPoints;loopA++){
+    EvalSpaceDerivs(loopA,threshold,firstDerivs,secondDerivs);
+    fprintf(outFile,"%e %e %e\n",firstDerivs[0][0],firstDerivs[0][1],firstDerivs[0][2]);
+    fprintf(outFile,"%e %e %e\n",firstDerivs[1][0],firstDerivs[1][1],firstDerivs[1][2]);
+    fprintf(outFile,"%e %e %e\n",firstDerivs[2][0],firstDerivs[2][1],firstDerivs[2][2]);
+    fprintf(outFile,"\n");
+  }
+
+  // Print the Velocity Gradient
+  fprintf(outFile,"TENSORS VelocityCurvature double\n");
+  // Print Reynolds Stress Tensor
+  for (int loopA=0;loopA<totalCellPoints;loopA++){
+    EvalSpaceDerivs(loopA,threshold,firstDerivs,secondDerivs);
+    fprintf(outFile,"%e %e %e\n",secondDerivs[0][0],secondDerivs[0][1],secondDerivs[0][2]);
+    fprintf(outFile,"%e %e %e\n",secondDerivs[1][0],secondDerivs[1][1],secondDerivs[1][2]);
+    fprintf(outFile,"%e %e %e\n",secondDerivs[2][0],secondDerivs[2][1],secondDerivs[2][2]);
+    fprintf(outFile,"\n");
+  }
+
   // Print outputs
   for(int loopA=0;loopA<outputs.size();loopA++){
     // Print Header
@@ -1689,14 +1723,13 @@ void MRIStructuredScan::ExportToVTK(std::string fileName){
     }
   }
 
-  // Print Vortex Criteria
-  /*if (printAux){
-    fprintf(outFile,"VECTORS VortexCrit float\n");
-    // Print pressure Gradient
-    for (int loopA=0;loopA<totalCellPoints;loopA++){
-      fprintf(outFile,"%e %e %e\n",cellPoints[loopA].auxVector[0],cellPoints[loopA].auxVector[1],cellPoints[loopA].auxVector[2]);
-    }
-  }*/
+  // Free Memory
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    delete [] firstDerivs[loopA];
+    delete [] secondDerivs[loopA];
+  }
+  delete [] firstDerivs;
+  delete [] secondDerivs;
 
   // Print Tagging
   if(mriCellTags.size() > 0){
@@ -2175,9 +2208,12 @@ int MRIStructuredScan::getTotalFaces(){
 // =======================
 // GET NEIGHBORS OF A CELL
 // =======================
-void MRIStructuredScan::GetNeighbourCells(int CurrentCell,std::vector<int> &cellNeighbors){
+void MRIStructuredScan::GetCartesianNeighbourCells(int CurrentCell,std::vector<int> &cellNeighbors, bool addself){
   int* coords = new int[3];
   cellNeighbors.clear();
+  if(addself){
+    cellNeighbors.push_back(CurrentCell);
+  }
   //Get The Coordinates of the Current Cell
   MapIndexToCoords(CurrentCell,coords);
   // Get Neighbor
@@ -3453,24 +3489,12 @@ void MRIStructuredScan::ExportForPOISSON(string inputFileName, MRIThresholdCrite
     }
   }
 
-  // ===================
-  // SAVE DIRICHELET BCS
-  // ===================
-  /*double pos[3];
-  for(int loopA=0;loopA<totAuxNodes;loopA++){
-    getAuxNodeCoordinates(loopA,pos);
-    if((fabs(pos[0]-(domainSizeMin[0]-0.5*cellLengths[0][0]))<1.0e-5)){
-      fprintf(outFile,"NODEDIRBC %d %e\n",loopA + 1,5.0);
-    }
-    if((fabs(pos[0]-(domainSizeMax[0]-0.5*cellLengths[0][0]))<1.0e-5)){
-      fprintf(outFile,"NODEDIRBC %d %e\n",loopA + 1,-5.0);
-    }
-  }*/
-
   bool found = false;
+  double qty;
   int count = 0;
   while(!found){
-    found = (cellPoints[count].concentration > 0.5);
+    qty = cellPoints[count].getQuantity(threshold->thresholdQty);
+    found = !(threshold->MeetsCriteria(qty));
     if(!found){
       count++;
     }
@@ -3506,10 +3530,11 @@ void MRIStructuredScan::setWallFluxesToZero(bool* isFaceOnWalls, MRIDoubleVec& p
 // EXPORT TO POISSON SOLVER ONLY ELEMENTS WITH POSITIVE CONCENTRATION
 // ==================================================================
 void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold){
+
   // Declare
   FILE* outFile;
   outFile = fopen(inputFileName.c_str(),"w");
-  int totAuxNodes = (cellTotals[0] + 1) * (cellTotals[1] + 1) * (cellTotals[2] + 1);
+  int totAuxNodes = getTotalAuxNodes();
   double qty = 0.0;
 
   // Get the mappings for nodes that need to be used
@@ -3518,11 +3543,12 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
   for(int loopA=0;loopA<totAuxNodes;loopA++){
     nodeUsageMap.push_back(-1);
   }
+
   // Mark Used Nodes
   int currAuxNode = 0;
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
-    if(threshold->MeetsCriteria(qty)){
+    if(!threshold->MeetsCriteria(qty)){
       for(int loopB=0;loopB<cellConnections[loopA].size();loopB++){
         currAuxNode = cellConnections[loopA][loopB];
         nodeUsageMap[currAuxNode] = 1;
@@ -3546,7 +3572,7 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
   int elCount = 0;
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
-    if(threshold->MeetsCriteria(qty)){
+    if(!threshold->MeetsCriteria(qty)){
       elUsageMap[loopA] = elCount;
       elCount++;
     }
@@ -3565,11 +3591,13 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
       }
     }
 
+    // ========================
     // SAVE ELEMENT CONNECTIONS
+    // ========================
     elCount = 0;
     for(int loopA=0;loopA<totalCellPoints;loopA++){
       qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
-      if(threshold->MeetsCriteria(qty)){
+      if(!threshold->MeetsCriteria(qty)){
         fprintf(outFile,"ELEMENT HEXA8 %d 1 ",elCount+1);
         elCount++;
         for(int loopB=0;loopB<cellConnections[loopA].size();loopB++){
@@ -3586,11 +3614,8 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
   elCount = 0;
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
-    if(threshold->MeetsCriteria(qty)){
+    if(!threshold->MeetsCriteria(qty)){
       fprintf(outFile,"ELDIFF %d ",elCount+1);
-      //fprintf(outFile,"%e ",cellPoints[loopA].concentration);
-      //fprintf(outFile,"%e ",cellPoints[loopA].concentration);
-      //fprintf(outFile,"%e ",cellPoints[loopA].concentration);
       fprintf(outFile,"%e ",1.0);
       fprintf(outFile,"%e ",1.0);
       fprintf(outFile,"%e ",1.0);
@@ -3621,7 +3646,7 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     // Only Cells with significant Concentration
     qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
-    if(threshold->MeetsCriteria(qty)){
+    if(!threshold->MeetsCriteria(qty)){
       // Eva Spatial Derivatives
       EvalSpaceDerivs(loopA, threshold, firstDerivs, secondDerivs);
       // Eval the Convective term for the current Cell
@@ -3635,22 +3660,14 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
           currValue += cellPoints[loopA].velocity[loopC] * firstDerivs[loopC][loopB];
           currValueViscous += secondDerivs[loopC][loopB];
         }
-        //printf("Acceleration: u1 %f du/d1 %f u2 %f du/d2 %f u3 %f du/d3 %f\n",
-        //       cellPoints[loopA].velocity[0],firstDerivs[0][loopB],
-        //       cellPoints[loopA].velocity[1],firstDerivs[1][loopB],
-        //       cellPoints[loopA].velocity[2],firstDerivs[2][loopB]);
-        // Add Component
+        // Add Viscous and Acceleration Components
         temp.push_back(density * currValue);
         tempViscous.push_back(viscosity * currValueViscous);
-        //printf("Dir %d, Cell: %d, Non Linear Term: %f, Viscous Term: %f\n",loopB,loopA,density *currValue,viscosity * currValueViscous);
       }
-      //printf("---\n");
-      //getchar();
       // Add to the global Vector: Only Elements with significant concentration
       poissonSourceVec.push_back(temp);
       poissonViscousTerm.push_back(tempViscous);
       elCount++;
-      //getchar();
     }else{
       // Add Zero for the cells with negligible concentration
       temp.clear();
@@ -3669,10 +3686,7 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
   for(int loopA=0;loopA<poissonSourceVec.size();loopA++){
     temp.clear();
     for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
-      // CHECK SIGN !!!
       temp.push_back(poissonSourceVec[loopA][loopB] - poissonViscousTerm[loopA][loopB]);
-      //temp.push_back(-poissonViscousTerm[loopA][loopB]);
-      //temp.push_back(poissonSourceVec[loopA][loopB]);
     }
     termSum.push_back(temp);
   }
@@ -3688,7 +3702,7 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     // Only Cells with Reasonable Concentration
     qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
-    if(threshold->MeetsCriteria(qty)){
+    if(!threshold->MeetsCriteria(qty)){
       for(int loopB=0;loopB<cellFaces[loopA].size();loopB++){
         faceCount[cellFaces[loopA][loopB]]++;
       }
@@ -3703,12 +3717,9 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
   }
   delete [] faceCount;
 
-
   // Convert Cell Vector to Face Vector
-  MRIThresholdCriteria* crit = new MRIThresholdCriteria(kCriterionLessThen,kNoQuantity,0.0);
   MRIDoubleVec poissonSourceFaceVec;
-  //cellToFacePartial(elUsageMap,crit,poissonSourceVec,poissonSourceFaceVec);
-  cellToFacePartial(elUsageMap,crit,termSum,poissonSourceFaceVec);
+  cellToFacePartial(elUsageMap,threshold,termSum,poissonSourceFaceVec);
 
   // SET TO ZERO THE FACES NOT ON THE BORDER
   setWallFluxesToZero(isFaceOnWalls,poissonSourceFaceVec);
@@ -3726,20 +3737,19 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
     currVol = evalCellVolume(loopA);
     // Add Source Term
     qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
-    if(threshold->MeetsCriteria(qty)){
+    if(!threshold->MeetsCriteria(qty)){
       SourceSum += cellDivs[loopA];
     }
     // Store source term
-    // CHECK !!!
     sourcesToApply.push_back(cellDivs[loopA]/currVol);
   }
-  printf("SOURCE TERM SUMMATION: %f\n",SourceSum);
+  printf("Source term summation: %f\n",SourceSum);
 
   // SAVE ELEMENT SOURCES TO FILE
   elCount = 0;
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
-    if(threshold->MeetsCriteria(qty)){
+    if(!threshold->MeetsCriteria(qty)){
       fprintf(outFile,"ELSOURCE %d %e\n",elCount+1,sourcesToApply[loopA]);
       elCount++;
     }
@@ -3755,7 +3765,7 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     // Sum Source Contribution
     qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
-    if(threshold->MeetsCriteria(qty)){
+    if(!threshold->MeetsCriteria(qty)){
       divSource += cellDivs[loopA];
     }
   }
@@ -3763,7 +3773,7 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
   int currFace = 0;
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
-    if(threshold->MeetsCriteria(qty)){
+    if(!threshold->MeetsCriteria(qty)){
       for(int loopB=0;loopB<cellFaces[loopA].size();loopB++){
         currFace = cellFaces[loopA][loopB];
         if(isFaceOnWalls[currFace]){
@@ -3781,27 +3791,24 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
       }
     }
   }
-  printf("CHECK DIVERGENCE THEOREM: DIV SUM: %f, NEU SUM: %f\n",divSource,divNeu);
-
+  printf("Divergence theorem check: Divergence SUM: %f, Neumann flux SUM: %f\n",divSource,divNeu);
 
   // =====================
   // SAVE NEUMANN BOUNDARY
   // =====================
-  double currVec[3] = {0.0};
-  double normComp = 0.0;
-  int numPos = 0;
-  int numNeg = 0;
   // Loop on the free faces
-  for(int loopA=0;loopA<faceCells.size();loopA++){
-    // Check if the face is free
-    //if(faceCells[loopA].size() == 1 || (isFaceOnWalls[loopA])){
+  for(int loopA=0;loopA<faceCells.size();loopA++){    
+
+    // Check if the face is on the wall
+    //if(faceCells[loopA].size() == 1){
     if(isFaceOnWalls[loopA]){
 
       // Get Current element
       if (faceCells[loopA].size() == 1){
         currCell = faceCells[loopA][0];
       }else{
-        if(cellPoints[faceCells[loopA][0]].concentration > 0.5){
+        qty = cellPoints[faceCells[loopA][0]].getQuantity(threshold->thresholdQty);
+        if(!threshold->MeetsCriteria(qty)){
           currCell = faceCells[loopA][0];
         }else{
           currCell = faceCells[loopA][1];
@@ -3809,67 +3816,25 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
       }
 
       // Only Cells with significant concentration
-      if(cellPoints[currCell].concentration > 0.5){
-        // Get Velocity Component
-        // Check SIGN !!!
-        //currVec[0] = poissonSourceVec[currCell][0] - poissonViscousTerm[currCell][0];
-        //currVec[1] = poissonSourceVec[currCell][1] - poissonViscousTerm[currCell][1];
-        //currVec[2] = poissonSourceVec[currCell][2] - poissonViscousTerm[currCell][2];
-        currVec[0] = - poissonViscousTerm[currCell][0];
-        currVec[1] = - poissonViscousTerm[currCell][1];
-        currVec[2] = - poissonViscousTerm[currCell][2];
-
-        // Get Normal Component
-        normComp = 0.0;
-        for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
-          normComp += currVec[loopB] * faceNormal[loopA][loopB];
-        }
-        // Multiply by the face area
-        currValue = faceArea[loopA] * normComp;
-        if(currValue > 0.0){
-          numPos++;
-        }else{
-          numNeg++;
-        }
-        // Print Line
+      qty = cellPoints[currCell].getQuantity(threshold->thresholdQty);
+      if(!threshold->MeetsCriteria(qty)){
+        // Print Neumann Condition
         fprintf(outFile,"FACENEUMANN %d ",elUsageMap[currCell] + 1);
         for(int loopB=0;loopB<faceConnections[loopA].size();loopB++){
           fprintf(outFile,"%d ",nodeUsageMap[faceConnections[loopA][loopB]] + 1);
         }
-        //fprintf(outFile,"%e\n",currValue);
-        //fprintf(outFile,"%e\n", - poissonSourceFaceVec[loopA] + currValue);
         fprintf(outFile,"%e\n", - poissonSourceFaceVec[loopA]);
-        //fprintf(outFile,"%e\n", currValue);
-        //printf("Neumann Terms: Advection: %f, Diffusion: %f\n",poissonSourceFaceVec[loopA],currValue);
       }else{
         printf("PROBLEM!\n");
       }
     }
   }
-  //printf("Positives: %d, Negatives: %d\n",numPos,numNeg);
-
-  // =====================================================
-  // SAVE DIRICHELET BCS - NO DIRICHELET CONDITIONS NEEDED
-  // BUT RHS SUM MUST BE ZERO
-  // =====================================================
-  /*
-  bool found = false;
-  int count = 0;
-  while(!found){
-    found = (cellPoints[count].concentration > 0.5);
-    if(!found){
-      count++;
-    }
-  }
-  fprintf(outFile,"NODEDIRBC %d 0.0\n",nodeUsageMap[cellConnections[count][0]] + 1);
-  */
 
   // Close Output file
   fclose(outFile);
 
   // Free Memory
   delete [] isFaceOnWalls;
-  delete crit;
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
     delete [] firstDerivs[loopA];
     delete [] secondDerivs[loopA];
@@ -3877,6 +3842,7 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
   delete [] firstDerivs;
   delete [] secondDerivs;
 
+  printf("\n");
   printf("Poisson Solver File Exported.\n");
 }
 
@@ -3911,7 +3877,7 @@ void MRIStructuredScan::cellToFace(bool deleteWalls, MRIThresholdCriteria* thres
     // Check for BC
     if(deleteWalls){
       currentValue = cellPoints[loopA].getQuantity(thresholdCriteria->thresholdQty);
-      continueToProcess = thresholdCriteria->MeetsCriteria(currentValue);
+      continueToProcess = !(thresholdCriteria->MeetsCriteria(currentValue));
     }else{
       continueToProcess = true;
     }
@@ -3954,10 +3920,8 @@ void MRIStructuredScan::cellToFace(bool deleteWalls, MRIThresholdCriteria* thres
 // ====================================================================
 // CONVERT CELL ARRAY TO FACE - ONLY CELLS WITH A CERTAIN CONCENTRATION
 // ====================================================================
-void MRIStructuredScan::cellToFacePartial(MRIIntVec elUsageMap, MRIThresholdCriteria* thresholdCriteria,
+void MRIStructuredScan::cellToFacePartial(MRIIntVec elUsageMap, MRIThresholdCriteria* threshold,
                                           MRIDoubleMat cellVec, MRIDoubleVec &faceVec){
-  bool   continueToProcess = false;
-  double currentValue = 0.0;
   double faceComponent = 0.0;
   int    currentFace = 0;
   double currFaceArea = 0.0;
@@ -3977,9 +3941,11 @@ void MRIStructuredScan::cellToFacePartial(MRIIntVec elUsageMap, MRIThresholdCrit
   }
 
   // Loop To Assemble Residual Vector
+  double qty = 0.0;
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     // Check for BC
-    if(cellPoints[loopA].concentration > 0.5){
+    qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
+    if(!threshold->MeetsCriteria(qty)){
       // Loop On Faces
       for(int loopB=0;loopB<k3DNeighbors;loopB++){
         // Get Current Face
@@ -4136,8 +4102,9 @@ void MRIStructuredScan::tagByNeighbour(int tag,int* cellTags, bool* isTaggable,i
 // ================================
 // INTERPOLATE DATA ON THE BOUNDARY
 // ================================
-void MRIStructuredScan::InterpolateBoundaryVelocities(){
+void MRIStructuredScan::InterpolateBoundaryVelocities(MRIThresholdCriteria* threshold){
   int currCell = 0;
+  double qty = 0.0;
   MRIIntVec boundaryCells;
   int* cellTags = new int[totalCellPoints];
   bool* isTaggable = new bool[totalCellPoints];
@@ -4151,7 +4118,8 @@ void MRIStructuredScan::InterpolateBoundaryVelocities(){
   for(int loopA=0;loopA<faceConnections.size();loopA++){
     if(faceCells[loopA].size() == 1){
       currCell = faceCells[loopA][0];
-      if(cellPoints[currCell].concentration > 0.5){
+      qty = cellPoints[currCell].getQuantity(threshold->thresholdQty);
+      if(!threshold->MeetsCriteria(qty)){
         isTaggable[currCell] = true;
       }
     }
@@ -4231,15 +4199,17 @@ int MRIStructuredScan::getOppositeCell(int cell, double* normal){
 // =====================================
 // CLEAN VELOCITY COMPONENTS ON BOUNDARY
 // =====================================
-void MRIStructuredScan::cleanNormalComponentOnBoundary(){
+void MRIStructuredScan::cleanNormalComponentOnBoundary(MRIThresholdCriteria* threshold){
   double currFaceNormal[3] = {0.0};
   int currCell = 0;
   int otherCell = 0;
+  double qty = 0.0;
   for(int loopA=0;loopA<faceConnections.size();loopA++){
     if(faceCells[loopA].size() == 1){
       //
       currCell = faceCells[loopA][0];
-      if(cellPoints[currCell].concentration > 0.5){
+      qty = cellPoints[currCell].getQuantity(threshold->thresholdQty);
+      if(!threshold->MeetsCriteria(qty)){
         // Get Normal
         currFaceNormal[0] = faceNormal[loopA][0];
         currFaceNormal[1] = faceNormal[loopA][1];
@@ -4256,3 +4226,6 @@ void MRIStructuredScan::cleanNormalComponentOnBoundary(){
 }
 
 
+// ============================================
+// DETERMINE ALL NEIGHBORS OF A CELL WITH ORDER
+// ============================================

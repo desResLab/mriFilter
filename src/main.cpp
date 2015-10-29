@@ -21,11 +21,14 @@ void ConvertDICOMToVTK(std::string inFileName,std::string outfileName){
   // Add File to Sequence
   MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
 
+  // Init a Threshold with No quantity
+  MRIThresholdCriteria* thresholdCriteria = new MRIThresholdCriteria(kNoQuantity,kCriterionLessThen,0.0);
+
   // Read from Raw Binary File
   MyMRIScan->ReadRAWFileSequence(inFileName);
 
   // Export to VTK
-  MyMRIScan->ExportToVTK("testVTK.vtk");
+  MyMRIScan->ExportToVTK("testVTK.vtk",thresholdCriteria);
 
 }
 
@@ -37,6 +40,9 @@ void ConvertTECPLOToVTK(MRIOptions* opts){
   // Add File to Sequence
   MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
 
+  // Init a Threshold with No quantity
+  MRIThresholdCriteria* thresholdCriteria = new MRIThresholdCriteria(kNoQuantity,kCriterionLessThen,0.0);
+
   // Read from Raw Binary File
   MyMRIScan->ReadPltFile(opts->inputFileName,true);
 
@@ -44,7 +50,7 @@ void ConvertTECPLOToVTK(MRIOptions* opts){
   WriteSchMessage(MRIUtils::FloatToStr(MyMRIScan->cellPoints[300].velocity[1]) + std::string("\n"));
 
   // Export to VTK
-  MyMRIScan->ExportToVTK(opts->outputFileName);
+  MyMRIScan->ExportToVTK(opts->outputFileName,thresholdCriteria);
   //MyMRIScan->ExportToTECPLOT(outfileName.c_str(),true);
 }
 
@@ -315,8 +321,11 @@ void ShowFaceFluxPatterns(std::string faceFluxFileName, std::string outFileName)
     // UPDATE VELOCITIES
     MyMRIScan->UpdateVelocities();
 
+    // Init a Threshold with No quantity
+    MRIThresholdCriteria* thresholdCriteria = new MRIThresholdCriteria(kNoQuantity,kCriterionLessThen,0.0);
+
     // EXPORT TO VTK
-    MyMRIScan->ExportToVTK(outFileName + "_" + MRIUtils::IntToStr(loop0) + ".vtk");
+    MyMRIScan->ExportToVTK(outFileName + "_" + MRIUtils::IntToStr(loop0) + ".vtk",thresholdCriteria);
   }
 }
 
@@ -363,9 +372,12 @@ void TEST_ExpansionCoefficients(MRIOptions* opts, MRICommunicator* comm){
     currDiffNorm += currScan1->GetDiffNorm(currScan2);
   }
 
+  // Init a Threshold with No quantity
+  MRIThresholdCriteria* thresholdCriteria = new MRIThresholdCriteria(kNoQuantity,kCriterionLessThen,0.0);
+
   // WRITE OUTPUT FILES TO VTK
-  MyMRISequence->ExportToVTK("FilteredSeq.vtk");
-  ReconstructedSequence->ExportToVTK("ReconstructedSeq.vtk");
+  MyMRISequence->ExportToVTK("FilteredSeq.vtk",thresholdCriteria);
+  ReconstructedSequence->ExportToVTK("ReconstructedSeq.vtk",thresholdCriteria);
 
   // PRINT DIFFERENCE NORM
   WriteSchMessage("Difference Norm " + MRIUtils::FloatToStr(currDiffNorm) + "\n");
@@ -404,9 +416,12 @@ void TEST02_PrintThresholdingToVTK(MRIOptions* opts, MRICommunicator* comm){
     MyRECSequence->AddScan(myScan);
   }
 
+  // Init a Threshold with No quantity
+  MRIThresholdCriteria* thresholdCriteria = new MRIThresholdCriteria(kNoQuantity,kCriterionLessThen,0.0);
+
   // WRITE OUTPUT FILES TO VTK
-  MyMRISequence->ExportToVTK("FilteredSeq");
-  MyRECSequence->ExportToVTK("ReconstructedSeq");
+  MyMRISequence->ExportToVTK("FilteredSeq",thresholdCriteria);
+  MyRECSequence->ExportToVTK("ReconstructedSeq",thresholdCriteria);
 }
 
 // ======================
@@ -456,8 +471,11 @@ void TEST03_EvalReynoldsStresses(MRIOptions* opts, MRICommunicator* comm){
     MyRECSequence->AddScan(myScan);
   }
 
+  // Init a Threshold with No quantity
+  MRIThresholdCriteria* thresholdCriteria = new MRIThresholdCriteria(kNoQuantity,kCriterionLessThen,0.0);
+
   // WRITE OUTPUT FILES TO VTK
-  MyRECSequence->ExportToVTK("ReynoldsStressSequence");
+  MyRECSequence->ExportToVTK("ReynoldsStressSequence",thresholdCriteria);
 }
 
 // ===========================================
@@ -510,8 +528,11 @@ void EvalPressureFromExpansion(MRIOptions* opts){
     // WRITE OUTPUT FILES TO TECPLOT
     MyMRISequence->ExportToTECPLOT(opts->outputFileName);
   }else{
+    // Init a Threshold with No quantity
+    MRIThresholdCriteria* thresholdCriteria = new MRIThresholdCriteria(kNoQuantity,kCriterionLessThen,0.0);
+
     // WRITE OUTPUT FILES TO VTK
-    MyMRISequence->ExportToVTK(opts->outputFileName);
+    MyMRISequence->ExportToVTK(opts->outputFileName,thresholdCriteria);
   }
 }
 
@@ -537,8 +558,11 @@ void EvalConcentrationGradient(MRIOptions* opts){
   // EVAL RELATIVE PRESSURE
   MyMRISequence->ComputeRelativePressure(doPressureSmoothing);
 
+  // Init a Threshold with No quantity
+  MRIThresholdCriteria* thresholdCriteria = new MRIThresholdCriteria(kNoQuantity,kCriterionLessThen,0.0);
+
   // WRITE OUTPUT FILES TO VTK
-  MyMRISequence->ExportToVTK(opts->outputFileName);
+  MyMRISequence->ExportToVTK(opts->outputFileName,thresholdCriteria);
 
 }
 
@@ -777,8 +801,11 @@ void PerformStreamlineTest2(std::string inFileName,std::string outfileName){
     myScan->cellPoints[loopA].velocity[2] = 1.0;
   }
 
+  // Init a Threshold with No quantity
+  MRIThresholdCriteria* thresholdCriteria = new MRIThresholdCriteria(kNoQuantity,kCriterionLessThen,0.0);
+
   // Export to VTK
-  myScan->ExportToVTK(outfileName+"_Model.vtk");
+  myScan->ExportToVTK(outfileName+"_Model.vtk",thresholdCriteria);
 
   // Compute Streamlines
   std::vector<MRIStreamline*> streamlines;
@@ -811,9 +838,12 @@ void BuildFromCoeffs(std::string coeffFileName,std::string plotOut,bool performT
   //MRIThresholdCriteria criteria(kCriterionLessThen,kQtyConcentration,1000.0);
   //MyMRISequence->ApplyThresholding(criteria);
 
+  // Init a Threshold with No quantity
+  MRIThresholdCriteria* thresholdCriteria = new MRIThresholdCriteria(kNoQuantity,kCriterionLessThen,0.0);
+
   // EXPORT TO PLT FILE
   //MyMRISequence->ExportToTECPLOT(plotOut);
-  MyMRISequence->ExportToVTK(plotOut);
+  MyMRISequence->ExportToVTK(plotOut, thresholdCriteria);
 }
 
 // ============================
@@ -833,9 +863,11 @@ void EvalVortexCriteria(MRIOptions* opts){
   // MyMRISequence->GetScan(0)->EvalVorticity();
   MyMRISequence->GetScan(0)->EvalEnstrophy(opts->thresholdCriteria);
 
+  // Init a Threshold with No quantity
+  MRIThresholdCriteria* thresholdCriteria = new MRIThresholdCriteria(kNoQuantity,kCriterionLessThen,0.0);
 
   // WRITE OUTPUT FILES TO VTK
-  MyMRISequence->ExportToVTK(opts->outputFileName);
+  MyMRISequence->ExportToVTK(opts->outputFileName,thresholdCriteria);
 }
 
 // ===========================================
@@ -857,8 +889,11 @@ void WriteSpatialExpansion(MRIOptions* opts){
   // SPATIALLY EVALUATE VORTEX COEFFICIENTS
   MyMRISequence->GetScan(0)->EvalSMPVortexCriteria(MyMRISequence->GetScan(0)->expansion);
 
+  // Init a Threshold with No quantity
+  MRIThresholdCriteria* thresholdCriteria = new MRIThresholdCriteria(kNoQuantity,kCriterionLessThen,0.0);
+
   // EXPORT TO VTK
-  MyMRISequence->ExportToVTK(opts->outputFileName);
+  MyMRISequence->ExportToVTK(opts->outputFileName,thresholdCriteria);
 }
 
 // ===============================
@@ -959,18 +994,18 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
     }
   }
 
-  if(comm->currProc == 0){
-    // Open Output File
-    FILE* outFile;
-    outFile = fopen("testGauss.log","w");
-    // Write Header
+  //if(comm->currProc == 0){
+  //  // Open Output File
+  //  FILE* outFile;
+  //  outFile = fopen("testGauss.log","w");
+  //  // Write Header
 
-    for(int loopA=0;loopA<MyMRISequence->GetScan(0)->totalCellPoints;loopA++){
-      fprintf(outFile,"%e %e %e\n",MyMRISequence->GetScan(0)->cellPoints[loopA].velocity[0],MyMRISequence->GetScan(0)->cellPoints[loopA].velocity[1],MyMRISequence->GetScan(0)->cellPoints[loopA].velocity[2]);
-    }
-    // Close Output file
-    fclose(outFile);
-  }
+  //  for(int loopA=0;loopA<MyMRISequence->GetScan(0)->totalCellPoints;loopA++){
+  //    fprintf(outFile,"%e %e %e\n",MyMRISequence->GetScan(0)->cellPoints[loopA].velocity[0],MyMRISequence->GetScan(0)->cellPoints[loopA].velocity[1],MyMRISequence->GetScan(0)->cellPoints[loopA].velocity[2]);
+  //  }
+  //  // Close Output file
+  //  fclose(outFile);
+  //}
 
 
   // APPLY FULL FILTER
@@ -1034,7 +1069,7 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
   if(comm->currProc == 0){
     if(opts->outputFormatType == itFILEVTK){
       // READ FROM FILE
-      MyMRISequence->ExportToVTK(opts->outputFileName);
+      MyMRISequence->ExportToVTK(opts->outputFileName,opts->thresholdCriteria);
     }else if (opts->outputFormatType == itFILETECPLOT){
       // READ FROM FILE
       MyMRISequence->ExportToTECPLOT(opts->outputFileName);

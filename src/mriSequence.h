@@ -35,7 +35,7 @@ class MRISequence{
     // EXPORT SEQUENCE TO FILE
     void ExportToTECPLOT(std::string outfileName);
     void ExportToVOL(std::string outfileName);
-    void ExportToVTK(std::string outfileName);
+    void ExportToVTK(std::string outfileName,MRIThresholdCriteria* thresholdCriteria);
     void WriteExpansionFile(string fileName);
     void ExportForPOISSON(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold);
 

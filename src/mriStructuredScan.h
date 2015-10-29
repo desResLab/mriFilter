@@ -137,7 +137,7 @@ class MRIStructuredScan: public MRIScan{
     // VIRTUAL
     virtual void ExportToVOL(std::string FileName);
     virtual void ExportToTECPLOT(std::string FileName, bool isFirstFile);
-    virtual void ExportToVTK(std::string fileName);
+    virtual void ExportToVTK(std::string fileName, MRIThresholdCriteria* threshold);
     virtual void WriteExpansionFile(std::string fileName);
     // Export all elements to Poisson Solver
     virtual void ExportForPOISSON(string inputFileName, MRIThresholdCriteria* threshold);
@@ -211,7 +211,7 @@ class MRIStructuredScan: public MRIScan{
     // MAPPING FUNCTIONS
     // Get Cell Number From Coords
     int  GetCellNumber(MRIReal* coords);
-    void GetNeighbourCells(int CurrentCell, std::vector<int> &coords);
+    void GetCartesianNeighbourCells(int CurrentCell, std::vector<int> &coords, bool addself);
     bool isCompatibleWith(MRIStructuredScan* secondScan);
     // Get Face from Cell Vector
     int  GetFacewithCellVector(int CurrentCell, double *UnitVector);
@@ -361,8 +361,8 @@ class MRIStructuredScan: public MRIScan{
    virtual void DistributeScanData(MRICommunicator* comm);
 
    // BOUNDARY CLEANING
-   virtual void cleanNormalComponentOnBoundary();
-   virtual void InterpolateBoundaryVelocities();
+   virtual void cleanNormalComponentOnBoundary(MRIThresholdCriteria* threshold);
+   virtual void InterpolateBoundaryVelocities(MRIThresholdCriteria* threshold);
    void projectCellVelocity(int cell,double* normal);
    int getOppositeCell(int cell, double* normal);
    void tagByNeighbour(int tag,int* cellTags, bool* isTaggable,int startingCell);

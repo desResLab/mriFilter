@@ -127,7 +127,7 @@ class MRIScan{
     // I/O
     virtual void ReadScanFromVOLFiles(std::string fileNameAn, std::string fileNameX, std::string fileNameY, std::string fileNameZ){throw MRIException("Error: Not Implemented!");}
     virtual void ExportToVOL(std::string FileName){throw MRIException("Error: Not Implemented!");}
-    virtual void ExportToVTK(std::string fileName){throw MRIException("Error: Not Implemented!");}
+    virtual void ExportToVTK(std::string fileName, MRIThresholdCriteria* threshold){throw MRIException("Error: Not Implemented!");}
     virtual void ExportToTECPLOT(std::string FileName, bool isFirstFile){throw MRIException("Error: Not Implemented!");}
     virtual void ExportForPOISSON(string inputFileName, MRIThresholdCriteria* threshold){throw MRIException("Error: ExportForPOISSON Not Implemented!");}
     virtual void ExportForPOISSONPartial(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold){throw MRIException("Error: ExportForPOISSONPartial Not Implemented!");}
@@ -142,7 +142,7 @@ class MRIScan{
     virtual int EvalCentralCell(){throw MRIException("Error: Not Implemented!");}
 
     // TOPOLOGY
-    virtual void GetNeighbourCells(int CurrentCell, std::vector<int> &coords){throw MRIException("Error: Not Implemented!");}
+    virtual void GetCartesianNeighbourCells(int CurrentCell, std::vector<int> &coords, bool addself){throw MRIException("Error: Not Implemented!");}
 
     // COEFFICIENTS
     virtual void RebuildFromExpansion(MRIExpansion* expansion,bool useConstantFlux){throw MRIException("Error: Not Implemented!");}

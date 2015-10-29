@@ -14,21 +14,25 @@ MRIThresholdCriteria::~MRIThresholdCriteria()
 
 // Check If a Value Meets the Predefined Criteria
 bool MRIThresholdCriteria::MeetsCriteria(double currentValue){
-  switch(thresholdType){
-    case kCriterionLessThen:
-      return (currentValue<thresholdValue);
-      break;
-    case kCriterionGreaterThen:
-      return (currentValue>thresholdValue);
-      break;
-    case kCriterionABSLessThen:
-      return (fabs(currentValue)<thresholdValue);
-      break;
-    case kCriterionABSGreaterThen:
-      return (fabs(currentValue)>thresholdValue);
-      break;
+  if(thresholdQty == kNoQuantity){
+    return false;
+  }else{
+    switch(thresholdType){
+      case kCriterionLessThen:
+        return (currentValue<thresholdValue);
+        break;
+      case kCriterionGreaterThen:
+        return (currentValue>thresholdValue);
+        break;
+      case kCriterionABSLessThen:
+        return (fabs(currentValue)<thresholdValue);
+        break;
+      case kCriterionABSGreaterThen:
+        return (fabs(currentValue)>thresholdValue);
+        break;
+    }
+    return false;
   }
-  return false;
 }
   
 

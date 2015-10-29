@@ -185,21 +185,17 @@ void MRISequence::ExportForPOISSON(string inputFileName,double density,double vi
   string name;
   for(int loopA=0;loopA<totalScans;loopA++){
     name = inputFileName;
-    //sequence[loopA]->ExportForPOISSON(name);
+    //sequence[loopA]->ExportForPOISSON(name,threshold);
     sequence[loopA]->ExportForPOISSONPartial(name,density,viscosity,threshold);
   }
 }
 
 // EXPORT TO SEQUENCE OF VTK FILES
-void MRISequence::ExportToVTK(std::string outfileName){
+void MRISequence::ExportToVTK(std::string outfileName,MRIThresholdCriteria* thresholdCriteria){
   // Export All Data
-  int index = 0;
   WriteSchMessage("\n");
   for(int loopA=0;loopA<totalScans;loopA++){
-    //outputName = outfileName;
-    //index = outputName.size();
-    //outputName.insert(index-4,string("_Step" + to_string(loopA)).c_str());
-    sequence[loopA]->ExportToVTK(outfileName);
+    sequence[loopA]->ExportToVTK(outfileName,thresholdCriteria);
   }
 }
 

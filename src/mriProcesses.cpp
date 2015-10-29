@@ -92,7 +92,7 @@ void MRIScan::ApplySmoothingFilter(){
     for(int loopA=0;loopA<totalCellPoints;loopA++){
       if(IsInnerCell(loopA)){
         // Eval Neighbours
-        GetNeighbourCells(loopA,otherCells);
+        GetCartesianNeighbourCells(loopA,otherCells,false);
         // Get Velocities from Neighbors
         velXPlus =  cellPoints[otherCells[0]].velocity[0];
         velXMinus = cellPoints[otherCells[1]].velocity[0];
