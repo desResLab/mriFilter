@@ -70,4 +70,3 @@ The preferred way to run the code is by reading a command file:
 ```
 mpFilterApp -c command_file_name
 ```
-
