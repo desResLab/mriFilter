@@ -181,7 +181,7 @@ inline void Normalize3DVector(std::vector<double> &v){
 // =======================================
 
 inline void InsertInIntList(int Item,MRIIntVec &FacesID){
-  for(int LoopA=0;LoopA<FacesID.size();LoopA++){
+  for(size_t LoopA=0;LoopA<FacesID.size();LoopA++){
     if (FacesID[LoopA]==Item) return;
   }
   FacesID.push_back(Item);
@@ -797,7 +797,7 @@ inline string getThresholdTypeString(int thresholdType){
 // =========================
 inline int getMinInt(vector<int> vec){
   int minVal = INT_MAX;
-  for(int loopA=0;loopA<vec.size();loopA++){
+  for(size_t loopA=0;loopA<vec.size();loopA++){
     if(vec[loopA] < minVal){
       minVal = vec[loopA];
     }

@@ -62,7 +62,7 @@ class MRISequence{
     void applyNoise(double noiseIntensity);
 
     // FILTER DATA
-    void ApplyMedianFilter(int qtyID,int maxIt, bool useMedian);
+    void ApplyMedianFilter(int qtyID,int maxIt,int order,int filterType,MRIThresholdCriteria* threshold);
     
     // File List Printing
     void PrintSequenceFiles(std::string outFIleName);

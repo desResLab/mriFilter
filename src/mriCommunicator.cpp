@@ -33,7 +33,7 @@ void MRICommunicator::passStdIntMatrix(MRIIntMat& matrix){
     int* sizeVec = new int[matSize];
 
     int mpiError = 0;
-    for(int loopA=0;loopA<matrix.size();loopA++){
+    for(size_t loopA=0;loopA<matrix.size();loopA++){
       sizeVec[loopA] = matrix[loopA].size();
       totSize +=  matrix[loopA].size();
     }
@@ -61,8 +61,8 @@ void MRICommunicator::passStdIntMatrix(MRIIntMat& matrix){
     // SEND MATRIX VALUES
     int* intMatrixToSend = new int[totSize];
     int count = 0;
-    for(int loopA=0;loopA<matrix.size();loopA++){
-      for(int loopB=0;loopB<matrix[loopA].size();loopB++){
+    for(size_t loopA=0;loopA<matrix.size();loopA++){
+      for(size_t loopB=0;loopB<matrix[loopA].size();loopB++){
         intMatrixToSend[count] = matrix[loopA][loopB];
         // Update Count
         count++;
@@ -122,6 +122,7 @@ void MRICommunicator::passStdDoubleMatrix(MRIDoubleMat& matrix){
   int unrolledSize = 0;
   int count = 0;
   int* sizeVec = NULL;
+  double* unrolledVec = NULL;
   MPI_Status status;
   if(currProc == 0){
     // UNROLL SIZES
@@ -158,8 +159,8 @@ void MRICommunicator::passStdDoubleMatrix(MRIDoubleMat& matrix){
   if(currProc == 0){
     double* doubleMatrixToSend = new double[totSize];
     int count = 0;
-    for(int loopA=0;loopA<matrix.size();loopA++){
-      for(int loopB=0;loopB<matrix[loopA].size();loopB++){
+    for(size_t loopA=0;loopA<matrix.size();loopA++){
+      for(size_t loopB=0;loopB<matrix[loopA].size();loopB++){
         doubleMatrixToSend[count] = matrix[loopA][loopB];
         // Update Count
         count++;
@@ -171,8 +172,7 @@ void MRICommunicator::passStdDoubleMatrix(MRIDoubleMat& matrix){
       MRIUtils::checkMpiError(mpiError);
     }
     delete [] doubleMatrixToSend;
-  }else{
-    double* unrolledVec;
+  }else{    
     // Probe the Unrolled Vector Size
     mpiError = MPI_Probe(source,tag,mpiComm,&status);
     MRIUtils::checkMpiError(mpiError);
@@ -337,7 +337,7 @@ void MRICommunicator::passCellData(int& totalCellPoints,vector<MRICell>& cellPoi
   if(currProc == 0){
     temp.resize(7);
     // Create Matrices
-    for(int loopA=0;loopA<cellPoints.size();loopA++){
+    for(size_t loopA=0;loopA<cellPoints.size();loopA++){
       //printf("PASSING CELLS: %d\n",loopA);
       temp[0] = cellPoints[loopA].concentration;
       temp[1] = cellPoints[loopA].velocity[0];

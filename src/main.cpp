@@ -974,9 +974,9 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
   // FILTER DATA IF REQUIRED
   if(comm->currProc == 0){
     if (opts->applyMedianFilter){
-      MyMRISequence->ApplyMedianFilter(kQtyVelocityX,opts->filterNumIterations,opts->filterUseMedian);
-      MyMRISequence->ApplyMedianFilter(kQtyVelocityY,opts->filterNumIterations,opts->filterUseMedian);
-      MyMRISequence->ApplyMedianFilter(kQtyVelocityZ,opts->filterNumIterations,opts->filterUseMedian);
+      MyMRISequence->ApplyMedianFilter(kQtyVelocityX,opts->filterNumIterations,opts->medianFilterOrder,opts->medianFilterType,opts->thresholdCriteria);
+      MyMRISequence->ApplyMedianFilter(kQtyVelocityY,opts->filterNumIterations,opts->medianFilterOrder,opts->medianFilterType,opts->thresholdCriteria);
+      MyMRISequence->ApplyMedianFilter(kQtyVelocityZ,opts->filterNumIterations,opts->medianFilterOrder,opts->medianFilterType,opts->thresholdCriteria);
     }
   }
 

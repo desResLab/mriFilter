@@ -14,7 +14,7 @@ include_directories(${Boost_INCLUDE_DIR})
 include_directories(${MPI_INCLUDE_PATH})
 
 # SET COMPILER FLAGS
-add_definitions("-g -O3")
+add_definitions("-Wall -g -O3")
 
 # CREATE EXECUTABLE
 ADD_EXECUTABLE(${PROJECT_NAME} ${SRC_LIST})

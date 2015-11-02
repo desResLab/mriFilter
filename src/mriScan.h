@@ -98,7 +98,7 @@ class MRIScan{
     void EvalPressureIterative(int currentCell, double currentValue, bool* visitedCell, std::vector<int> &cellStack,int& cellCount);
 
     // FILTERING
-    virtual void ApplyMedianFilter(int qtyID,int maxIt, bool useMedian);
+    virtual void ApplyMedianFilter(int qtyID,int maxIt,int order,int filterType,MRIThresholdCriteria* threshold){throw MRIException("Error: Not Implemented!");}
     void ApplyThresholding(MRIThresholdCriteria* thresholdCriteria);
     void ApplySmoothingFilter();
     void ApplyGaussianNoise(double stDev);

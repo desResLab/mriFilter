@@ -325,10 +325,10 @@ void MRISequence::DistributeSequenceData(MRICommunicator* comm){
 // =============================
 // PERFORM BASIC DATA FILTERING
 // =============================
-void MRISequence::ApplyMedianFilter(int qtyID,int maxIt, bool useMedian){
+void MRISequence::ApplyMedianFilter(int qtyID,int maxIt,int order,int filterType,MRIThresholdCriteria* threshold){
   // Create New Sequence
   for(int loopA=0;loopA<this->totalScans;loopA++){
-    sequence[loopA]->ApplyMedianFilter(qtyID,maxIt,useMedian);
+    sequence[loopA]->ApplyMedianFilter(qtyID,maxIt,order,filterType,threshold);
   }
 }
 

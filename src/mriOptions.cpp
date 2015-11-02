@@ -32,7 +32,7 @@ MRIOptions::MRIOptions(){
   // Apply Filter
   applySMPFilter = false;
   applyBCFilter = false;
-  useConstantPatterns = true;
+  useConstantPatterns = false;
   // Export Format Type
   inputFormatType = itFILEVTK;
   outputFormatType = otFILEVTK;
@@ -54,7 +54,8 @@ MRIOptions::MRIOptions(){
   // Init with No Median Filter
   applyMedianFilter = false;
   filterNumIterations = 1;
-  filterUseMedian = false;
+  medianFilterType = kMedianFilter;
+  medianFilterOrder = 1;
   // Clean Velocity Components
   cleanBoundaryVelocities = false;
   interpolateBoundaryVelocities = false;
@@ -310,19 +311,22 @@ int MRIOptions::getOptionsFromCommandFile(string commandFile){
         }catch(...){
           throw MRIException("ERROR: Invalid Density Value.\n");
         }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("APPLYMEDIANFILTER")){
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("APPLYSMOOTHINGFILTER")){
         try{
           applyMedianFilter = true;
           filterNumIterations = atoi(tokenizedString[1].c_str());
           if(boost::to_upper_copy(tokenizedString[2]) == std::string("MEDIAN")){
-            filterUseMedian = true;
+            medianFilterType = kMedianFilter;
+          }else if(boost::to_upper_copy(tokenizedString[2]) == std::string("MEAN")){
+            medianFilterType = kMeanFilter;
           }else if(boost::to_upper_copy(tokenizedString[2]) == std::string("GAUSSIAN")){
-            filterUseMedian = false;
+            medianFilterType = kGaussianFilter;
           }else{
             throw MRIException("ERROR: Invalid Filter Type.\n");
           }
+          medianFilterOrder = atoi(tokenizedString[3].c_str());
         }catch(...){
-          throw MRIException("ERROR: Invalid Density Value.\n");
+          throw MRIException("ERROR: Invalid Median Filter Entry.\n");
         }
     }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("VISCOSITY")){
         try{

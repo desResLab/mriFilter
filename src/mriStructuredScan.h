@@ -212,6 +212,7 @@ class MRIStructuredScan: public MRIScan{
     // Get Cell Number From Coords
     int  GetCellNumber(MRIReal* coords);
     void GetCartesianNeighbourCells(int CurrentCell, std::vector<int> &coords, bool addself);
+    void GetStructuredNeighbourCells(int centreCell,int order,MRIThresholdCriteria* threshold,MRIIntVec& cellNeighbors);
     bool isCompatibleWith(MRIStructuredScan* secondScan);
     // Get Face from Cell Vector
     int  GetFacewithCellVector(int CurrentCell, double *UnitVector);
@@ -299,6 +300,7 @@ class MRIStructuredScan: public MRIScan{
     
     // APPLY SMOOTHING FILTER - LAVISION
     void ApplySmoothingFilter();
+    virtual void ApplyMedianFilter(int qtyID,int maxIt,int order,int filterType,MRIThresholdCriteria* threshold);
 
     // THRESHOLD
     void ThresholdQuantity(int qtyID,double threshold);

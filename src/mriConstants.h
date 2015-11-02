@@ -74,13 +74,18 @@
   const int kPlaneZX = 2;
 
   // Vortex Criterion
-  const int kVortexQ = 0;
-  const int kVortexL2 = 1;
+  const int kVortexQ     = 0;
+  const int kVortexL2    = 1;
   const int kVortexDelta = 2;
 
   // Vortex Expansion Thresholding
-  const int kHardThresold = 0;
+  const int kHardThresold  = 0;
   const int kSoftThreshold = 1;
+
+  // Smoothing Filter Type
+  const int kMedianFilter   = 0;
+  const int kMeanFilter     = 1;
+  const int kGaussianFilter = 2;
 
   // Aternative Typedefs
   typedef const int MRIDirection;

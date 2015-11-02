@@ -93,9 +93,10 @@ public:
   double viscosity;
 
   // Filtering Options
-  bool applyMedianFilter;
+  int applyMedianFilter;
   int filterNumIterations;
-  bool filterUseMedian;
+  int medianFilterType;
+  int medianFilterOrder;
 
   // Clean Boundary Velocities
   bool cleanBoundaryVelocities;

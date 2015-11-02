@@ -159,7 +159,7 @@ void MRIStructuredScan::FillPLTHeader(std::vector<std::string> &pltHeader, bool 
   pltHeader.push_back(" DATAPACKING=POINT");
   string singleString = string(" DT=(SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE ");
   for(size_t loopA=0;loopA<outputs.size();loopA++){
-    for(size_t loopB=0;loopB<outputs[loopA].totComponents;loopB++){
+    for(int loopB=0;loopB<outputs[loopA].totComponents;loopB++){
       singleString += "SINGLE ";
     }
   }
@@ -386,9 +386,9 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
       // Set Continue
       Continue = true;
       // Check Ratio between ResultArray.size, valueCounter, neededValues
-      if(ResultArray.size()+valueCounter < neededValues){
+      if(ResultArray.size()+valueCounter < (size_t)neededValues){
         // Read the whole Result Array
-        for(int loopA=0;loopA<ResultArray.size();loopA++){
+        for(size_t loopA=0;loopA<ResultArray.size();loopA++){
           LocalVal[loopA] = atof(ResultArray[loopA].c_str());
         }
         Continue = false;
@@ -398,7 +398,7 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
           LocalVal[loopA] = atof(ResultArray[loopA].c_str());
         }
         // Put the rest in temporary array
-        for(int loopA=0;loopA<ResultArray.size()-(neededValues-valueCounter);loopA++){
+        for(size_t loopA=0;loopA<ResultArray.size()-(neededValues-valueCounter);loopA++){
           TempVal[loopA] = atof(ResultArray[loopA].c_str());
         }
         Continue = true;
@@ -675,7 +675,7 @@ void MRIStructuredScan::ExportToTECPLOT(std::string FileName, bool isFirstFile)
 
     // Add result quantities
     for(size_t loopB=0;loopB<outputs.size();loopB++){
-      for(size_t loopC=0;loopC<outputs[loopB].totComponents;loopC++){
+      for(int loopC=0;loopC<outputs[loopB].totComponents;loopC++){
         fprintf(outFile,"%-15.6e ",outputs[loopB].values[loopA*outputs[loopB].totComponents + loopC]);
       }
     }
@@ -1501,7 +1501,7 @@ bool MRIStructuredScan::hasUniformSpacing(){
   double lengthZ = cellLengths[0][2];
   int count = 1;
   bool result = true;
-  while(result && (count<cellLengths.size())){
+  while(result && ((size_t)count<cellLengths.size())){
     result = result && (fabs(cellLengths[count][0] - lengthX) < 1.0e-3) &&
                        (fabs(cellLengths[count][1] - lengthY) < 1.0e-3) &&
                        (fabs(cellLengths[count][2] - lengthZ) < 1.0e-3);
@@ -2203,60 +2203,6 @@ int MRIStructuredScan::getTotalFaces(){
   return cellTotals[0]*cellTotals[1]*(cellTotals[2]+1)+
          cellTotals[1]*cellTotals[2]*(cellTotals[0]+1)+
          cellTotals[2]*cellTotals[0]*(cellTotals[1]+1);
-}
-
-// =======================
-// GET NEIGHBORS OF A CELL
-// =======================
-void MRIStructuredScan::GetCartesianNeighbourCells(int CurrentCell,std::vector<int> &cellNeighbors, bool addself){
-  int* coords = new int[3];
-  cellNeighbors.clear();
-  if(addself){
-    cellNeighbors.push_back(CurrentCell);
-  }
-  //Get The Coordinates of the Current Cell
-  MapIndexToCoords(CurrentCell,coords);
-  // Get Neighbor
-  // coords[0]
-  if ((coords[0]-1)>=0){
-    cellNeighbors.push_back(MapCoordsToIndex(coords[0]-1,coords[1],coords[2]));
-  }else{
-    cellNeighbors.push_back(-1);
-  }
-  // coords[1]
-  if((coords[0]+1)<cellTotals[0]){
-    cellNeighbors.push_back(MapCoordsToIndex(coords[0]+1,coords[1],coords[2]));
-  }else{
-    cellNeighbors.push_back(-1);
-  }
-  // coords[2]
-  if((coords[1]-1)>=0){
-    cellNeighbors.push_back(MapCoordsToIndex(coords[0],coords[1]-1,coords[2]));
-  }else{
-    cellNeighbors.push_back(-1);
-  }
-  // coords[3]
-  if((coords[1]+1)<cellTotals[1]){
-    cellNeighbors.push_back(MapCoordsToIndex(coords[0],coords[1]+1,coords[2]));
-  }else{
-    cellNeighbors.push_back(-1);
-  }
-  // coords[4]
-  if((coords[2]-1)>=0){
-    cellNeighbors.push_back(MapCoordsToIndex(coords[0],coords[1],coords[2]-1));
-  }else{
-    cellNeighbors.push_back(-1);
-  }
-    // coords[5]
-  if((coords[2]+1)<cellTotals[2]){
-    cellNeighbors.push_back(MapCoordsToIndex(coords[0],coords[1],coords[2]+1));
-  }else{
-    cellNeighbors.push_back(-1);
-  }
-  // SCRAMBLE VECTOR !!!
-  //std::random_shuffle(&cellNeighbors[0], &cellNeighbors[5]);
-  // DEALLOCATE
-  delete [] coords;
 }
 
 // Get Face Starting From Cell and Unit Vector
@@ -3525,7 +3471,6 @@ void MRIStructuredScan::setWallFluxesToZero(bool* isFaceOnWalls, MRIDoubleVec& p
   }
 }
 
-
 // ==================================================================
 // EXPORT TO POISSON SOLVER ONLY ELEMENTS WITH POSITIVE CONCENTRATION
 // ==================================================================
@@ -3690,6 +3635,20 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
     }
     termSum.push_back(temp);
   }
+
+  // =====================
+  // ADD THE RESULT VECTOR
+  // ======================
+  MRIOutput outF("FValues",3);
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    // Loop on the dimensions
+    for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
+      // Assign To cell
+      outF.values.push_back(termSum[loopA][loopB]);
+    }
+  }
+  // Add output quantities
+  outputs.push_back(outF);
 
   // ===================
   // FIND FACES ON WALLS
