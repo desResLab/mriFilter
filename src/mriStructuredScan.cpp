@@ -54,7 +54,7 @@ void assignVTKOptions(int lineNum, std::vector<std::string> tokens, vtkStructure
       vtkOptions.isDefined[4] = true;
     }else if(boost::to_upper_copy(tokens[loopA]) == "SCALARS"){
       // Add Starting Point
-      vtkOptions.dataBlockStart.push_back(lineNum + 2);
+      vtkOptions.dataBlockStart.push_back(lineNum);
       // Add type
       vtkOptions.dataBlockType.push_back(0);
       if((boost::to_upper_copy(tokens[loopA + 1]) == "CONCENTRATION")){
@@ -64,7 +64,7 @@ void assignVTKOptions(int lineNum, std::vector<std::string> tokens, vtkStructure
       }
     }else if(boost::to_upper_copy(tokens[loopA]) == "VECTORS"){
       // Add Starting Point
-      vtkOptions.dataBlockStart.push_back(lineNum + 1);
+      vtkOptions.dataBlockStart.push_back(lineNum);
       // Add type
       vtkOptions.dataBlockType.push_back(1);
       if((boost::to_upper_copy(tokens[loopA + 1]) == "VELOCITY")){
@@ -1585,7 +1585,7 @@ void MRIStructuredScan::ExportToVTK(std::string fileName, MRIThresholdCriteria* 
     counterVec[loopA] = 0;
   }
   int currCell = 0;
-  for(int loopA=0;loopA<faceConnections.size();loopA++){
+  for(size_t loopA=0;loopA<faceConnections.size();loopA++){
     if(faceCells[loopA].size() == 1){
       currCell = faceCells[loopA][0];
       counterVec[currCell]++;
@@ -1702,7 +1702,7 @@ void MRIStructuredScan::ExportToVTK(std::string fileName, MRIThresholdCriteria* 
   }
 
   // Print outputs
-  for(int loopA=0;loopA<outputs.size();loopA++){
+  for(size_t loopA=0;loopA<outputs.size();loopA++){
     // Print Header
     if(outputs[loopA].totComponents == 1){
       fprintf(outFile,"%s\n",string("SCALARS " + outputs[loopA].name + " double").c_str());
@@ -2527,7 +2527,7 @@ void MRIStructuredScan::buildFaceCells(){
   faceCells.resize(faceConnections.size());
   int currFace = 0;
   for(int loopA=0;loopA<totalCellPoints;loopA++){
-    for(int loopB=0;loopB<cellFaces[loopA].size();loopB++){
+    for(size_t loopB=0;loopB<cellFaces[loopA].size();loopB++){
       currFace = cellFaces[loopA][loopB];
       faceCells[currFace].push_back(loopA);
     }
@@ -2913,10 +2913,10 @@ void MRIStructuredScan::buildMetisConnectivities(int *eptr,int *eind){
   // Initialize Counter
   int count = 0;
   // Loop through the cells
-  for(int loopA=0;loopA<cellConnections.size();loopA++){
+  for(size_t loopA=0;loopA<cellConnections.size();loopA++){
     // Assign the pointer
     eptr[loopA] = count;
-    for(int loopB=0;loopB<cellConnections[loopA].size();loopB++){
+    for(size_t loopB=0;loopB<cellConnections[loopA].size();loopB++){
       // Increment Counter
       count++;
     }
@@ -2926,8 +2926,8 @@ void MRIStructuredScan::buildMetisConnectivities(int *eptr,int *eind){
 
   // Loop through the cells
   count = 0;
-  for(int loopA=0;loopA<cellConnections.size();loopA++){
-    for(int loopB=0;loopB<cellConnections[loopA].size();loopB++){
+  for(size_t loopA=0;loopA<cellConnections.size();loopA++){
+    for(size_t loopB=0;loopB<cellConnections[loopA].size();loopB++){
       // Get Current Node Number
       currNode = cellConnections[loopA][loopB];
       // Increment Counter
@@ -3040,68 +3040,66 @@ void InitVTKStructuredPointsOptions(vtkStructuredPointsOptionRecord &opts){
 }
 
 // Read Scalars From VTK Legacy
-void readVTKScalar(ifstream& vtkFile, int& lineCount,MRIDoubleVec& vtkScalar){
+void readVTKScalar(ifstream& vtkFile, int& lineCount,int linesToRead,MRIDoubleVec& vtkScalar){
   vtkScalar.clear();
   string buffer;
-  bool finished = false;
   double value;
   vector<string> tokenizedString;
-  while(!finished){
+  // Skip first two lines
+  std::getline(vtkFile,buffer);
+  lineCount++;
+  std::getline(vtkFile,buffer);
+  lineCount++;
+  for(int loopA=0;loopA<linesToRead;loopA++){
     std::getline(vtkFile,buffer);
     boost::trim(buffer);
     lineCount++;
-    //printf("Reading Line: %s\n",buffer.c_str());
-    boost::split(tokenizedString, buffer, boost::is_any_of(" ,"), boost::token_compress_on);
-    if(buffer.find_first_not_of(' ') != std::string::npos){
-      try{
-        for(int loopA=0;loopA<tokenizedString.size();loopA++){
-          value = atof(tokenizedString[loopA].c_str());
+    if(!buffer.empty()){
+      boost::split(tokenizedString, buffer, boost::is_any_of(" ,"), boost::token_compress_on);
+      for(size_t loopB=0;loopB<tokenizedString.size();loopB++){
+        try{
+          value = atof(tokenizedString[loopB].c_str());
           vtkScalar.push_back(value);
+        }catch(...){
+          break;
         }
-      }catch(...){
-        printf("COUGHT...\n");
-        finished = true;
       }
     }else{
-      finished = true;
+      break;
     }
   }
 }
 
 // Read Vectors From VTK Legacy
-void readVTKVector(ifstream& vtkFile, int& lineCount,MRIDoubleMat& vtkVector){
+void readVTKVector(ifstream& vtkFile, int& lineCount,int linesToRead,MRIDoubleMat& vtkVector){
   vtkVector.clear();
   MRIDoubleVec temp;
   MRIDoubleVec store;
   string buffer;
-  bool finished = false;
-  int count = 0;
-  int testCount = 0;
   double value;
   vector<string> tokenizedString;
-  while(!finished){
+  // Skip first line
+  std::getline(vtkFile,buffer);
+  lineCount++;
+  for(int loopA=0;loopA<linesToRead;loopA++){
     std::getline(vtkFile,buffer);
     boost::trim(buffer);
     lineCount++;
-    //printf("Reading Line: %s\n",buffer.c_str());
-    if(buffer.find_first_not_of(' ') != std::string::npos){
-      try{
-        boost::split(tokenizedString, buffer, boost::is_any_of(" ,"), boost::token_compress_on);
-        //printf("Line: %d, Number of entries %d\n",lineCount,tokenizedString.size());
-        //getchar();
-        for(int loopA=0;loopA<tokenizedString.size();loopA++){
-          value = atof(tokenizedString[loopA].c_str());
+    if(!buffer.empty()){
+      boost::split(tokenizedString, buffer, boost::is_any_of(" ,"), boost::token_compress_on);
+      for(size_t loopB=0;loopB<tokenizedString.size();loopB++){
+        try{
+          value = atof(tokenizedString[loopB].c_str());
           temp.push_back(value);
-          testCount++;
+        }catch(...){
+          //printf("Exiting with: %s\n",buffer.c_str());
+          break;
         }
-      }catch(...){
-        printf("COUGHT...\n");
-        finished = true;
       }
     }else{
-       finished = true;
+      //printf("Exiting with: %s\n",buffer.c_str());
+      break;
     }
-    count++;
   }
   // Fill Matrix
   for(int loopA=0;loopA<temp.size()/3;loopA++){
@@ -3117,6 +3115,7 @@ void readVTKVector(ifstream& vtkFile, int& lineCount,MRIDoubleMat& vtkVector){
 // READ VTK STRUCTURED POINTS
 // ==========================
 void MRIStructuredScan::ReadVTKStructuredPoints(std::string vtkFileName, bool DoReorderCells){
+
   // Init totalCellPoints
   totalCellPoints = 0;
 
@@ -3144,6 +3143,9 @@ void MRIStructuredScan::ReadVTKStructuredPoints(std::string vtkFileName, bool Do
     // Increase line number
     totalLinesInFile++;
   }
+  vtkOptions.dataBlockStart.push_back(totalLinesInFile);
+  vtkOptions.dataBlockType.push_back(0);
+  vtkOptions.dataBlockRead.push_back(false);
 
   // Done: Computing Input File Size
   WriteSchMessage(std::string("Done.\n"));
@@ -3177,6 +3179,7 @@ void MRIStructuredScan::ReadVTKStructuredPoints(std::string vtkFileName, bool Do
   // Read Concentration and Velocities
   MRIDoubleVec vtkScalar;
   MRIDoubleMat vtkVector;
+  int linesToRead = 0;
   totalLinesInFile = 0;
   for(int loopA=0;loopA<vtkOptions.dataBlockStart.size();loopA++){
     if(vtkOptions.dataBlockRead[loopA]){
@@ -3190,15 +3193,18 @@ void MRIStructuredScan::ReadVTKStructuredPoints(std::string vtkFileName, bool Do
         // Read Scalars
         WriteSchMessage(std::string("Reading Scalars...\n"));
         vtkScalar.clear();
-        readVTKScalar(vtkFile,totalLinesInFile,vtkScalar);
+        linesToRead = vtkOptions.dataBlockStart[loopA + 1] - vtkOptions.dataBlockStart[loopA];
+        readVTKScalar(vtkFile,totalLinesInFile,linesToRead,vtkScalar);
         if(vtkScalar.size() != totalCellPoints){
-          throw MRIException("ERROR: Total number of scalar differs from number of cells.\n");
+          printf("Scalar Size %d, Total Cells %d\n",(int)vtkScalar.size(), totalCellPoints);
+          throw MRIException("ERROR: Total number of scalars differ from number of cells.\n");
         }
       }else{
         // Read Vectors
         WriteSchMessage(std::string("Reading Vectors...\n"));
         vtkVector.clear();
-        readVTKVector(vtkFile,totalLinesInFile,vtkVector);
+        linesToRead = vtkOptions.dataBlockStart[loopA + 1] - vtkOptions.dataBlockStart[loopA];
+        readVTKVector(vtkFile,totalLinesInFile,linesToRead,vtkVector);
         if(vtkVector.size() != totalCellPoints){
           printf("Vector Size %d, Total Cells %d\n",(int)vtkVector.size(), totalCellPoints);
           throw MRIException("ERROR: Total number of vectors differs from number of cells.\n");

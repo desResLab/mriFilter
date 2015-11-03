@@ -864,6 +864,7 @@ void communicateResFilt2(int totalFaces,double* resVec,double* filteredVels,MRIC
   resNorm = sqrt(resNorm);
   delete [] recvcounts;
   delete [] displs;
+  delete [] storeVec;
 }
 
 // =========================================

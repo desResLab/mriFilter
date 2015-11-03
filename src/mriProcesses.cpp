@@ -40,6 +40,7 @@ void MRIStructuredScan::GetStructuredNeighbourCells(int centreCell,int order,MRI
    cellNeighbors.push_back(centreCell);
    return;
  }else{
+
    // Get Coords in current cell
    MapIndexToCoords(centreCell,centreCellCoords);
    for(int i=-order;i<=order;i++){
@@ -52,9 +53,13 @@ void MRIStructuredScan::GetStructuredNeighbourCells(int centreCell,int order,MRI
          }else{
            nextCell = -1;
          }
-         cellQty = cellPoints[nextCell].getQuantity(threshold->thresholdQty);
-         if(!threshold->MeetsCriteria(cellQty)){
-           cellNeighbors.push_back(nextCell);
+         if(nextCell>-1){
+           cellQty = cellPoints[nextCell].getQuantity(threshold->thresholdQty);
+           if(!threshold->MeetsCriteria(cellQty)){
+             cellNeighbors.push_back(nextCell);
+           }else{
+             cellNeighbors.push_back(-1);
+           }
          }else{
            cellNeighbors.push_back(-1);
          }
@@ -149,11 +154,8 @@ void MRIStructuredScan::ApplyMedianFilter(int qtyID,int maxIt,int order,int filt
   }else if(filterType == kMeanFilter){
     WriteSchMessage(std::string("Applying Mean Filter...\n"));
   }else if(filterType == kGaussianFilter){
-    WriteSchMessage(std::string("Applying Gaussian Filter...\n"));
+    WriteSchMessage(std::string("Applying Gaussian Filter...\n"));    
     createGaussianKernel(order,gaussKernelVector);
-    //for(int loopA=0;loopA<gaussKernelVector.size();loopA++){
-    //  printf("%f\n",gaussKernelVector[loopA]);
-    //}
   }else{
     throw MRIException("Error in ApplyMedianFilter: Invalid Filter Type.\n");
   }
@@ -171,10 +173,12 @@ void MRIStructuredScan::ApplyMedianFilter(int qtyID,int maxIt,int order,int filt
     // LOOP ON ALL CELLS
     double maxError = 0.0;
     for(int loopA=0;loopA<totalCellPoints;loopA++){
+
       // Get Value in Current Cell
       centerCellValue = cellPoints[loopA].getQuantity(qtyID);
+
       // GET NEIGHBOURS
-      GetStructuredNeighbourCells(loopA,order,threshold,neighbours);
+      GetStructuredNeighbourCells(loopA,order,threshold,neighbours);      
 
       // CHECK IF THE CURRENT CELL IS TO BE PROCESSED
       cellQty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
