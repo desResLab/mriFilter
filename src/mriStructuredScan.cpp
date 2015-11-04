@@ -3687,7 +3687,7 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
   cellToFacePartial(elUsageMap,threshold,termSum,poissonSourceFaceVec);
 
   // SET TO ZERO THE FACES NOT ON THE BORDER
-  setWallFluxesToZero(isFaceOnWalls,poissonSourceFaceVec);
+  //setWallFluxesToZero(isFaceOnWalls,poissonSourceFaceVec);
 
   // Eval the integral of the divergence over the cell
   MRIDoubleVec cellDivs;
