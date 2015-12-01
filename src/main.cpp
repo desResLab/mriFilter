@@ -951,6 +951,16 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
   int mpiError = MPI_Barrier(comm->mpiComm);
   MRIUtils::checkMpiError(mpiError);
 
+  // Scale Model if required
+  if(comm->currProc == 0){
+    if (opts->scaleVelocities){
+      MyMRISequence->ScaleVelocities(opts->scaleVelocityFactor);
+    }
+    if (opts->scalePositions){
+      MyMRISequence->ScalePositions(opts->scalePositionFactor);
+    }
+  }
+
   // Distribute Sequence Data using MPI
   if(comm->totProc > 1){
     MyMRISequence->DistributeSequenceData(comm);

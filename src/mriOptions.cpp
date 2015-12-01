@@ -59,6 +59,11 @@ MRIOptions::MRIOptions(){
   // Clean Velocity Components
   cleanBoundaryVelocities = false;
   interpolateBoundaryVelocities = false;
+  // Model Scaling
+  scaleVelocities = false;
+  scaleVelocityFactor = 1.0;
+  scaleVelocities = false;
+  scalePositionFactor = 1.0;
 }
 
 MRIOptions::~MRIOptions(){
@@ -541,6 +546,20 @@ int MRIOptions::getOptionsFromCommandFile(string commandFile){
       }catch(...){
         throw MRIException("ERROR: Invalid template parameters.\n");
       }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("SCALEVELOCITY")){
+        try{
+          scaleVelocities = true;
+          scaleVelocityFactor = atof(tokenizedString[1].c_str());
+        }catch(...){
+          throw MRIException("ERROR: Invalid velocity scaling parameters.\n");
+        }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("SCALEPOSITION")){
+        try{
+          scalePositions = true;
+          scalePositionFactor = atof(tokenizedString[1].c_str());
+        }catch(...){
+          throw MRIException("ERROR: Invalid position scaling parameters.\n");
+        }
     }else if((tokenizedString[0].empty())||(tokenizedString[0].at(0) == '#')){
       // Comment: Do Nothing
     }else{

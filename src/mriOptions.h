@@ -102,6 +102,12 @@ public:
   bool cleanBoundaryVelocities;
   bool interpolateBoundaryVelocities;
 
+  // Scale Velocities and Positions
+  bool scaleVelocities;
+  double scaleVelocityFactor;
+  bool scalePositions;
+  double scalePositionFactor;
+
   // CONSTRUCTOR
   MRIOptions();
   // Distructor

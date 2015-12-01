@@ -334,7 +334,7 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
 
   // Skip Comments
   std::string* PltFileHeader = new std::string[headerCount];
-  for(int loopA=0;loopA<headerCount;loopA++){
+  for(int loopA=0;loopA<headerCount-1;loopA++){
     std::getline(PltFile,Buffer);
     PltFileHeader[loopA] = Buffer;
     lineCount++;
@@ -386,7 +386,7 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
       // Set Continue
       Continue = true;
       // Check Ratio between ResultArray.size, valueCounter, neededValues
-      if(ResultArray.size()+valueCounter < (size_t)neededValues){
+      if((int)ResultArray.size()+valueCounter < neededValues){
         // Read the whole Result Array
         for(size_t loopA=0;loopA<ResultArray.size();loopA++){
           LocalVal[loopA] = atof(ResultArray[loopA].c_str());
