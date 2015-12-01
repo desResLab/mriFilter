@@ -268,7 +268,6 @@ class MRIStructuredScan: public MRIScan{
     double EvalAverageVelocityMod();
     void   evalCellAreas(int cellNumber,double* Areas);
     int    getTotalAuxNodes();
-    bool   isUniform();
     virtual int  EvalTotalVortex();
     virtual int  getTotalFaces();
 

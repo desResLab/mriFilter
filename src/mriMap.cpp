@@ -329,20 +329,3 @@ void MRIStructuredScan::MapAuxCoordsToPosition(int* auxCoords, double* pos){
     pos[loopA] = pos[loopA] + domainSizeMin[loopA] - 0.5*cellLengths[loopA][0];
   }
 }
-
-
-// ===================================
-// CHECK IF STRUCTURED MESH IS UNIFORM
-// ===================================
-bool MRIStructuredScan::isUniform(){
-  bool res = true;
-  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
-    // Assign Reference Length
-    double refLength = cellLengths[0][0];
-    // Loop through all the lengths to see of they are equal
-    for(int loopB=0;loopB<cellLengths[loopA].size();loopB++){
-      res = (res && (fabs(refLength-cellLengths[loopA][loopB])<kMathZero));
-    }
-  }
-  return res;
-}

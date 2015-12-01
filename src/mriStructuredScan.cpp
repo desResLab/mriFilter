@@ -892,7 +892,7 @@ void MRIStructuredScan::CreateVolDataRecord(int volDataType, MRIVolData &VolData
   VolData.GridZ = cellTotals[2];
 
   // Only Uniform Case
-  if(!isUniform()){
+  if(!hasUniformSpacing()){
     throw MRIException("Error. Mesh is not uniform.\n");
   }
 
@@ -1497,14 +1497,14 @@ void MRIStructuredScan::ScalePositions(double factor){
 // ===========================
 bool MRIStructuredScan::hasUniformSpacing(){
   double lengthX = cellLengths[0][0];
-  double lengthY = cellLengths[0][1];
-  double lengthZ = cellLengths[0][2];
+  double lengthY = cellLengths[1][0];
+  double lengthZ = cellLengths[2][0];
   int count = 1;
   bool result = true;
   while(result && ((size_t)count<cellLengths.size())){
-    result = result && (fabs(cellLengths[count][0] - lengthX) < 1.0e-3) &&
-                       (fabs(cellLengths[count][1] - lengthY) < 1.0e-3) &&
-                       (fabs(cellLengths[count][2] - lengthZ) < 1.0e-3);
+    result = result && (fabs(cellLengths[0][count] - lengthX) < 1.0e-3) &&
+                       (fabs(cellLengths[1][count] - lengthY) < 1.0e-3) &&
+                       (fabs(cellLengths[2][count] - lengthZ) < 1.0e-3);
     count++;
   }
   return result;
@@ -3047,11 +3047,14 @@ void readVTKScalar(ifstream& vtkFile, int& lineCount,int linesToRead,MRIDoubleVe
   vector<string> tokenizedString;
   // Skip first two lines
   std::getline(vtkFile,buffer);
+  //printf("Skipping; %s\n",buffer.c_str());
   lineCount++;
   std::getline(vtkFile,buffer);
+  //printf("Skipping; %s\n",buffer.c_str());
   lineCount++;
   for(int loopA=0;loopA<linesToRead;loopA++){
     std::getline(vtkFile,buffer);
+    //printf("Reading: %s\n",buffer.c_str());
     boost::trim(buffer);
     lineCount++;
     if(!buffer.empty()){
@@ -3061,7 +3064,7 @@ void readVTKScalar(ifstream& vtkFile, int& lineCount,int linesToRead,MRIDoubleVe
           value = atof(tokenizedString[loopB].c_str());
           vtkScalar.push_back(value);
         }catch(...){
-          break;
+          return;
         }
       }
     }else{
@@ -3193,7 +3196,7 @@ void MRIStructuredScan::ReadVTKStructuredPoints(std::string vtkFileName, bool Do
         // Read Scalars
         WriteSchMessage(std::string("Reading Scalars...\n"));
         vtkScalar.clear();
-        linesToRead = vtkOptions.dataBlockStart[loopA + 1] - vtkOptions.dataBlockStart[loopA];
+        linesToRead = vtkOptions.dataBlockStart[loopA + 1] - vtkOptions.dataBlockStart[loopA] - 2;
         readVTKScalar(vtkFile,totalLinesInFile,linesToRead,vtkScalar);
         if(vtkScalar.size() != totalCellPoints){
           printf("Scalar Size %d, Total Cells %d\n",(int)vtkScalar.size(), totalCellPoints);
@@ -3715,7 +3718,7 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
     if(!threshold->MeetsCriteria(qty)){
-      fprintf(outFile,"ELSOURCE %d %e\n",elCount+1,sourcesToApply[loopA]);
+      fprintf(outFile,"ELSOURCE %d %17.10e\n",elCount+1,sourcesToApply[loopA]);
       elCount++;
     }
   }
@@ -3788,7 +3791,7 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
         for(int loopB=0;loopB<faceConnections[loopA].size();loopB++){
           fprintf(outFile,"%d ",nodeUsageMap[faceConnections[loopA][loopB]] + 1);
         }
-        fprintf(outFile,"%e\n", - poissonSourceFaceVec[loopA]);
+        fprintf(outFile,"%17.10e\n", - poissonSourceFaceVec[loopA]);
       }else{
         printf("PROBLEM!\n");
       }
