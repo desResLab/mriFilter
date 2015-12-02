@@ -138,7 +138,7 @@ void MRIStructuredScan::MapIndexToCoords(int index, int* intCoords){
   intCoords[0] = CurrentIndex;
 }
 
-// Map To Cells Coords
+// Map To Aux Cells Coords
 void MRIStructuredScan::MapIndexToAuxNodeCoords(int index, int* intCoords){
   int CurrentIndex = index;
   int totalX = cellTotals[0] + 1;

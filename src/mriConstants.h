@@ -15,7 +15,7 @@
   //const int kHeaderCommentsLines = 20;
   const int kInitialMemorySize = 1000;
   // Math
-  const double kMathZero = 1.0e-7;
+  const double kMathZero = 1.0e-8;
   // File Types
   const int ftPLT = 0;
   const int ftVOL = 1;

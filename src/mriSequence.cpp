@@ -181,12 +181,15 @@ void MRISequence::ExportToVOL(std::string outfileName){
 }
 
 // Export to Poisson Solver
-void MRISequence::ExportForPOISSON(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold){
+void MRISequence::ExportForPoisson(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold){
   string name;
+  MRIDoubleMat timeDeriv;
   for(int loopA=0;loopA<totalScans;loopA++){
-    name = inputFileName;
-    //sequence[loopA]->ExportForPOISSON(name,threshold);
-    sequence[loopA]->ExportForPOISSONPartial(name,density,viscosity,threshold);
+    name = inputFileName + "_" + MRIUtils::FloatToStr(loopA);
+    printf("Computing Time Derivatives for Scan %d...",loopA);
+    EvalScanTimeDerivs(loopA,timeDeriv);
+    printf("Done.\n");
+    sequence[loopA]->ExportForPoisson(name,density,viscosity,threshold,timeDeriv);
   }
 }
 

@@ -907,13 +907,13 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
   if(comm->currProc == 0){
 
       // INIT SEQUENCE
-      MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
+      MyMRISequence = new MRISequence(true/*Cyclic Sequence*/);
 
       // LOOP ON THE NUMBER OF SCANS
       for(size_t loopA=0;loopA<opts->sequenceFileList.size();loopA++){
 
         // CREATE NEW SCAN
-        MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
+        MRIStructuredScan* MyMRIScan = new MRIStructuredScan(opts->sequenceFileTimes[loopA]);
 
         // CHOOSE INPUT FORMAT
         if(opts->inputFormatType == itTEMPLATE){
@@ -926,7 +926,7 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
           double thresholdRatio = 0.5;
           MyMRIScan->ReadFromExpansionFile(opts->sequenceFileList[loopA],applyThreshold,thresholdType,thresholdRatio);
         }else if (opts->inputFormatType == itFILEVTK){
-          // READ FROM FILE
+          // READ FROM FILE          
           MyMRIScan->ReadVTKStructuredPoints(opts->sequenceFileList[loopA], true);
         }else if (opts->inputFormatType == itFILETECPLOT){
           // READ FROM FILE
@@ -960,6 +960,7 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
       MyMRISequence->ScalePositions(opts->scalePositionFactor);
     }
   }
+
 
   // Distribute Sequence Data using MPI
   if(comm->totProc > 1){
@@ -1071,7 +1072,7 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
   // SAVE FILE FOR POISSON COMPUTATION
   if(comm->currProc == 0){
     if (opts->exportToPoisson){
-      MyMRISequence->ExportForPOISSON(opts->poissonFileName,opts->density,opts->viscosity,opts->thresholdCriteria);
+      MyMRISequence->ExportForPoisson(opts->poissonFileName,opts->density,opts->viscosity,opts->thresholdCriteria);
     }
   }
 

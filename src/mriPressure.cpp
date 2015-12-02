@@ -70,7 +70,7 @@ double findParabolicDeriv(double y1, double y2, double y3, double h1, double h2,
 }
 
 // Eval Time Derivatives: TODO: Complete for Transient Case
-void MRISequence::EvalTimeDerivs(int currentScan, int currentCell,double* &timeDeriv){
+void MRISequence::EvalTimeDerivs(int currentScan, int currentCell,double* timeDeriv){
   // Eval Difference Formulae
   if (totalScans>1){
     // multiple Scan
@@ -194,6 +194,23 @@ void MRISequence::EvalTimeDerivs(int currentScan, int currentCell,double* &timeD
     timeDeriv[1] = 0.0;
     // DVZ/DT
     timeDeriv[2] = 0.0;
+  }
+}
+
+// ==================================
+// EVAL TIME DERIVATIVES FOR THE SCAN
+// ==================================
+void MRISequence::EvalScanTimeDerivs(int currentScan,MRIDoubleMat& timeDeriv){
+  timeDeriv.clear();
+  MRIDoubleVec temp;
+  double cellTimeDeriv[3];
+  for(int loopA=0;loopA<sequence[currentScan]->totalCellPoints;loopA++){
+    temp.clear();
+    EvalTimeDerivs(currentScan,loopA,cellTimeDeriv);
+    temp.push_back(cellTimeDeriv[0]);
+    temp.push_back(cellTimeDeriv[1]);
+    temp.push_back(cellTimeDeriv[2]);
+    timeDeriv.push_back(temp);
   }
 }
 

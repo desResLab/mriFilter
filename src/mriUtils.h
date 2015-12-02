@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <math.h>
 #include <limits.h>
-#include <string>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -159,8 +158,7 @@ inline Type Do3DEucNorm(std::vector<Type> v){
 inline void Normalize3DVector(double* v){
   double norm = Do3DEucNorm(v);
   if(norm>kMathZero){
-    for(int LoopA=0;LoopA<kNumberOfDimensions;LoopA++)
-    {
+    for(int LoopA=0;LoopA<kNumberOfDimensions;LoopA++){
       v[LoopA] = v[LoopA]/norm;
     }
   }

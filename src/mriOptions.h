@@ -78,8 +78,10 @@ public:
   bool applyBCFilter;
   bool useConstantPatterns;
   // Sequence Processing
+  bool haveSequence;
   string sequenceFileName;
   vector<string> sequenceFileList;
+  vector<double> sequenceFileTimes;
   // Post processing
   bool evalPopVortexCriteria;
   bool evalSMPVortexCriterion;
@@ -121,6 +123,8 @@ public:
   int writeCommandFilePrototype(string commandFile);  
   // Write Options to file
   int writeOptionsToFile(string outFile);
+  // Read Sequence File List
+  void readSequenceFileList(string fileName,MRIStringVec& sequenceFileList,MRIDoubleVec& sequenceFileTimes);
 
   // Process Options
   void finalize();

@@ -73,6 +73,7 @@ class MRIScan{
     // INFO
     virtual int getTotalFaces(){return 0;}
     double EvalAverageVelocityMod();
+    virtual std::string WriteStatistics();
 
     // SCAN TRAVERSAL ALGORITHMS
     bool AreThereNotVisitedNeighbor(int cell, bool* visitedCell);
@@ -129,8 +130,7 @@ class MRIScan{
     virtual void ExportToVOL(std::string FileName){throw MRIException("Error: Not Implemented!");}
     virtual void ExportToVTK(std::string fileName, MRIThresholdCriteria* threshold){throw MRIException("Error: Not Implemented!");}
     virtual void ExportToTECPLOT(std::string FileName, bool isFirstFile){throw MRIException("Error: Not Implemented!");}
-    virtual void ExportForPOISSON(string inputFileName, MRIThresholdCriteria* threshold){throw MRIException("Error: ExportForPOISSON Not Implemented!");}
-    virtual void ExportForPOISSONPartial(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold){throw MRIException("Error: ExportForPOISSONPartial Not Implemented!");}
+    virtual void ExportForPoisson(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold, MRIDoubleMat& timeDerivs){throw MRIException("Error: ExportForPOISSONPartial Not Implemented!");}
     virtual void WriteExpansionFile(std::string fileName){throw MRIException("Error: Not Implemented!");}
 
     // MODEL MANIPULATION

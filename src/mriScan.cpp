@@ -226,3 +226,10 @@ void MRIScan::saveVelocity(){
 void MRIScan::DistributeScanData(MRICommunicator* comm){
   throw MRIException("ERROR: MRIScan::DistributeScanData Not Implemented.");
 }
+
+// ================
+// WRITE STATISTICS
+// ================
+std::string MRIScan::WriteStatistics(){
+  throw MRIException("ERROR: MRIScan::WriteStatistics Not Implemented.");
+}

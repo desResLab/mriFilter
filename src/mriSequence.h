@@ -37,7 +37,7 @@ class MRISequence{
     void ExportToVOL(std::string outfileName);
     void ExportToVTK(std::string outfileName,MRIThresholdCriteria* thresholdCriteria);
     void WriteExpansionFile(string fileName);
-    void ExportForPOISSON(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold);
+    void ExportForPoisson(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold);
 
     // SAVE QUANTITIES TO OUTPUTS
     void saveVelocity();
@@ -70,7 +70,8 @@ class MRISequence{
     void MakeScanDifference(int firstScanID, int secondScanID);
     void MakeScanAverage(int numberOfMeasures, int firstScanID, int secondScanID);
     // Eval Time Derivatives
-    void EvalTimeDerivs(int currentScan, int currentCell,double* &timeDeriv);
+    void EvalTimeDerivs(int currentScan, int currentCell,double* timeDeriv);
+    void EvalScanTimeDerivs(int currentScan,MRIDoubleMat& timeDeriv);
   
     // STATISTICS
     void ExtractSinglePointTimeCurve(int cellNumber, int exportQty, std::string fileName);

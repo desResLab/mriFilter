@@ -37,6 +37,7 @@ MRIOptions::MRIOptions(){
   inputFormatType = itFILEVTK;
   outputFormatType = otFILEVTK;
   // Default: Process Single Scan
+  haveSequence = false;
   sequenceFileName = "";
   // Post processing
   evalPopVortexCriteria = false;
@@ -245,6 +246,38 @@ int MRIOptions::getCommadLineOptions(int argc, char **argv){
   return 0;
 }
 
+// ============================
+// READ FILE SEQUENCE AND TIMES
+// ============================
+void MRIOptions::readSequenceFileList(string fileName,MRIStringVec& sequenceFileList,MRIDoubleVec& sequenceFileTimes){
+  vector<string> tokenizedString;
+
+  // Clear Outputs
+  sequenceFileList.clear();
+  sequenceFileTimes.clear();
+
+  // Read Data From File
+  std::string buffer;
+  std::ifstream infile;
+  infile.open(fileName.c_str());
+  while (std::getline(infile,buffer)){
+    // Trim String
+    boost::trim(buffer);
+    // Tokenize String
+    boost::split(tokenizedString, buffer, boost::is_any_of(" ,"), boost::token_compress_on);
+    // Add Sequence File and time
+    try{
+      sequenceFileList.push_back(tokenizedString[0]);
+      sequenceFileTimes.push_back(atof(tokenizedString[1].c_str()));
+    }catch(...){
+      infile.close();
+      throw MRIException("ERROR: Cannot read sequence file.\n");
+    }
+  }
+  // Close File
+  infile.close();
+}
+
 // ======================================
 // FINALIZE OPTIONS: PROCESS INPUT PARAMS
 // ======================================
@@ -252,10 +285,12 @@ void MRIOptions::finalize(){
   // CREATE THRESHOLD OBJECT
   thresholdCriteria = new MRIThresholdCriteria(thresholdQty,thresholdType,thresholdValue);
   // FILL FILE LIST SEQUENCE WITH SINGLE FILE
-  if(sequenceFileName == ""){
+  if(!haveSequence){
     sequenceFileList.push_back(inputFileName);
+    sequenceFileTimes.push_back(0.0);
   }else{
     // READ FROM SEQUENCE LIST FILE
+    readSequenceFileList(sequenceFileName,sequenceFileList,sequenceFileTimes);
   }
 }
 
@@ -469,6 +504,7 @@ int MRIOptions::getOptionsFromCommandFile(string commandFile){
       }
     }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("SEQUENCEFILENAME")){
       try{
+        haveSequence = true;
         sequenceFileName = tokenizedString[1];
       }catch(...){
         throw MRIException("ERROR: Invalid Sequence File Name.\n");

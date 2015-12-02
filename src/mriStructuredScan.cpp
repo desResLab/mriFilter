@@ -1477,9 +1477,13 @@ void MRIStructuredScan::ScalePositions(double factor){
   }
   // SCALE POSITIONS
   for(int loopA=0;loopA<totalCellPoints;loopA++){
-    cellPoints[loopA].position[0] = (cellPoints[loopA].position[0] - domainSizeMin[0])*factor;
-    cellPoints[loopA].position[1] = (cellPoints[loopA].position[1] - domainSizeMin[1])*factor;
-    cellPoints[loopA].position[2] = (cellPoints[loopA].position[2] - domainSizeMin[2])*factor;
+    cellPoints[loopA].position[0] = (cellPoints[loopA].position[0] - domainSizeMin[0]) * factor;
+    cellPoints[loopA].position[1] = (cellPoints[loopA].position[1] - domainSizeMin[1]) * factor;
+    cellPoints[loopA].position[2] = (cellPoints[loopA].position[2] - domainSizeMin[2]) * factor;
+  }
+  // SCALE FACE AREA
+  for(int loopA=0;loopA<faceConnections.size();loopA++){
+    faceArea[loopA] = faceArea[loopA] * factor * factor;
   }
   // SCALE DOMAIN DIMENSIONS
   // Max
@@ -1489,7 +1493,7 @@ void MRIStructuredScan::ScalePositions(double factor){
   // Min
   domainSizeMin[0] = 0.0;
   domainSizeMin[1] = 0.0;
-  domainSizeMin[2] = 0.0;  
+  domainSizeMin[2] = 0.0;
 }
 
 // ===========================
@@ -1502,9 +1506,9 @@ bool MRIStructuredScan::hasUniformSpacing(){
   int count = 1;
   bool result = true;
   while(result && ((size_t)count<cellLengths.size())){
-    result = result && (fabs(cellLengths[0][count] - lengthX) < 1.0e-3) &&
-                       (fabs(cellLengths[1][count] - lengthY) < 1.0e-3) &&
-                       (fabs(cellLengths[2][count] - lengthZ) < 1.0e-3);
+    result = result && (fabs(cellLengths[0][count] - lengthX) < kMathZero) &&
+                       (fabs(cellLengths[1][count] - lengthY) < kMathZero) &&
+                       (fabs(cellLengths[2][count] - lengthZ) < kMathZero);
     count++;
   }
   return result;
@@ -1577,13 +1581,14 @@ void MRIStructuredScan::ExportToVTK(std::string fileName, MRIThresholdCriteria* 
   double* normSignX = new double[totalCellPoints];
   double* normSignY = new double[totalCellPoints];
   double* normSignZ = new double[totalCellPoints];
-  int counterVec[totalCellPoints];
+  int* counterVec = new int[totalCellPoints];
   for (int loopA=0;loopA<totalCellPoints;loopA++){
     normSignX[loopA] = 0.0;
     normSignY[loopA] = 0.0;
     normSignZ[loopA] = 0.0;
     counterVec[loopA] = 0;
   }
+
   int currCell = 0;
   for(size_t loopA=0;loopA<faceConnections.size();loopA++){
     if(faceCells[loopA].size() == 1){
@@ -1594,6 +1599,7 @@ void MRIStructuredScan::ExportToVTK(std::string fileName, MRIThresholdCriteria* 
       normSignZ[currCell] += faceNormal[loopA][2];
     }
   }
+
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     if(counterVec[loopA] > 0){
       normSignX[loopA] /= (double)counterVec[loopA];
@@ -1609,6 +1615,7 @@ void MRIStructuredScan::ExportToVTK(std::string fileName, MRIThresholdCriteria* 
   delete [] normSignX;
   delete [] normSignY;
   delete [] normSignZ;
+  delete [] counterVec;
 
   // Print Scalar Concentration
   fprintf(outFile,"SCALARS concentration double\n");
@@ -1665,7 +1672,7 @@ void MRIStructuredScan::ExportToVTK(std::string fileName, MRIThresholdCriteria* 
       fprintf(outFile,"%e %e %e\n",cellPoints[loopA].ReStress[2],cellPoints[loopA].ReStress[4],cellPoints[loopA].ReStress[5]);
       fprintf(outFile,"\n");
     }
-  }
+  }  
 
   // ==================
   // EXPORT REDIVATIVES
@@ -3281,194 +3288,6 @@ int MRIStructuredScan::GetCellFaceID(int CellId,int FaceId){
   return count;
 }
 
-// ========================
-// EXPORT TO POISSON SOLVER
-// ========================
-void MRIStructuredScan::ExportForPOISSON(string inputFileName, MRIThresholdCriteria* threshold){
-  // Declare
-  FILE* outFile;
-  outFile = fopen(inputFileName.c_str(),"w");
-  int totAuxNodes = (cellTotals[0] + 1) * (cellTotals[1] + 1) * (cellTotals[2] + 1);
-
-  // ==================
-  // SAVE MESH TOPOLOGY
-  // ==================
-  // SAVE NODE COORDS
-  if(totalCellPoints>0){
-    double pos[3];
-    for(int loopA=0;loopA<totAuxNodes;loopA++){
-      getAuxNodeCoordinates(loopA,pos);
-      fprintf(outFile,"NODE %d %e %e %e\n",loopA+1,pos[0],pos[1],pos[2]);
-    }
-
-    // SAVE ELEMENT CONNECTIONS
-    for(int loopA=0;loopA<totalCellPoints;loopA++){
-      fprintf(outFile,"ELEMENT HEXA8 %d 1 ",loopA+1);
-      for(int loopB=0;loopB<cellConnections[loopA].size();loopB++){
-        fprintf(outFile,"%d ",cellConnections[loopA][loopB] + 1);
-      }
-      fprintf(outFile,"\n");
-    }
-  }
-
-  // ========================
-  // SAVE ELEMENT DIFFUSIVITY
-  // ========================
-  double velMod = 0.0;
-  for(int loopA=0;loopA<totalCellPoints;loopA++){
-    fprintf(outFile,"ELDIFF %d ",loopA+1);
-    velMod = sqrt(cellPoints[loopA].velocity[0] * cellPoints[loopA].velocity[0] +
-                  cellPoints[loopA].velocity[1] * cellPoints[loopA].velocity[1] +
-                  cellPoints[loopA].velocity[2] * cellPoints[loopA].velocity[2]);
-    if(velMod < 1.0e-4){
-      fprintf(outFile,"%e ",1.0e-2);
-      fprintf(outFile,"%e ",1.0e-2);
-      fprintf(outFile,"%e ",1.0e-2);
-    }else{
-      fprintf(outFile,"%e ",cellPoints[loopA].velocity[0]/velMod);
-      fprintf(outFile,"%e ",cellPoints[loopA].velocity[1]/velMod);
-      fprintf(outFile,"%e ",cellPoints[loopA].velocity[2]/velMod);
-    }
-    //fprintf(outFile,"%e ",cellPoints[loopA].concentration);
-    //fprintf(outFile,"%e ",cellPoints[loopA].concentration);
-    //fprintf(outFile,"%e ",cellPoints[loopA].concentration);
-    //if(cellPoints[loopA].concentration < 0.5){
-    //}else{
-    //  fprintf(outFile,"%e ",1.0);
-     // fprintf(outFile,"%e ",1.0);
-     // fprintf(outFile,"%e ",1.0);
-    //}
-    fprintf(outFile,"\n");
-  }
-
-  // ================
-  // SAVE SOURCE TERM
-  // ================
-  MRIDoubleMat poissonSourceVec;
-  MRIDoubleMat poissonViscousTerm;
-  MRIDoubleVec temp;
-  MRIDoubleVec tempViscous;
-  double currValue = 0.0;
-  double currValueViscous = 0.0;
-  // First and Second Derivatives
-  double** firstDerivs = new double*[kNumberOfDimensions];
-  double** secondDerivs = new double*[kNumberOfDimensions];
-  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
-    firstDerivs[loopA] = new double[kNumberOfDimensions];
-    secondDerivs[loopA] = new double[kNumberOfDimensions];
-  }
-
-  // Loop on cells
-  for(int loopA=0;loopA<totalCellPoints;loopA++){
-    // Eva Spatial Derivatives
-    EvalSpaceDerivs(loopA,threshold,firstDerivs,secondDerivs);
-    // Eval the Convective term for the current Cell
-    temp.clear();
-    tempViscous.clear();
-    for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
-      currValue = 0.0;
-      currValueViscous = 0.0;
-      for(int loopC=0;loopC<kNumberOfDimensions;loopC++){
-        // Same velocity component on columns
-        currValue += cellPoints[loopA].velocity[loopC] * firstDerivs[loopC][loopB];
-        currValueViscous += secondDerivs[loopC][loopB];
-
-      }
-      // Add Component
-      temp.push_back(currValue);
-      tempViscous.push_back(4.0e-3 * currValueViscous);
-    }
-    // Add to the global Vector
-    poissonSourceVec.push_back(temp);
-    poissonViscousTerm.push_back(tempViscous);
-  }
-
-  // Convert Cell Vector to Face Vector
-  bool deleteWalls = false;
-  MRIThresholdCriteria* crit = new MRIThresholdCriteria(kCriterionLessThen,kNoQuantity,0.0);
-  MRIDoubleVec poissonSourceFaceVec;
-  cellToFace(deleteWalls,crit,poissonSourceVec,poissonSourceFaceVec);
-
-
-  // Eval the integral of the divergence over the cell
-  MRIDoubleVec cellDivs;
-  cellDivs = evalCellDivergences(poissonSourceFaceVec);
-
-  // Divide by the volume
-  MRIDoubleVec sourcesToApply;
-  double currVol = 0.0;
-  for(int loopA=0;loopA<totalCellPoints;loopA++){
-    // Evaluate current cell volume
-    currVol = evalCellVolume(loopA);
-    // Store source term
-    sourcesToApply.push_back(-cellDivs[loopA]/currVol);
-  }
-
-  // SAVE ELEMENT SOURCES TO FILE
-  for(int loopA=0;loopA<totalCellPoints;loopA++){
-    fprintf(outFile,"ELSOURCE %d %e\n",loopA+1,sourcesToApply[loopA]);
-  }
-
-  // =====================
-  // SAVE NEUMANN BOUNDARY
-  // =====================
-  int currCell = 0;
-  double currVec[3] = {0.0};
-  double normComp = 0.0;
-  int faceID = 0.0;
-  // Loop on the free faces
-  for(int loopA=0;loopA<faceCells.size();loopA++){
-    // Check if the face is free
-    if(faceCells[loopA].size() == 1){
-      // Get Current element
-      currCell = faceCells[loopA][0];
-      // Get Velocity Component
-      currVec[0] = poissonSourceVec[currCell][0] + poissonViscousTerm[currCell][0];
-      currVec[1] = poissonSourceVec[currCell][1] + poissonViscousTerm[currCell][1];
-      currVec[2] = poissonSourceVec[currCell][2] + poissonViscousTerm[currCell][2];
-      // Get Normal Component
-      normComp = 0.0;
-      for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
-        normComp += currVec[loopB] * faceNormal[loopA][loopB];
-      }
-      // Multiply by the face area
-      currValue = faceArea[loopA] * normComp;
-      // Print Line
-      if(fabs(currValue) > kMathZero){
-        fprintf(outFile,"FACENEUMANN %d ",currCell + 1);
-        for(int loopB=0;loopB<faceConnections[loopA].size();loopB++){
-          fprintf(outFile,"%d ",faceConnections[loopA][loopB] + 1);
-        }
-        fprintf(outFile,"%e\n",currValue/(double)faceConnections[loopA].size());
-      }
-    }
-  }
-
-  bool found = false;
-  double qty;
-  int count = 0;
-  while(!found){
-    qty = cellPoints[count].getQuantity(threshold->thresholdQty);
-    found = !(threshold->MeetsCriteria(qty));
-    if(!found){
-      count++;
-    }
-  }
-  fprintf(outFile,"NODEDIRBC %d 30.0\n",cellConnections[count][0] + 1);
-
-  // Close Output file
-  fclose(outFile);
-
-  // Free Memory
-  delete crit;
-  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
-    delete [] firstDerivs[loopA];
-    delete [] secondDerivs[loopA];
-  }
-  delete [] firstDerivs;
-  delete [] secondDerivs;
-}
-
 // =======================================
 // SET TO ZERO THE FACES NOT ON THE BORDER
 // =======================================
@@ -3483,7 +3302,7 @@ void MRIStructuredScan::setWallFluxesToZero(bool* isFaceOnWalls, MRIDoubleVec& p
 // ==================================================================
 // EXPORT TO POISSON SOLVER ONLY ELEMENTS WITH POSITIVE CONCENTRATION
 // ==================================================================
-void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold){
+void MRIStructuredScan::ExportForPoisson(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold, MRIDoubleMat& timeDerivs){
 
   // Declare
   FILE* outFile;
@@ -3541,7 +3360,7 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
     for(int loopA=0;loopA<totAuxNodes;loopA++){
       if(nodeUsageMap[loopA] > -1){
         getAuxNodeCoordinates(loopA,pos);
-        fprintf(outFile,"NODE %d %e %e %e\n",nodeUsageMap[loopA]+1,pos[0],pos[1],pos[2]);
+        fprintf(outFile,"NODE %d %19.12e %19.12e %19.12e\n",nodeUsageMap[loopA]+1,pos[0],pos[1],pos[2]);
       }
     }
 
@@ -3583,10 +3402,13 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
   // ================
   MRIDoubleMat poissonSourceVec;
   MRIDoubleMat poissonViscousTerm;
+  MRIDoubleMat poissonAccelTerm;
   MRIDoubleVec temp;
   MRIDoubleVec tempViscous;
+  MRIDoubleVec tempAccel;
   double currValue = 0.0;
   double currValueViscous = 0.0;
+  double currValueAccel = 0.0;
   // First and Second Derivatives
   double** firstDerivs = new double*[kNumberOfDimensions];
   double** secondDerivs = new double*[kNumberOfDimensions];
@@ -3606,6 +3428,7 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
       // Eval the Convective term for the current Cell
       temp.clear();
       tempViscous.clear();
+      tempAccel.clear();
       for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
         currValue = 0.0;
         currValueViscous = 0.0;
@@ -3614,13 +3437,16 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
           currValue += cellPoints[loopA].velocity[loopC] * firstDerivs[loopC][loopB];
           currValueViscous += secondDerivs[loopC][loopB];
         }
+        currValueAccel = timeDerivs[loopA][loopB];
         // Add Viscous and Acceleration Components
         temp.push_back(density * currValue);
         tempViscous.push_back(viscosity * currValueViscous);
+        tempAccel.push_back(density * currValueAccel);
       }
       // Add to the global Vector: Only Elements with significant concentration
       poissonSourceVec.push_back(temp);
       poissonViscousTerm.push_back(tempViscous);
+      poissonAccelTerm.push_back(tempAccel);
       elCount++;
     }else{
       // Add Zero for the cells with negligible concentration
@@ -3630,6 +3456,7 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
       }
       poissonSourceVec.push_back(temp);
       poissonViscousTerm.push_back(temp);
+      poissonAccelTerm.push_back(temp);
     }
   }
 
@@ -3640,7 +3467,7 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
   for(int loopA=0;loopA<poissonSourceVec.size();loopA++){
     temp.clear();
     for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
-      temp.push_back(poissonSourceVec[loopA][loopB] - poissonViscousTerm[loopA][loopB]);
+      temp.push_back(poissonAccelTerm[loopA][loopB] + poissonSourceVec[loopA][loopB] - poissonViscousTerm[loopA][loopB]);
     }
     termSum.push_back(temp);
   }
@@ -3700,17 +3527,32 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
   MRIDoubleVec sourcesToApply;
   double currVol = 0.0;
   double SourceSum = 0.0;
+  double totalVolume = 0.0;
+  double minVolume = std::numeric_limits<double>::max();
+  double maxVolume = -std::numeric_limits<double>::max();
+
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     // Evaluate current cell volume
-    currVol = evalCellVolume(loopA);
+    currVol = evalCellVolume(loopA);    
     // Add Source Term
     qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
     if(!threshold->MeetsCriteria(qty)){
       SourceSum += cellDivs[loopA];
+      totalVolume += currVol;
+      if(currVol > maxVolume){
+        maxVolume = currVol;
+      }
+      if(currVol < minVolume){
+        minVolume = currVol;
+      }
     }
     // Store source term
     sourcesToApply.push_back(cellDivs[loopA]/currVol);
+    // TEST
+    //sourcesToApply.push_back(cellDivs[loopA]);
   }
+  printf("Min Volume: %f, Max Volume: %f\n",minVolume,maxVolume);
+  printf("Total Fluid Volume: %f\n",totalVolume);
   printf("Source term summation: %f\n",SourceSum);
 
   // SAVE ELEMENT SOURCES TO FILE
@@ -3718,7 +3560,7 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
     if(!threshold->MeetsCriteria(qty)){
-      fprintf(outFile,"ELSOURCE %d %17.10e\n",elCount+1,sourcesToApply[loopA]);
+      fprintf(outFile,"ELSOURCE %d %19.12e\n",elCount+1,sourcesToApply[loopA]);
       elCount++;
     }
   }
@@ -3731,6 +3573,8 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
   double divNeu = 0.0;
   double sign = 0.0;
   for(int loopA=0;loopA<totalCellPoints;loopA++){
+    // Evaluate current cell volume
+    currVol = evalCellVolume(loopA);
     // Sum Source Contribution
     qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
     if(!threshold->MeetsCriteria(qty)){
@@ -3759,7 +3603,7 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
       }
     }
   }
-  printf("Divergence theorem check: Divergence SUM: %f, Neumann flux SUM: %f\n",divSource,divNeu);
+  printf("Divergence theorem check: Divergence SUM: %e, Neumann flux SUM: %e\n",divSource,divNeu);
 
   // =====================
   // SAVE NEUMANN BOUNDARY
@@ -3791,7 +3635,7 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
         for(int loopB=0;loopB<faceConnections[loopA].size();loopB++){
           fprintf(outFile,"%d ",nodeUsageMap[faceConnections[loopA][loopB]] + 1);
         }
-        fprintf(outFile,"%17.10e\n", - poissonSourceFaceVec[loopA]);
+        fprintf(outFile,"%19.12e\n", - poissonSourceFaceVec[loopA]);
       }else{
         printf("PROBLEM!\n");
       }
@@ -3813,7 +3657,6 @@ void MRIStructuredScan::ExportForPOISSONPartial(string inputFileName,double dens
   printf("\n");
   printf("Poisson Solver File Exported.\n");
 }
-
 
 // ==========================
 // CONVERT CELL ARRAY TO FACE

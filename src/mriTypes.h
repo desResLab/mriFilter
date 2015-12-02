@@ -8,6 +8,7 @@ typedef std::vector<double> MRIDoubleVec;
 typedef std::vector< std::vector<int> > MRIIntMat;
 typedef std::vector<int> MRIIntVec;
 typedef std::vector<bool> MRIBoolVec;
+typedef std::vector<std::string> MRIStringVec;
 
 #endif // MRITYPES_H
 

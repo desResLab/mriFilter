@@ -107,7 +107,7 @@ class MRIStructuredScan: public MRIScan{
     // Destructor
     virtual ~MRIStructuredScan(){}
     // INFO FUNCTIONS
-    std::string WriteStatistics();
+    virtual std::string WriteStatistics();
     int GetTotalFaces();
   
     // ==============
@@ -139,10 +139,8 @@ class MRIStructuredScan: public MRIScan{
     virtual void ExportToTECPLOT(std::string FileName, bool isFirstFile);
     virtual void ExportToVTK(std::string fileName, MRIThresholdCriteria* threshold);
     virtual void WriteExpansionFile(std::string fileName);
-    // Export all elements to Poisson Solver
-    virtual void ExportForPOISSON(string inputFileName, MRIThresholdCriteria* threshold);
     // Export to Poisson Solver Only element with significant concentration
-    virtual void ExportForPOISSONPartial(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold);
+    virtual void ExportForPoisson(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold, MRIDoubleMat& timeDerivs);
 
     // ========
     // VOL DATA
