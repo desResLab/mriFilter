@@ -11,6 +11,7 @@
 
 using namespace boost::algorithm;
 
+
 MRIOptions::MRIOptions(){
   // Set Default Values of the parameters
   runMode = rmHELP;
@@ -43,6 +44,11 @@ MRIOptions::MRIOptions(){
   evalPopVortexCriteria = false;
   evalSMPVortexCriterion = false;
   evalPressure = false;
+  // Pressure Gradient Components To be considered for pressure computation
+  PPE_IncludeAccelerationTerm = true;
+  PPE_IncludeAdvectionTerm = true;
+  PPE_IncludeDiffusionTerm = true;
+  PPE_IncludeReynoldsTerm = false;
   // Export to Poisson
   exportToPoisson = false;
   poissonFileName = "solution.vtk";
@@ -595,6 +601,43 @@ int MRIOptions::getOptionsFromCommandFile(string commandFile){
           scalePositionFactor = atof(tokenizedString[1].c_str());
         }catch(...){
           throw MRIException("ERROR: Invalid position scaling parameters.\n");
+        }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("PRESSUREGRADIENTCOMPONENTS")){
+        try{
+          // ACCELERATION TERM
+          if(tokenizedString[1].compare("Y") == 0){
+            PPE_IncludeAccelerationTerm = true;
+          }else if(tokenizedString[1].compare("N") == 0){
+            PPE_IncludeAccelerationTerm = false;
+          }else{
+            throw MRIException("ERROR: Invalid token for acceleration term.\n");
+          }
+          // ADVECTION TERM
+          if(tokenizedString[2].compare("Y") == 0){
+            PPE_IncludeAdvectionTerm = true;
+          }else if(tokenizedString[2].compare("N") == 0){
+            PPE_IncludeAdvectionTerm = false;
+          }else{
+            throw MRIException("ERROR: Invalid token for advection term.\n");
+          }
+          // DIFFUSION TERM
+          if(tokenizedString[3].compare("Y") == 0){
+            PPE_IncludeDiffusionTerm = true;
+          }else if(tokenizedString[3].compare("N") == 0){
+            PPE_IncludeDiffusionTerm = false;
+          }else{
+            throw MRIException("ERROR: Invalid token for diffusion term.\n");
+          }
+          // REYNOLDS TERM
+          if(tokenizedString[4].compare("Y") == 0){
+            PPE_IncludeReynoldsTerm = true;
+          }else if(tokenizedString[4].compare("N") == 0){
+            PPE_IncludeReynoldsTerm = false;
+          }else{
+            throw MRIException("ERROR: Invalid token for Reynolds term.\n");
+          }
+        }catch(...){
+          throw MRIException("ERROR: Invalid pressure gradient component inclusion command.\n");
         }
     }else if((tokenizedString[0].empty())||(tokenizedString[0].at(0) == '#')){
       // Comment: Do Nothing

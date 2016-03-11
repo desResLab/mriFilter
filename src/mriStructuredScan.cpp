@@ -541,7 +541,7 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
   WriteSchMessage(std::string("---------------------\n"));
   WriteSchMessage(std::string(" Creating Topology...\n"));
   WriteSchMessage(std::string("---------------------\n"));
-  CreateTopology();
+  //CreateTopology();
 
   // WRITE STATISTICS
   std::string CurrentStats = WriteStatistics();
@@ -2901,6 +2901,7 @@ void MRIStructuredScan::CreateTopology(){
   // Build Edge Connections
   WriteSchMessage(std::string("Build Edge Connections...\n"));
   edgeConn_BeginTime = clock();
+  // CAREFUL !!!
   buildEdgeConnections();
   edgeConn_TotalTime = float( clock () - edgeConn_BeginTime ) /  CLOCKS_PER_SEC;
   printf("Executed in %f [s]\n",edgeConn_TotalTime);
@@ -3302,7 +3303,10 @@ void MRIStructuredScan::setWallFluxesToZero(bool* isFaceOnWalls, MRIDoubleVec& p
 // ==================================================================
 // EXPORT TO POISSON SOLVER ONLY ELEMENTS WITH POSITIVE CONCENTRATION
 // ==================================================================
-void MRIStructuredScan::ExportForPoisson(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold, MRIDoubleMat& timeDerivs){
+void MRIStructuredScan::ExportForPoisson(string inputFileName,double density,double viscosity,
+                                         MRIThresholdCriteria* threshold,
+                                         const MRIDoubleMat& timeDerivs, const MRIDoubleMat& reynoldsDeriv,
+                                         bool PPE_IncludeAccelerationTerm,bool PPE_IncludeAdvectionTerm,bool PPE_IncludeDiffusionTerm,bool PPE_IncludeReynoldsTerm){
 
   // Declare
   FILE* outFile;
@@ -3403,12 +3407,15 @@ void MRIStructuredScan::ExportForPoisson(string inputFileName,double density,dou
   MRIDoubleMat poissonSourceVec;
   MRIDoubleMat poissonViscousTerm;
   MRIDoubleMat poissonAccelTerm;
+  MRIDoubleMat poissonReynoldsTerm;
   MRIDoubleVec temp;
   MRIDoubleVec tempViscous;
   MRIDoubleVec tempAccel;
+  MRIDoubleVec tempReynolds;
   double currValue = 0.0;
   double currValueViscous = 0.0;
   double currValueAccel = 0.0;
+  double currValueReynolds = 0.0;
   // First and Second Derivatives
   double** firstDerivs = new double*[kNumberOfDimensions];
   double** secondDerivs = new double*[kNumberOfDimensions];
@@ -3429,6 +3436,7 @@ void MRIStructuredScan::ExportForPoisson(string inputFileName,double density,dou
       temp.clear();
       tempViscous.clear();
       tempAccel.clear();
+      tempReynolds.clear();
       for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
         currValue = 0.0;
         currValueViscous = 0.0;
@@ -3438,15 +3446,18 @@ void MRIStructuredScan::ExportForPoisson(string inputFileName,double density,dou
           currValueViscous += secondDerivs[loopC][loopB];
         }
         currValueAccel = timeDerivs[loopA][loopB];
+        currValueReynolds = reynoldsDeriv[loopA][loopB];
         // Add Viscous and Acceleration Components
         temp.push_back(density * currValue);
         tempViscous.push_back(viscosity * currValueViscous);
         tempAccel.push_back(density * currValueAccel);
+        tempReynolds.push_back(density * currValueReynolds);
       }
       // Add to the global Vector: Only Elements with significant concentration
       poissonSourceVec.push_back(temp);
       poissonViscousTerm.push_back(tempViscous);
       poissonAccelTerm.push_back(tempAccel);
+      poissonReynoldsTerm.push_back(tempReynolds);
       elCount++;
     }else{
       // Add Zero for the cells with negligible concentration
@@ -3457,6 +3468,7 @@ void MRIStructuredScan::ExportForPoisson(string inputFileName,double density,dou
       poissonSourceVec.push_back(temp);
       poissonViscousTerm.push_back(temp);
       poissonAccelTerm.push_back(temp);
+      poissonReynoldsTerm.push_back(temp);
     }
   }
 
@@ -3464,10 +3476,25 @@ void MRIStructuredScan::ExportForPoisson(string inputFileName,double density,dou
   // SUM THE CONTRIBUTIONS OF ADVECTION AND DIFFUSION
   // ================================================
   MRIDoubleMat termSum;
+  double currentValue = 0.0;
   for(int loopA=0;loopA<poissonSourceVec.size();loopA++){
     temp.clear();
     for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
-      temp.push_back(poissonAccelTerm[loopA][loopB] + poissonSourceVec[loopA][loopB] - poissonViscousTerm[loopA][loopB]);
+      // All Terms
+      if(PPE_IncludeAccelerationTerm){
+        currentValue += poissonAccelTerm[loopA][loopB];
+      }
+      if(PPE_IncludeAdvectionTerm){
+        currentValue += poissonSourceVec[loopA][loopB];
+      }
+      if(PPE_IncludeDiffusionTerm){
+        currentValue -= poissonViscousTerm[loopA][loopB];
+      }
+      if(PPE_IncludeReynoldsTerm){
+        currentValue += poissonReynoldsTerm[loopA][loopB];
+      }
+      // Store Pressure Gradent Component
+      temp.push_back(currentValue);
     }
     termSum.push_back(temp);
   }

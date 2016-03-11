@@ -140,7 +140,8 @@ class MRIStructuredScan: public MRIScan{
     virtual void ExportToVTK(std::string fileName, MRIThresholdCriteria* threshold);
     virtual void WriteExpansionFile(std::string fileName);
     // Export to Poisson Solver Only element with significant concentration
-    virtual void ExportForPoisson(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold, MRIDoubleMat& timeDerivs);
+    virtual void ExportForPoisson(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold, const MRIDoubleMat& timeDerivs, const MRIDoubleMat& reynoldsDeriv,
+                                  bool PPE_IncludeAccelerationTerm,bool PPE_IncludeAdvectionTerm,bool PPE_IncludeDiffusionTerm,bool PPE_IncludeReynoldsTerm);
 
     // ========
     // VOL DATA

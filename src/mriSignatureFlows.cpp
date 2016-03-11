@@ -13,7 +13,6 @@ void MRIStructuredScan::AssignStagnationFlowSignature(MRIDirection dir){
     cellPoints[loopA].concentration = 0.0;
     switch(dir){
       case kdirX:
-        xCoord = cellPoints[loopA].position[0] - 0.0;
         yCoord = cellPoints[loopA].position[1] - domainSizeMin[1];
         zCoord = cellPoints[loopA].position[2] - 0.5*(domainSizeMin[2]+domainSizeMax[2]);
         cellPoints[loopA].velocity[0] = 0.0;
@@ -22,16 +21,14 @@ void MRIStructuredScan::AssignStagnationFlowSignature(MRIDirection dir){
         break;
       case kdirY:
         xCoord = cellPoints[loopA].position[0] - domainSizeMin[0];
-        yCoord = cellPoints[loopA].position[1]- 0.0;
         zCoord = cellPoints[loopA].position[2]- 0.5 * (domainSizeMin[2] + domainSizeMax[2]);
         cellPoints[loopA].velocity[0] = bConst * xCoord;
         cellPoints[loopA].velocity[1] = 0.0;
         cellPoints[loopA].velocity[2] = -bConst * zCoord;
         break;
       case kdirZ:
-        xCoord = cellPoints[loopA].position[0] - domainSizeMin[1];
+        xCoord = cellPoints[loopA].position[0] - domainSizeMin[0];
         yCoord = cellPoints[loopA].position[1] - 0.5 * (domainSizeMin[1] + domainSizeMax[1]);
-        zCoord = cellPoints[loopA].position[2] - 0.0;
         cellPoints[loopA].velocity[0] = bConst * xCoord;
         cellPoints[loopA].velocity[1] = -bConst * yCoord;
         cellPoints[loopA].velocity[2] = 0.0;
@@ -553,9 +550,9 @@ void MRIStructuredScan::CreateSampleCase(MRISamples sampleType,vector<double> pa
   domainSizeMin[1] = 0.0;
   domainSizeMin[2] = 0.0;
   // Max
-  domainSizeMax[0] = (sizeX) * distX;
-  domainSizeMax[1] = (sizeY) * distY;
-  domainSizeMax[2] = (sizeZ) * distZ;
+  domainSizeMax[0] = (sizeX-1) * distX;
+  domainSizeMax[1] = (sizeY-1) * distY;
+  domainSizeMax[2] = (sizeZ-1) * distZ;
   // Set Total Cells
   totalCellPoints = sizeX * sizeY * sizeZ;
   // Allocate Cell Values

@@ -37,7 +37,8 @@ class MRISequence{
     void ExportToVOL(std::string outfileName);
     void ExportToVTK(std::string outfileName,MRIThresholdCriteria* thresholdCriteria);
     void WriteExpansionFile(string fileName);
-    void ExportForPoisson(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold);
+    void ExportForPoisson(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold,
+                          bool PPE_IncludeAccelerationTerm,bool PPE_IncludeAdvectionTerm,bool PPE_IncludeDiffusionTerm,bool PPE_IncludeReynoldsTerm);
 
     // SAVE QUANTITIES TO OUTPUTS
     void saveVelocity();
@@ -57,6 +58,10 @@ class MRISequence{
     // PRESSURE COMPUTATION
     void ComputePressureGradients(MRIThresholdCriteria* threshold);
     void ComputeRelativePressure(bool doPressureSmoothing);
+
+    // COMPUTING REYNOLDS STRESSES
+    void EvalReynoldsStresses(MRIThresholdCriteria* threshold);
+    void EvalScanReynoldsStressDerivs(int currentScan,MRIDoubleMat& reynoldsDeriv);
 
     // ADD NOISE
     void applyNoise(double noiseIntensity);

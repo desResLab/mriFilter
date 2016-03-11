@@ -214,6 +214,32 @@ void MRISequence::EvalScanTimeDerivs(int currentScan,MRIDoubleMat& timeDeriv){
   }
 }
 
+// ================================
+// EVAL REYNOLDS STRESS DERIVATIVES
+// ================================
+void MRISequence::EvalScanReynoldsStressDerivs(int currentScan,MRIDoubleMat& reynoldsDeriv){
+  reynoldsDeriv.clear();
+  MRIDoubleVec temp;
+  double** rsg;
+  rsg = new double*[3];
+  for(int loopA=0;loopA<3;loopA++){
+    rsg[loopA] = new double[3];
+  }
+  for(int loopA=0;loopA<sequence[currentScan]->totalCellPoints;loopA++){
+    temp.clear();
+    sequence[currentScan]->EvalReynoldsStressGradient(loopA, rsg);
+    temp.push_back(rsg[0][0] + rsg[1][0] + rsg[2][0]);
+    temp.push_back(rsg[0][1] + rsg[1][1] + rsg[2][1]);
+    temp.push_back(rsg[0][2] + rsg[1][2] + rsg[2][2]);
+    reynoldsDeriv.push_back(temp);
+  }
+  // Free Matrix
+  for(int loopA=0;loopA<3;loopA++){
+    delete [] rsg[loopA];
+  }
+  delete [] rsg;
+}
+
 // ==========================================
 // EVAL FIRST AND SECOND DERIVATIVES IN SPACE
 // ==========================================

@@ -181,15 +181,24 @@ void MRISequence::ExportToVOL(std::string outfileName){
 }
 
 // Export to Poisson Solver
-void MRISequence::ExportForPoisson(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold){
+void MRISequence::ExportForPoisson(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold,
+                                   bool PPE_IncludeAccelerationTerm,bool PPE_IncludeAdvectionTerm,bool PPE_IncludeDiffusionTerm,bool PPE_IncludeReynoldsTerm){
   string name;
   MRIDoubleMat timeDeriv;
+  MRIDoubleMat reynoldsDeriv;
   for(int loopA=0;loopA<totalScans;loopA++){
     name = inputFileName + "_" + MRIUtils::FloatToStr(loopA);
-    printf("Computing Time Derivatives for Scan %d...",loopA);
-    EvalScanTimeDerivs(loopA,timeDeriv);
-    printf("Done.\n");
-    sequence[loopA]->ExportForPoisson(name,density,viscosity,threshold,timeDeriv);
+    if(PPE_IncludeAccelerationTerm){
+      printf("Computing Time Derivatives for Scan %d...",loopA);
+      EvalScanTimeDerivs(loopA,timeDeriv);
+      printf("Done.\n");
+    }
+    if(PPE_IncludeReynoldsTerm){
+      printf("Computing Reynolds Stress Gradients for Scan %d...",loopA);
+      EvalScanReynoldsStressDerivs(loopA,reynoldsDeriv);
+      printf("Done.\n");
+    }
+    sequence[loopA]->ExportForPoisson(name,density,viscosity,threshold,timeDeriv,reynoldsDeriv,PPE_IncludeAccelerationTerm,PPE_IncludeAdvectionTerm,PPE_IncludeDiffusionTerm,PPE_IncludeReynoldsTerm);
   }
 }
 
@@ -351,6 +360,17 @@ void MRISequence::InterpolateBoundaryVelocities(){
   printf("Interpolating Boundary Velocities...\n");
   for(int loopA=0;loopA<this->totalScans;loopA++){
     sequence[loopA]->InterpolateBoundaryVelocities();
+  }
+}
+
+// ===============================
+// EVALUATE REYNOLDS STRESS TENSOR
+// ===============================
+void MRISequence::EvalReynoldsStresses(MRIThresholdCriteria* threshold){
+  for(int loopA=0;loopA<totalScans;loopA++){
+    printf("Evaluating Reynolds Stress Tensor for Scan %d...",loopA);
+    sequence[loopA]->EvalReynoldsStressComponent(threshold);
+    printf("Done.");
   }
 }
 

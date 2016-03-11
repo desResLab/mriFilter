@@ -86,6 +86,11 @@ public:
   bool evalPopVortexCriteria;
   bool evalSMPVortexCriterion;
   bool evalPressure;
+  // Pressure Gradient Components to include
+  bool PPE_IncludeAccelerationTerm;
+  bool PPE_IncludeAdvectionTerm;
+  bool PPE_IncludeDiffusionTerm;
+  bool PPE_IncludeReynoldsTerm;
   // Export to Poisson Solver
   bool exportToPoisson;
   string poissonFileName;
