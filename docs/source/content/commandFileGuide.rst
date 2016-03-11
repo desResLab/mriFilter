@@ -4,7 +4,7 @@ Command File Guide for smpFilter
 Running Mode
 ^^^^^^^^^^^^
 
-Only the normal running mode is supported at the moment ::
+The normal running mode is the typical execution mode (other modes are experimental and will be integrated in future releases) ::
 
   RUNMODE: NORMAL
 
@@ -16,10 +16,10 @@ Input file format
 
 This token allows the user to specify various input file formats. The available formats are:
 
-1. **VTK**. VTK File format. A structured_point dataset need to be specified in Ascii format.
-2. **TECPLOT**. ASCII Tecplot file format. 
-3. **TEMPLATE**. 
-4. **EXPANSION**. 
+1. **VTK**, VTK File format. A structured_point dataset need to be specified in ASCII format.
+2. **TECPLOT**, ASCII Tecplot file format. 
+3. **TEMPLATE**, Creates a template model using the parameters specified in **TEMPLATEPARAMS**. 
+4. **EXPANSION**, Reads the model from a file containing the vortex frame expansion coefficients. 
 
 Example input: ::
 
@@ -35,13 +35,17 @@ An example VTK file is ::
   ORIGIN 0.0 0.0 0.0
   SPACING 1.000000 1.000000 1.000000
   POINT_DATA 1000
+  SCALARS concentration double 1
+  LOOKUP_TABLE default
+  ...
+  ...
   VECTORS velocity float
   vx1 vy1 vz1
   ...
   ...
   ...
 
-Note that the dataset type is **STRUCTURED_POINTS** and the file format is Ascii.
+Note that the dataset type is **STRUCTURED_POINTS**, the file format is ASCII and the there must be a *SCALAR* quantity called **concentration** (i.e., the magnitude of the acquired field or a mask) and a *VECTOR* quantity called **velocity**.
 
 An example of TECPLOT file is: ::
 
@@ -68,7 +72,7 @@ An example of TECPLOT file is: ::
   ...
   ...
 
-Note that the datapacking type is **POINT** and the file format is Ascii.
+Note that the datapacking type is **POINT** and the file format is ASCII. Note also that there are **7** columns where the first three contain the **x,y and z** cell-center coordinates, a column with the **concentration** and the last three columns containing the **x,y and z** components of the velocity. 
 
 Input file name
 """""""""""""""
@@ -80,35 +84,43 @@ Example input: ::
 Using pre-defined templates
 """""""""""""""""""""""""""
 
-Using the TEMPLATETYPE token it is possible to create a pre-defined flow configuration 
+Using the TEMPLATETYPE token it is possible to create a pre-defined flow configuration. The following hardcoded templates are available: 
 
-1. **ZEROVELOCITY**. 
-2. **CONSTANT**. 
-3. **POISEILLE**. 
-4. **STAGNATION**. 
+1. **ZEROVELOCITY**, a velocity field with uniformly zero velocities. 
+2. **CONSTANT**, a constant flow along one of the coordinate axis, x,y or z. 
+3. **POISEILLE**, a parabolic velocity profile in a cilinder.
+4. **STAGNATION**, stagnation point flow. 
 5. **CYLINDRICALVOLTEX**. 
 6. **SPHERICALVORTEX**. 
 7. **TOROIDALVORTEX**. 
 8. **TRANSIENT**. 
 9. **CONSTANTWITHSTEP**. 
-10. **TAYLORVORTEX**. 
+10. **ROTATINGVORTEX** Flow in a rotating cylinder.
+
+Specification of the selected template is completed by specifing a few parameters using **TEMPLATEPARAMS**. The first six parameters specify the geometry of the cartesian acquisition grid with uniform spacing. These are followed by a time and a direction parameter.
 
 Example input: ::
 
-Using pre-defined templates
-"""""""""""""""""""""""""""
+  TEMPLATEPARAMS: sizeX,sizeY,sizeZ,distX,distY,distZ,time,direction
 
-Example input: ::
+These parameters are:
 
-TEMPLATEPARAMS
+1. **sizeX**, the number of measurement cells in the x direction.
+2. **sizeY**, the number of measurement cells in the y direction.
+3. **sizeZ**, the number of measurement cells in the z direction.
+4. **distX**, cell spacing in the x direction.
+5. **distY**, cell spacing in the y direction.
+6. **distZ**, cell spacing in the z direction.
+7. **time**, time parameter (used only for the **TRANSIENT** template)
+8. **direction**, orientation parameter.
 
 Output file type
 """"""""""""""""
 
 The output file format can be specified using the following formats:
 
-1. **VTK**. 
-2. **TECPLOT**. ASCII Tecplot file format. 
+1. **VTK**, VTK Legacy file format, either STRUCTURED_POINTS or STRUCTURED_GRID (form non uniformly spaced grids). 
+2. **TECPLOT**, Tecplot ASCII file format. 
 
 Example input: ::
 
@@ -121,17 +133,36 @@ The name of the output file is specified through the following token:
 
   OUTPUTFILE: outputFile.vtk
 
-Gaussian/Median Filter
-^^^^^^^^^^^^^^^^^^^^^^
+Mean/Median/Gaussian Filter
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-It is possible to filter the velocity data using either a Gaussian or Median filter approach as follows:
+It is possible to filter the velocity data using either a Mean, Median or Gaussian filter approach as follows:
 
-1. **MEDIAN**. 
-2. **GAUSSIAN**. 
+1. **MEAN**, applies a mean filter to the neighbors of every cell (direct neighbors for filter of order one). 
+2. **MEDIAN**, applies a median filter. 
+3. **GAUSSIAN**, applied a Gaussian filter. 
 
 Example input: ::
 
-  APPLYMEDIANFILTER: MEDIAN
+  APPLYSMOOTHINGFILTER: 2,MEDIAN,1
+
+The **first integer parameter** defines the number of filter iterations. If it is greater the one the filter is applied multiple times.
+The **third integer parameter** is the neighboring order that defines how many cells are included when computing the filtered velocities. 
+
+Scaling Geometry and Velocities
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Sometimes when the units used for the geometry of the acquisition grid and the velocities are not consistent it may be usefull to scale indipendently these two quantities. This is achived by the **SCALEPOSITION** and **SCALEVELOCITY** tokens.
+
+Example input: ::
+
+  # Scale from mm to m 
+  SCALEPOSITION: 1.0e-3
+
+  # Scale from mm/s to m/s 
+  SCALEVELOCITY: 1.0e-3
+
+Note that when scaling the position, the measurement grid is **translated in space** and the minimum coordinates are set equal to the **origin** of the axis system (0.0,0.0,0.0).
 
 SMP Filter
 ^^^^^^^^^^
@@ -149,7 +180,6 @@ Two possible inputs can be specified:
 Example input: :: 
 
   USESMPFILTER: TRUE
-
 
 Use Constant flow waveforms
 """""""""""""""""""""""""""
@@ -171,7 +201,7 @@ Example input: ::
 
 Example input: ::
 
-  SMPMAXITERATIONS: 
+  SMPMAXITERATIONS: 1000
 
 Adding Noise
 ^^^^^^^^^^^^
@@ -187,10 +217,11 @@ This will use 10\% of the maximum velocity module in the field as the standard d
 Physical Constants
 ^^^^^^^^^^^^^^^^^^
 
-Two tokens, DENSITY and VISCOSITY can be used to specify physical constants. These constant are mainly use for pressure estimation through the Pressure Poisson Equation method or other methods.  
+Two tokens, **DENSITY** and **VISCOSITY** can be used to specify physical constants. These constant are mainly use for pressure estimation through the Pressure Poisson Equation (PPE) or alternative approaches.  
 
 Example input: ::
 
+  # Apply density and viscosity of blood in SI units
   DENSITY: 1060.0
   VISCOSITY: 4.0e-3
 
@@ -239,7 +270,7 @@ This means that all the cells with concentration greater than 0.5 will be consid
 Export to PPE Poisson Solver
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The EXPORTTOPOISSON and POISSONFILE tell the application to export a finite element input file for successive solution with a PPE solver. 
+The **EXPORTTOPOISSON** and **POISSONFILE** tell the application to export a finite element input file for successive solution with a PPE solver. 
 
 Example input: ::
 
@@ -252,7 +283,7 @@ Vortex Criteria
 Traditional Vortex Criteria
 """""""""""""""""""""""""""
 
-The EVALVORTEXCRITERIA is responsible to add three criteria to the Q, L2 and Delta result file (this works only for the VTK output file format).
+The EVALVORTEXCRITERIA is responsible to add three criteria to the Q, L2 and Delta result file.
 
 Example input: ::
 
@@ -276,11 +307,10 @@ Example input: ::
 
   SAVEINITIALVELOCITIES: TRUE
 
-
 Save Expansion Coefficients
 """""""""""""""""""""""""""
 
-The coefficient representation computed using the SMP filter can be saved and a flow field can be restored by an expansion file. See also the INPUTTYPE token above for instructions on how to read an expansion file. 
+The coefficient representation computed using the SMP filter can be saved and a flow field can be restored by an expansion file. See also the **INPUTTYPE** token above for instructions on how to read an expansion file. 
 
 Example input: ::
 
