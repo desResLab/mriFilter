@@ -185,7 +185,7 @@ void MRISequence::ExportForPoisson(string inputFileName,double density,double vi
                                    bool PPE_IncludeAccelerationTerm,bool PPE_IncludeAdvectionTerm,bool PPE_IncludeDiffusionTerm,bool PPE_IncludeReynoldsTerm){
   string name;
   MRIDoubleMat timeDeriv;
-  MRIDoubleMat reynoldsDeriv;
+  // MRIDoubleMat reynoldsDeriv;
   for(int loopA=0;loopA<totalScans;loopA++){
     name = inputFileName + "_" + MRIUtils::FloatToStr(loopA);
     if(PPE_IncludeAccelerationTerm){
@@ -193,12 +193,21 @@ void MRISequence::ExportForPoisson(string inputFileName,double density,double vi
       EvalScanTimeDerivs(loopA,timeDeriv);
       printf("Done.\n");
     }
-    if(PPE_IncludeReynoldsTerm){
-      printf("Computing Reynolds Stress Gradients for Scan %d...",loopA);
-      EvalScanReynoldsStressDerivs(loopA,reynoldsDeriv);
-      printf("Done.\n");
-    }
-    sequence[loopA]->ExportForPoisson(name,density,viscosity,threshold,timeDeriv,reynoldsDeriv,PPE_IncludeAccelerationTerm,PPE_IncludeAdvectionTerm,PPE_IncludeDiffusionTerm,PPE_IncludeReynoldsTerm);
+   // if(PPE_IncludeReynoldsTerm){
+   //   printf("Computing Reynolds Stress Gradients for Scan %d...",loopA);
+   //   EvalScanReynoldsStressDerivs(loopA,reynoldsDeriv);
+   //   printf("Done.\n");
+   // }
+    sequence[loopA]->ExportForPoisson(name,density,viscosity,threshold,timeDeriv,PPE_IncludeAccelerationTerm,PPE_IncludeAdvectionTerm,PPE_IncludeDiffusionTerm,PPE_IncludeReynoldsTerm);
+  }
+}
+
+// EXPORT TO WALL DISTANCE SOLVER
+void MRISequence::ExportForDistancing(string inputFileName, MRIThresholdCriteria* threshold){
+  string name;
+  for(int loopA=0;loopA<totalScans;loopA++){
+    name = inputFileName + "_" + MRIUtils::FloatToStr(loopA);
+    sequence[loopA]->ExportForDistancing(name,threshold);
   }
 }
 

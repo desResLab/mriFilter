@@ -1675,7 +1675,7 @@ void MRIStructuredScan::ExportToVTK(std::string fileName, MRIThresholdCriteria* 
   }  
 
   // ==================
-  // EXPORT REDIVATIVES
+  // EXPORT DERIVATIVES
   // ==================
 
   // First and Second Derivatives
@@ -1708,7 +1708,7 @@ void MRIStructuredScan::ExportToVTK(std::string fileName, MRIThresholdCriteria* 
     fprintf(outFile,"\n");
   }
 
-  // Print outputs
+  // EXPORT OUTPUTS
   for(size_t loopA=0;loopA<outputs.size();loopA++){
     // Print Header
     if(outputs[loopA].totComponents == 1){
@@ -3300,19 +3300,133 @@ void MRIStructuredScan::setWallFluxesToZero(bool* isFaceOnWalls, MRIDoubleVec& p
   }
 }
 
+// ===========================================================
+// COMPUTE TURBULENT VISCOSITY USING PANDTL MIXED LENGTH MODEL
+// ===========================================================
+void MRIStructuredScan::evalPradtlTurbViscosity(MRIDoubleMat cellDistance, MRIThresholdCriteria* threshold, double density, MRIDoubleMat& turbViscosity){
+  int cellCount = 0;
+  double sTerm  = 0.0;
+  double qty    = 0.0;
+  double currDist = 0.0;
+  MRIDoubleVec tmp;
+  // First and Second Derivatives
+  double** firstDerivs = new double*[kNumberOfDimensions];
+  double** secondDerivs = new double*[kNumberOfDimensions];
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    firstDerivs[loopA] = new double[kNumberOfDimensions];
+    secondDerivs[loopA] = new double[kNumberOfDimensions];
+  }
+  turbViscosity.clear();
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    // Only Cells with significant Concentration
+    qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
+    if(!threshold->MeetsCriteria(qty)){
+      // Get Current Distance
+      currDist = cellDistance[cellCount][0];
+      // Eva Spatial Derivatives
+      EvalSpaceDerivs(loopA, threshold, firstDerivs, secondDerivs);
+      // Evaluate the Module of the strain rate tensor
+      sTerm = 0.0;
+      for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
+        for(int loopC=0;loopC<kNumberOfDimensions;loopC++){
+          // Pradtl
+          sTerm += (0.5 * (firstDerivs[loopB][loopC] + firstDerivs[loopC][loopB])) * (0.5 * (firstDerivs[loopB][loopC] + firstDerivs[loopC][loopB]));
+          // Baldwin and Lomax
+          //sTerm += (0.5 * (firstDerivs[loopB][loopC] - firstDerivs[loopC][loopB])) * (0.5 * (firstDerivs[loopB][loopC] - firstDerivs[loopC][loopB]));
+        }
+      }
+      tmp.clear();
+      tmp.push_back(density * 0.4187 * currDist * 0.4187 * currDist * sqrt(2.0 * sTerm));
+      turbViscosity.push_back(tmp);
+      // Increment the counter
+      cellCount++;
+    }else{
+      // Add zero
+      tmp.clear();
+      tmp.push_back(0.0);
+      turbViscosity.push_back(tmp);
+    }
+  }
+  // Free Memory
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    delete [] firstDerivs[loopA];
+    delete [] secondDerivs[loopA];
+  }
+  delete [] firstDerivs;
+  delete [] secondDerivs;
+
+}
+
+// ================================================
+// EVAL SMAGORINSKY LILLY TURBULENT VISCOSITY MODEL
+// ================================================
+void MRIStructuredScan::evalSmagorinskyLillyTurbViscosity(double density, MRIThresholdCriteria* threshold, MRIDoubleMat& turbViscosity){
+  double modS = 0.0;
+  double currCharDist = 0.0;
+  double sTerm = 0.0;
+  double smagorinskyCoeff = 0.15;
+  MRIDoubleVec tmp;
+  // First and Second Derivatives
+  double** firstDerivs = new double*[kNumberOfDimensions];
+  double** secondDerivs = new double*[kNumberOfDimensions];
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    firstDerivs[loopA] = new double[kNumberOfDimensions];
+    secondDerivs[loopA] = new double[kNumberOfDimensions];
+  }
+
+  turbViscosity.clear();
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    // Eva Spatial Derivatives
+    EvalSpaceDerivs(loopA, threshold, firstDerivs, secondDerivs);
+    // Evaluate the Module of the strain rate tensor
+    sTerm = 0.0;
+    for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
+      for(int loopC=0;loopC<kNumberOfDimensions;loopC++){
+        // Pradtl
+        sTerm += (0.5 * (firstDerivs[loopB][loopC] + firstDerivs[loopC][loopB])) * (0.5 * (firstDerivs[loopB][loopC] + firstDerivs[loopC][loopB]));
+        // Baldwin and Lomax
+        //sTerm += (0.5 * (firstDerivs[loopB][loopC] - firstDerivs[loopC][loopB])) * (0.5 * (firstDerivs[loopB][loopC] - firstDerivs[loopC][loopB]));
+      }
+    }
+    currCharDist = pow(evalCellVolume(loopA),1.0/3.0);
+    modS = sqrt(2.0 * sTerm);
+    tmp.clear();
+    tmp.push_back(density * (smagorinskyCoeff * currCharDist) * (smagorinskyCoeff * currCharDist) * modS);
+    turbViscosity.push_back(tmp);
+  }
+  // Free Memory
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+      delete [] firstDerivs[loopA];
+      delete [] secondDerivs[loopA];
+  }
+  delete [] firstDerivs;
+  delete [] secondDerivs;
+
+}
+
 // ==================================================================
 // EXPORT TO POISSON SOLVER ONLY ELEMENTS WITH POSITIVE CONCENTRATION
 // ==================================================================
 void MRIStructuredScan::ExportForPoisson(string inputFileName,double density,double viscosity,
                                          MRIThresholdCriteria* threshold,
-                                         const MRIDoubleMat& timeDerivs, const MRIDoubleMat& reynoldsDeriv,
+                                         const MRIDoubleMat& timeDerivs,
                                          bool PPE_IncludeAccelerationTerm,bool PPE_IncludeAdvectionTerm,bool PPE_IncludeDiffusionTerm,bool PPE_IncludeReynoldsTerm){
+
+  printf("\n");
+  printf("Acceleration Term included: %s\n",PPE_IncludeAccelerationTerm ? "TRUE":"FALSE");
+  printf("Advection Term included:    %s\n",PPE_IncludeAdvectionTerm ? "TRUE":"FALSE");
+  printf("Viscous Term included:      %s\n",PPE_IncludeDiffusionTerm ? "TRUE":"FALSE");
+  printf("Reynolds Term included:     %s\n",PPE_IncludeReynoldsTerm ? "TRUE":"FALSE");
 
   // Declare
   FILE* outFile;
   outFile = fopen(inputFileName.c_str(),"w");
   int totAuxNodes = getTotalAuxNodes();
   double qty = 0.0;
+
+  // WRITE THE TOTAL NUMBER OF DOFs FOR THIS PROBLEM
+  fprintf(outFile,"NODEDOF %d\n",1);
+  fprintf(outFile,"PROBLEM PPE\n");
 
   // Get the mappings for nodes that need to be used
   MRIIntVec nodeUsageMap;
@@ -3399,24 +3513,63 @@ void MRIStructuredScan::ExportForPoisson(string inputFileName,double density,dou
       fprintf(outFile,"\n");
       elCount++;
     }
+  }  
+
+  // ========================================
+  // TEMP: READ TURBULENT VISCOSITY FROM FILE
+  // ========================================
+  MRIDoubleMat turbViscosity;
+  MRIDoubleVec tmp;
+
+  // if(readMuTFromFile){
+  // printf("Reading Turbulent Viscosity From File...\n");
+  // MRIUtils::readTableFromFile(string("turbViscosity.txt"),turbViscosity,false);
+  // printf("Turbulent Viscosity Points: %d, Columns: %d\n",(int)turbViscosity.size(),(int)turbViscosity[0].size());
+
+  if(PPE_IncludeReynoldsTerm){
+    // Read Cell Distances From File
+    printf("Using Smagorinsky Lilly Subgrid scale model...\n");
+    evalSmagorinskyLillyTurbViscosity(density, threshold, turbViscosity);
+    double maxTurbVisc = 0.0;
+    for(int loopA=0;loopA<turbViscosity.size();loopA++){
+      if(fabs(turbViscosity[loopA][0]) > maxTurbVisc){
+        maxTurbVisc = fabs(turbViscosity[loopA][0]);
+      }
+    }
+    printf("Max Turbulent Viscosity Module: %e\n",maxTurbVisc);
+  }else{
+     // Zero Turbulent Voscosity
+     for(int loopA=0;loopA<totalCellPoints;loopA++){
+       tmp.clear();
+       tmp.push_back(0.0);
+       turbViscosity.push_back(tmp);
+     }
   }
 
-  // ================
-  // SAVE SOURCE TERM
-  // ================
+  // ==========================================
+  // ADD THE TURBULENT VISCOSITY TO THE RESULTS
+  // ==========================================
+  MRIOutput outMuT("TurbulentViscosity",1);
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    // Assign To cell
+    outMuT.values.push_back(turbViscosity[loopA][0]);
+  }
+  // Add output quantities
+  outputs.push_back(outMuT);
+
+  // ====================================
+  // COMPUTE PRESSURE GRADIENT COMPONENTS
+  // ====================================
   MRIDoubleMat poissonSourceVec;
   MRIDoubleMat poissonViscousTerm;
   MRIDoubleMat poissonAccelTerm;
-  MRIDoubleMat poissonReynoldsTerm;
   MRIDoubleVec temp;
   MRIDoubleVec tempViscous;
   MRIDoubleVec tempAccel;
-  MRIDoubleVec tempReynolds;
-  double currValue = 0.0;
   double currValueViscous = 0.0;
+  double currValueAdvection = 0.0;
   double currValueAccel = 0.0;
-  double currValueReynolds = 0.0;
-  // First and Second Derivatives
+  // ALLOCATE FIRST AND SECOND DERIVATIVES
   double** firstDerivs = new double*[kNumberOfDimensions];
   double** secondDerivs = new double*[kNumberOfDimensions];
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
@@ -3424,40 +3577,77 @@ void MRIStructuredScan::ExportForPoisson(string inputFileName,double density,dou
     secondDerivs[loopA] = new double[kNumberOfDimensions];
   }
 
-  // Loop on cells
+  // ========================================
+  // PRINT THE NORM OF THE STRAIN RATE TENSOR
+  // ========================================
+  MRIOutput outSS("strainRateNorm",1);
+  double sTerm = 0.0;
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    // Eva Spatial Derivatives
+    EvalSpaceDerivs(loopA, threshold, firstDerivs, secondDerivs);
+    // Evaluate the Module of the velocity Gradient
+    sTerm = 0.0;
+    for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
+      for(int loopC=0;loopC<kNumberOfDimensions;loopC++){
+        // Pradtl
+        sTerm += (0.5 * (firstDerivs[loopB][loopC] + firstDerivs[loopC][loopB])) * (0.5 * (firstDerivs[loopB][loopC] + firstDerivs[loopC][loopB]));
+        // Baldwin and Lomax
+        //sTerm += (0.5 * (firstDerivs[loopB][loopC] - firstDerivs[loopC][loopB])) * (0.5 * (firstDerivs[loopB][loopC] - firstDerivs[loopC][loopB]));
+      }
+    }
+    outSS.values.push_back(sqrt(2.0 * sTerm));
+  }
+  // Add output quantities
+  outputs.push_back(outSS);
+
+  // LOOP ON CELLS
   elCount = 0;
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     // Only Cells with significant Concentration
     qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
     if(!threshold->MeetsCriteria(qty)){
+
       // Eva Spatial Derivatives
       EvalSpaceDerivs(loopA, threshold, firstDerivs, secondDerivs);
+
       // Eval the Convective term for the current Cell
       temp.clear();
       tempViscous.clear();
       tempAccel.clear();
-      tempReynolds.clear();
       for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
-        currValue = 0.0;
-        currValueViscous = 0.0;
-        for(int loopC=0;loopC<kNumberOfDimensions;loopC++){
-          // Same velocity component on columns
-          currValue += cellPoints[loopA].velocity[loopC] * firstDerivs[loopC][loopB];
-          currValueViscous += secondDerivs[loopC][loopB];
+
+        // Add Advection term if required
+        currValueAdvection = 0.0;
+        if(PPE_IncludeAdvectionTerm){
+          for(int loopC=0;loopC<kNumberOfDimensions;loopC++){
+            currValueAdvection += cellPoints[loopA].velocity[loopC] * firstDerivs[loopC][loopB];
+          }
         }
-        currValueAccel = timeDerivs[loopA][loopB];
-        currValueReynolds = reynoldsDeriv[loopA][loopB];
+
+        // Add Viscous term if required
+        currValueViscous = 0.0;
+        if(PPE_IncludeDiffusionTerm){
+          for(int loopC=0;loopC<kNumberOfDimensions;loopC++){
+            currValueViscous += secondDerivs[loopC][loopB];
+          }
+        }
+
+        // Add Acceleration term if required
+        if(PPE_IncludeAccelerationTerm){
+          currValueAccel = timeDerivs[loopA][loopB];
+        }else{
+          currValueAccel = 0.0;
+        }
+
         // Add Viscous and Acceleration Components
-        temp.push_back(density * currValue);
-        tempViscous.push_back(viscosity * currValueViscous);
+        temp.push_back(density * currValueAdvection);
+        tempViscous.push_back((viscosity + turbViscosity[loopA][0]) * currValueViscous);
         tempAccel.push_back(density * currValueAccel);
-        tempReynolds.push_back(density * currValueReynolds);
       }
       // Add to the global Vector: Only Elements with significant concentration
       poissonSourceVec.push_back(temp);
       poissonViscousTerm.push_back(tempViscous);
       poissonAccelTerm.push_back(tempAccel);
-      poissonReynoldsTerm.push_back(tempReynolds);
       elCount++;
     }else{
       // Add Zero for the cells with negligible concentration
@@ -3468,18 +3658,19 @@ void MRIStructuredScan::ExportForPoisson(string inputFileName,double density,dou
       poissonSourceVec.push_back(temp);
       poissonViscousTerm.push_back(temp);
       poissonAccelTerm.push_back(temp);
-      poissonReynoldsTerm.push_back(temp);
     }
   }
 
-  // ================================================
-  // SUM THE CONTRIBUTIONS OF ADVECTION AND DIFFUSION
-  // ================================================
+  // =================================================================================
+  // SUM THE CONTRIBUTIONS OF ACCELERATION, ADVECTION, DIFFUSION AND REYNOLDS STRESSES
+  // =================================================================================
   MRIDoubleMat termSum;
   double currentValue = 0.0;
-  for(int loopA=0;loopA<poissonSourceVec.size();loopA++){
-    temp.clear();
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    temp.clear();    
     for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
+      // Set Current Value to Zero
+      currentValue = 0.0;
       // All Terms
       if(PPE_IncludeAccelerationTerm){
         currentValue += poissonAccelTerm[loopA][loopB];
@@ -3490,10 +3681,7 @@ void MRIStructuredScan::ExportForPoisson(string inputFileName,double density,dou
       if(PPE_IncludeDiffusionTerm){
         currentValue -= poissonViscousTerm[loopA][loopB];
       }
-      if(PPE_IncludeReynoldsTerm){
-        currentValue += poissonReynoldsTerm[loopA][loopB];
-      }
-      // Store Pressure Gradent Component
+      // Store Pressure Gradient Components
       temp.push_back(currentValue);
     }
     termSum.push_back(temp);
@@ -3502,7 +3690,7 @@ void MRIStructuredScan::ExportForPoisson(string inputFileName,double density,dou
   // =====================
   // ADD THE RESULT VECTOR
   // ======================
-  MRIOutput outF("FValues",3);
+  MRIOutput outF("PressureGradient",3);
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     // Loop on the dimensions
     for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
@@ -4063,7 +4251,208 @@ void MRIStructuredScan::cleanNormalComponentOnBoundary(MRIThresholdCriteria* thr
   }
 }
 
+// ==================================================================
+// EXPORT TO POISSON SOLVER ONLY ELEMENTS WITH POSITIVE CONCENTRATION
+// ==================================================================
+void MRIStructuredScan::ExportForDistancing(string inputFileName,MRIThresholdCriteria* threshold){
 
-// ============================================
-// DETERMINE ALL NEIGHBORS OF A CELL WITH ORDER
-// ============================================
+  // Declare
+  FILE* outFile;
+  outFile = fopen(inputFileName.c_str(),"w");
+  int totAuxNodes = getTotalAuxNodes();
+  double qty = 0.0;
+
+  // WRITE THE NUMBER OF DOFs FOR THIS PROBLEM
+  fprintf(outFile,"NODEDOF %d\n",1);
+  fprintf(outFile,"PROBLEM DISTANCE\n");
+
+  // Get the mappings for nodes that need to be used
+  MRIIntVec nodeUsageMap;
+  MRIIntVec elUsageMap;
+  for(int loopA=0;loopA<totAuxNodes;loopA++){
+    nodeUsageMap.push_back(-1);
+  }
+
+  // Mark Used Nodes
+  int currAuxNode = 0;
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
+    if(!threshold->MeetsCriteria(qty)){
+      for(int loopB=0;loopB<cellConnections[loopA].size();loopB++){
+        currAuxNode = cellConnections[loopA][loopB];
+        nodeUsageMap[currAuxNode] = 1;
+      }
+    }
+  }
+
+  // Renumber Nodes in nodeUsageMap
+  int usedNodeCount = 0;
+  for(int loopA=0;loopA<totAuxNodes;loopA++){
+    if(nodeUsageMap[loopA] > 0){
+      nodeUsageMap[loopA] = usedNodeCount;
+      usedNodeCount++;
+    }
+  }
+
+  // Build Element Mapping
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    elUsageMap.push_back(-1);
+  }
+  int elCount = 0;
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
+    if(!threshold->MeetsCriteria(qty)){
+      elUsageMap[loopA] = elCount;
+      elCount++;
+    }
+  }
+
+  // ==================
+  // SAVE MESH TOPOLOGY
+  // ==================
+  // SAVE NODE COORDS ONLY FOR NODES NUMBERED IN USEDNODEMAP
+  if(totalCellPoints > 0){
+    double pos[3];
+    for(int loopA=0;loopA<totAuxNodes;loopA++){
+      if(nodeUsageMap[loopA] > -1){
+        getAuxNodeCoordinates(loopA,pos);
+        fprintf(outFile,"NODE %d %19.12e %19.12e %19.12e\n",nodeUsageMap[loopA]+1,pos[0],pos[1],pos[2]);
+      }
+    }
+
+    // ========================
+    // SAVE ELEMENT CONNECTIONS
+    // ========================
+    elCount = 0;
+    for(int loopA=0;loopA<totalCellPoints;loopA++){
+      qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
+      if(!threshold->MeetsCriteria(qty)){
+        fprintf(outFile,"ELEMENT HEXA8 %d 1 ",elCount+1);
+        elCount++;
+        for(int loopB=0;loopB<cellConnections[loopA].size();loopB++){
+          fprintf(outFile,"%d ",nodeUsageMap[cellConnections[loopA][loopB]] + 1);
+        }
+        fprintf(outFile,"\n");
+      }
+    }
+  }
+
+  // ===================
+  // FIND FACES ON WALLS
+  // ===================
+  int* faceCount = new int[faceConnections.size()];
+  for(int loopA=0;loopA<faceConnections.size();loopA++){
+    faceCount[loopA] = 0;
+  }
+  bool* isFaceOnWalls = new bool[faceConnections.size()];
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    // Only Cells with Reasonable Concentration
+    qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
+    if(!threshold->MeetsCriteria(qty)){
+      for(int loopB=0;loopB<cellFaces[loopA].size();loopB++){
+        faceCount[cellFaces[loopA][loopB]]++;
+      }
+    }
+  }
+  for(int loopA=0;loopA<faceConnections.size();loopA++){
+    if(faceCount[loopA] == 1){
+      isFaceOnWalls[loopA] = true;
+    }else{
+      isFaceOnWalls[loopA] = false;
+    }
+  }
+  delete [] faceCount;
+
+  // ========================
+  // SAVE ELEMENT DIFFUSIVITY
+  // ========================
+  elCount = 0;
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
+    if(!threshold->MeetsCriteria(qty)){
+      fprintf(outFile,"ELDIFF %d ",elCount+1);
+      fprintf(outFile,"%e ",1.0);
+      fprintf(outFile,"%e ",1.0);
+      fprintf(outFile,"%e ",1.0);
+      fprintf(outFile,"\n");
+      elCount++;
+    }
+  }
+
+  // ==========================================
+  // SAVE DIRICHELET CONDITIONS ON THE BOUNDARY
+  // ==========================================
+  MRIIntVec diricheletNodes;
+  diricheletNodes.resize(totalCellPoints);
+  long int currCell = 0;
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    diricheletNodes[loopA] = 0;
+  }
+  for(int loopA=0;loopA<faceCells.size();loopA++){
+
+    // Check if the face is on the wall
+    if(isFaceOnWalls[loopA]){
+
+      // Get Current element
+      if (faceCells[loopA].size() == 1){
+        currCell = faceCells[loopA][0];
+      }else{
+        qty = cellPoints[faceCells[loopA][0]].getQuantity(threshold->thresholdQty);
+        if(!threshold->MeetsCriteria(qty)){
+          currCell = faceCells[loopA][0];
+        }else{
+          currCell = faceCells[loopA][1];
+        }
+      }
+
+      // Only Cells with significant concentration
+      qty = cellPoints[currCell].getQuantity(threshold->thresholdQty);
+      if(!threshold->MeetsCriteria(qty)){
+        // Loop through the Nodes
+        for(int loopB=0;loopB<faceConnections[loopA].size();loopB++){
+          diricheletNodes[nodeUsageMap[faceConnections[loopA][loopB]]]++;
+        }
+      }else{
+        printf("PROBLEM!\n");
+      }
+    }
+  }
+
+  // WRITE DIRICHELET BOUNDARY CONDITIONS
+  elCount = 0;
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    if(diricheletNodes[loopA] > 0){
+      fprintf(outFile,"NODEDIRBC %d %19.12e\n",loopA+1,0.0e0);
+    }
+  }
+
+  // COMPUTE SOURCE TERMS TO APPLY
+  MRIDoubleVec sourcesToApply;
+  double currVol = 0.0;
+
+  // APPLY SOURCES
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    // Evaluate current cell volume
+    currVol = evalCellVolume(loopA);
+    // Add Source Term
+    sourcesToApply.push_back(1.0/currVol);
+  }
+
+  // SAVE ELEMENT SOURCES TO FILE
+  elCount = 0;
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    qty = cellPoints[loopA].getQuantity(threshold->thresholdQty);
+    if(!threshold->MeetsCriteria(qty)){
+      fprintf(outFile,"ELSOURCE %d %19.12e\n",elCount+1,sourcesToApply[loopA]);
+      elCount++;
+    }
+  }
+  // Delete Face on walls
+  delete [] isFaceOnWalls;
+
+  // Close Output file
+  fclose(outFile);
+
+  printf("\n");
+  printf("Distancing Solver File Exported.\n");
+}

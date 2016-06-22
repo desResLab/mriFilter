@@ -814,6 +814,51 @@ inline bool isFloat(string token){
   return iss.eof() && !iss.fail(); 
 }
 
+// ====================
+// READ TABLE FROM FILE
+// ====================
+inline int readTableFromFile(string fileName, MRIDoubleMat& table,bool skipFirstRow){
+  // Open File
+  ifstream myReadFile;
+  string buffer;
+  int lineCount = 0;
+  std::vector<std::string> tokens;
+  std::vector<double> currParams;
+  myReadFile.open(fileName.c_str());
+  if (myReadFile.is_open()) {
+    if(skipFirstRow){
+      std::getline(myReadFile,buffer);
+    }
+    // Loop through the File
+    while (!myReadFile.eof()){
+      // Read One Line of Input File
+      std::getline(myReadFile,buffer);
+      if(!buffer.empty()){
+        lineCount++;
+        boost::split(tokens, buffer, boost::is_any_of(","));
+        currParams.clear();
+        for(int loopA=0;loopA<tokens.size();loopA++){
+          try{
+            currParams.push_back(atof(tokens[loopA].c_str()));
+          }catch(...){
+            printf("Invalid Table File. Exiting.\n");
+            return 1;
+          }
+        }
+        table.push_back(currParams);
+      }
+    }
+  }else{
+    printf("Cannot Open File. Exiting.\n");
+    return 1;
+  }
+  // Close File
+  myReadFile.close();
+  // Return
+  return 0;
+}
+
+
 
 }
 #endif //MRIUTILS_H

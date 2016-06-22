@@ -91,9 +91,13 @@ public:
   bool PPE_IncludeAdvectionTerm;
   bool PPE_IncludeDiffusionTerm;
   bool PPE_IncludeReynoldsTerm;
+
   // Export to Poisson Solver
   bool exportToPoisson;
   string poissonFileName;
+  // Export to Wall Distance Solver
+  bool exportToDistance;
+  string distanceFileName;
 
   // Options for the material properties
   double density;

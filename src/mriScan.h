@@ -130,8 +130,9 @@ class MRIScan{
     virtual void ExportToVOL(std::string FileName){throw MRIException("Error: Not Implemented!");}
     virtual void ExportToVTK(std::string fileName, MRIThresholdCriteria* threshold){throw MRIException("Error: Not Implemented!");}
     virtual void ExportToTECPLOT(std::string FileName, bool isFirstFile){throw MRIException("Error: Not Implemented!");}
-    virtual void ExportForPoisson(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold, const MRIDoubleMat& timeDerivs, const MRIDoubleMat& reynoldsDeriv,
+    virtual void ExportForPoisson(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold, const MRIDoubleMat& timeDerivs,
                                   bool PPE_IncludeAccelerationTerm,bool PPE_IncludeAdvectionTerm,bool PPE_IncludeDiffusionTerm,bool PPE_IncludeReynoldsTerm){throw MRIException("Error: ExportForPOISSONPartial Not Implemented!");}
+    virtual void ExportForDistancing(string inputFileName, MRIThresholdCriteria* threshold){throw MRIException("Error: Not Implemented!");}
     virtual void WriteExpansionFile(std::string fileName){throw MRIException("Error: Not Implemented!");}
 
     // MODEL MANIPULATION

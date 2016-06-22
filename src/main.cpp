@@ -1062,11 +1062,6 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
     MyMRISequence->ComputeRelativePressure(false);
   }
 
-  // COMPUTE REYNOLDS STRESSES IF REQUIRED
-  if(opts->PPE_IncludeReynoldsTerm){
-    MyMRISequence->EvalReynoldsStresses(opts->thresholdCriteria);
-  }
-
   // SAVE EXPANSION COEFFICIENTS IF REQUESTED
   if(comm->currProc == 0){
     if(opts->applySMPFilter && opts->saveExpansionCoeffs){
@@ -1082,6 +1077,13 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
                                       opts->PPE_IncludeAdvectionTerm,
                                       opts->PPE_IncludeDiffusionTerm,
                                       opts->PPE_IncludeReynoldsTerm);
+    }
+  }
+
+  // SAVE FILE FOR DISTANCE COMPUTATION
+  if(comm->currProc == 0){
+    if (opts->exportToDistance){
+      MyMRISequence->ExportForDistancing(opts->distanceFileName,opts->thresholdCriteria);
     }
   }
 

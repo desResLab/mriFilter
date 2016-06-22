@@ -52,6 +52,9 @@ MRIOptions::MRIOptions(){
   // Export to Poisson
   exportToPoisson = false;
   poissonFileName = "solution.vtk";
+  // Export to wall distance solver
+  exportToDistance = false;
+  distanceFileName = "solution.vtk";
   // Add Noise
   applyNoise = false;
   noiseIntensity = 0.0;
@@ -547,6 +550,17 @@ int MRIOptions::getOptionsFromCommandFile(string commandFile){
       }else{
         throw MRIException("ERROR: Invalid logical value for exportToPoisson.\n");
       }
+
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("EXPORTTODISTANCE")){
+      if(boost::to_upper_copy(tokenizedString[1]) == std::string("TRUE")){
+        exportToDistance = true;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("FALSE")){
+        exportToDistance = false;
+      }else{
+        throw MRIException("ERROR: Invalid logical value for exportToDistance.\n");
+      }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("DISTANCEFILE")){
+      distanceFileName = tokenizedString[1];
     }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("POISSONFILE")){
       poissonFileName = tokenizedString[1];
     }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("ADDNOISE")){

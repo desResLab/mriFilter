@@ -37,6 +37,7 @@ class MRISequence{
     void ExportToVOL(std::string outfileName);
     void ExportToVTK(std::string outfileName,MRIThresholdCriteria* thresholdCriteria);
     void WriteExpansionFile(string fileName);
+    void ExportForDistancing(string inputFileName, MRIThresholdCriteria* threshold);
     void ExportForPoisson(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold,
                           bool PPE_IncludeAccelerationTerm,bool PPE_IncludeAdvectionTerm,bool PPE_IncludeDiffusionTerm,bool PPE_IncludeReynoldsTerm);
 
