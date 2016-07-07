@@ -541,7 +541,7 @@ void MRIStructuredScan::ReadPltFile(std::string PltFileName, bool DoReorderCells
   WriteSchMessage(std::string("---------------------\n"));
   WriteSchMessage(std::string(" Creating Topology...\n"));
   WriteSchMessage(std::string("---------------------\n"));
-  //CreateTopology();
+  CreateTopology();
 
   // WRITE STATISTICS
   std::string CurrentStats = WriteStatistics();
