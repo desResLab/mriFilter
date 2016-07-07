@@ -1076,7 +1076,10 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
                                       opts->PPE_IncludeAccelerationTerm,
                                       opts->PPE_IncludeAdvectionTerm,
                                       opts->PPE_IncludeDiffusionTerm,
-                                      opts->PPE_IncludeReynoldsTerm);
+                                      opts->PPE_IncludeReynoldsTerm,
+                                      opts->readMuTFromFile,
+                                      opts->muTFile,
+                                      opts->smagorinskyCoeff);
     }
   }
 

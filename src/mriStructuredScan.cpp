@@ -3360,11 +3360,10 @@ void MRIStructuredScan::evalPradtlTurbViscosity(MRIDoubleMat cellDistance, MRITh
 // ================================================
 // EVAL SMAGORINSKY LILLY TURBULENT VISCOSITY MODEL
 // ================================================
-void MRIStructuredScan::evalSmagorinskyLillyTurbViscosity(double density, MRIThresholdCriteria* threshold, MRIDoubleMat& turbViscosity){
+void MRIStructuredScan::evalSmagorinskyLillyTurbViscosity(double density, double smagorinskyCoeff, MRIThresholdCriteria* threshold, MRIDoubleMat& turbViscosity){
   double modS = 0.0;
   double currCharDist = 0.0;
   double sTerm = 0.0;
-  double smagorinskyCoeff = 0.15;
   MRIDoubleVec tmp;
   // First and Second Derivatives
   double** firstDerivs = new double*[kNumberOfDimensions];
@@ -3410,7 +3409,8 @@ void MRIStructuredScan::evalSmagorinskyLillyTurbViscosity(double density, MRIThr
 void MRIStructuredScan::ExportForPoisson(string inputFileName,double density,double viscosity,
                                          MRIThresholdCriteria* threshold,
                                          const MRIDoubleMat& timeDerivs,
-                                         bool PPE_IncludeAccelerationTerm,bool PPE_IncludeAdvectionTerm,bool PPE_IncludeDiffusionTerm,bool PPE_IncludeReynoldsTerm){
+                                         bool PPE_IncludeAccelerationTerm,bool PPE_IncludeAdvectionTerm,bool PPE_IncludeDiffusionTerm,bool PPE_IncludeReynoldsTerm,
+                                         bool readMuTFromFile, string muTFile, double smagorinskyCoeff){
 
   printf("\n");
   printf("Acceleration Term included: %s\n",PPE_IncludeAccelerationTerm ? "TRUE":"FALSE");
@@ -3521,22 +3521,24 @@ void MRIStructuredScan::ExportForPoisson(string inputFileName,double density,dou
   MRIDoubleMat turbViscosity;
   MRIDoubleVec tmp;
 
-  // if(readMuTFromFile){
-  // printf("Reading Turbulent Viscosity From File...\n");
-  // MRIUtils::readTableFromFile(string("turbViscosity.txt"),turbViscosity,false);
-  // printf("Turbulent Viscosity Points: %d, Columns: %d\n",(int)turbViscosity.size(),(int)turbViscosity[0].size());
-
   if(PPE_IncludeReynoldsTerm){
-    // Read Cell Distances From File
-    printf("Using Smagorinsky Lilly Subgrid scale model...\n");
-    evalSmagorinskyLillyTurbViscosity(density, threshold, turbViscosity);
+    // If the term needs to read by a file
+    if(readMuTFromFile){
+      printf("Reading Turbulent Viscosity From File...\n");
+      MRIUtils::readTableFromFile(muTFile,turbViscosity,false);
+      printf("Turbulent Viscosity Points: %d\n",(int)turbViscosity.size());
+    }else{
+      printf("Using Smagorinsky Lilly Subgrid scale model with coefficient %.4f...\n",smagorinskyCoeff);
+      evalSmagorinskyLillyTurbViscosity(density, smagorinskyCoeff, threshold, turbViscosity);
+    }
+    // Eval the Maximum Module of the turbulent viscosity
     double maxTurbVisc = 0.0;
     for(int loopA=0;loopA<turbViscosity.size();loopA++){
       if(fabs(turbViscosity[loopA][0]) > maxTurbVisc){
         maxTurbVisc = fabs(turbViscosity[loopA][0]);
       }
     }
-    printf("Max Turbulent Viscosity Module: %e\n",maxTurbVisc);
+    printf("Max ABS Turbulent Viscosity: %e\n",maxTurbVisc);
   }else{
      // Zero Turbulent Voscosity
      for(int loopA=0;loopA<totalCellPoints;loopA++){

@@ -39,7 +39,8 @@ class MRISequence{
     void WriteExpansionFile(string fileName);
     void ExportForDistancing(string inputFileName, MRIThresholdCriteria* threshold);
     void ExportForPoisson(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold,
-                          bool PPE_IncludeAccelerationTerm,bool PPE_IncludeAdvectionTerm,bool PPE_IncludeDiffusionTerm,bool PPE_IncludeReynoldsTerm);
+                          bool PPE_IncludeAccelerationTerm,bool PPE_IncludeAdvectionTerm,bool PPE_IncludeDiffusionTerm,bool PPE_IncludeReynoldsTerm,
+                          bool readMuTFromFile, string muTFile, double smagorinskyCoeff);
 
     // SAVE QUANTITIES TO OUTPUTS
     void saveVelocity();

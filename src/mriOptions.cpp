@@ -49,6 +49,10 @@ MRIOptions::MRIOptions(){
   PPE_IncludeAdvectionTerm = true;
   PPE_IncludeDiffusionTerm = true;
   PPE_IncludeReynoldsTerm = false;
+  // Turbulent Viscosity
+  readMuTFromFile = false;
+  muTFile = "";
+  smagorinskyCoeff = 0.15;
   // Export to Poisson
   exportToPoisson = false;
   poissonFileName = "solution.vtk";
@@ -601,6 +605,22 @@ int MRIOptions::getOptionsFromCommandFile(string commandFile){
         }
       }catch(...){
         throw MRIException("ERROR: Invalid template parameters.\n");
+      }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("USETURBVISCOSITYFROMFILE")){
+      if(boost::to_upper_copy(tokenizedString[1]) == std::string("TRUE")){
+        readMuTFromFile = true;
+      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("FALSE")){
+        readMuTFromFile = false;
+      }else{
+        throw MRIException("ERROR: Invalid logical value for USETURBVISCOSITYFROMFILE.\n");
+      }
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("TURBVISCOSITYFILE")){
+      muTFile = tokenizedString[1];
+    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("SMAGORINSKYCONSTANT")){
+      try{
+        smagorinskyCoeff = atof(tokenizedString[1].c_str());
+      }catch(...){
+        throw MRIException("ERROR: Invalid Smagorinsky Constant.\n");
       }
     }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("SCALEVELOCITY")){
         try{

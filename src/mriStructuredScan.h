@@ -142,7 +142,8 @@ class MRIStructuredScan: public MRIScan{
     // Export to Poisson Solver Only element with significant concentration
     virtual void ExportForDistancing(string inputFileName, MRIThresholdCriteria* threshold);
     virtual void ExportForPoisson(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold, const MRIDoubleMat& timeDerivs,
-                                  bool PPE_IncludeAccelerationTerm,bool PPE_IncludeAdvectionTerm,bool PPE_IncludeDiffusionTerm,bool PPE_IncludeReynoldsTerm);
+                                  bool PPE_IncludeAccelerationTerm,bool PPE_IncludeAdvectionTerm,bool PPE_IncludeDiffusionTerm,bool PPE_IncludeReynoldsTerm,
+                                  bool readMuTFromFile, string muTFile, double smagorinskyCoeff);
 
     // ========
     // VOL DATA
@@ -297,7 +298,7 @@ class MRIStructuredScan: public MRIScan{
     // REYNOLDS STRESS COMPUTATION    
     void EvalReynoldsStressGradient(int currentCell, double** ReynoldsStressGradient);
     void evalPradtlTurbViscosity(MRIDoubleMat cellDistance, MRIThresholdCriteria* threshold, double density, MRIDoubleMat& turbViscosity);
-    void evalSmagorinskyLillyTurbViscosity(double density, MRIThresholdCriteria* threshold, MRIDoubleMat& turbViscosity);
+    void evalSmagorinskyLillyTurbViscosity(double density, double smagorinskyCoeff, MRIThresholdCriteria* threshold, MRIDoubleMat& turbViscosity);
     
     // APPLY SMOOTHING FILTER - LAVISION
     void ApplySmoothingFilter();

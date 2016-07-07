@@ -91,7 +91,10 @@ public:
   bool PPE_IncludeAdvectionTerm;
   bool PPE_IncludeDiffusionTerm;
   bool PPE_IncludeReynoldsTerm;
-
+  // Turbulent Viscosity
+  bool readMuTFromFile;
+  string muTFile;
+  double smagorinskyCoeff;
   // Export to Poisson Solver
   bool exportToPoisson;
   string poissonFileName;

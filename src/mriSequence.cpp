@@ -182,7 +182,8 @@ void MRISequence::ExportToVOL(std::string outfileName){
 
 // Export to Poisson Solver
 void MRISequence::ExportForPoisson(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold,
-                                   bool PPE_IncludeAccelerationTerm,bool PPE_IncludeAdvectionTerm,bool PPE_IncludeDiffusionTerm,bool PPE_IncludeReynoldsTerm){
+                                   bool PPE_IncludeAccelerationTerm,bool PPE_IncludeAdvectionTerm,bool PPE_IncludeDiffusionTerm,bool PPE_IncludeReynoldsTerm,
+                                   bool readMuTFromFile, string muTFile, double smagorinskyCoeff){
   string name;
   MRIDoubleMat timeDeriv;
   // MRIDoubleMat reynoldsDeriv;
@@ -193,12 +194,9 @@ void MRISequence::ExportForPoisson(string inputFileName,double density,double vi
       EvalScanTimeDerivs(loopA,timeDeriv);
       printf("Done.\n");
     }
-   // if(PPE_IncludeReynoldsTerm){
-   //   printf("Computing Reynolds Stress Gradients for Scan %d...",loopA);
-   //   EvalScanReynoldsStressDerivs(loopA,reynoldsDeriv);
-   //   printf("Done.\n");
-   // }
-    sequence[loopA]->ExportForPoisson(name,density,viscosity,threshold,timeDeriv,PPE_IncludeAccelerationTerm,PPE_IncludeAdvectionTerm,PPE_IncludeDiffusionTerm,PPE_IncludeReynoldsTerm);
+    sequence[loopA]->ExportForPoisson(name,density,viscosity,threshold,timeDeriv,
+                                      PPE_IncludeAccelerationTerm,PPE_IncludeAdvectionTerm,PPE_IncludeDiffusionTerm,PPE_IncludeReynoldsTerm,
+                                      readMuTFromFile,muTFile,smagorinskyCoeff);
   }
 }
 

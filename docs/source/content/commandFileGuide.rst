@@ -277,6 +277,47 @@ Example input: ::
   EXPORTTOPOISSON: TRUE
   POISSONFILE: poissonInputFile.txt
 
+Components of the pressure gradient to evaluate
+"""""""""""""""""""""""""""""""""""""""""""""""
+
+The **PRESSUREGRADIENTCOMPONENTS** token tell the program which components of the pressure gradient need to be included in the computation of the relative pressures by solving th PPE. The following components can be activated/deactivated:
+
+1. Acceleration (or transient) term ("Y" to activate and "N" to deactivate).
+2. Advection (or convection) term ("Y" to activate and "N" to deactivate).
+3. Diffusion term ("Y" to activate and "N" to deactivate).
+4. Reynolds Stress term ("Y" to activate and "N" to deactivate). The eddy viscosity approximation is activated by default. Therefore by specifying "N" the turbulent viscosity is neglected. 
+
+By default, if the **PRESSUREGRADIENTCOMPONENTS** is not specified all but the Reynolds Stress terms are included. 
+
+The example below shows how to include only the acceleration and advection components of the pressure gradient and to exclude the diffusion and Reynolds Stress term: ::
+
+  PRESSUREGRADIENTCOMPONENTS: Y,Y,N,N
+
+Computing the Turbulent Viscosity
+"""""""""""""""""""""""""""""""""
+
+The token **USETURBVISCOSITYFROMFILE** allows to read the value of the turbulent viscosity from file. The file contains only one column where the value of the turbulent viscosity is specified at each row. The order should reflect the order of the grid points in the velocity measurements (i.e., the first row should contain the turbulent viscosity for the grid point one, the second row for point two, and so on) ::
+
+  muT_Point_1
+  muT_Point_2
+  muT_Point_3
+  muT_Point_4
+  ...
+
+The token **TURBVISCOSITYFILE** specifies the location of the file above. 
+
+In case the turbulent viscosity is not read from file, the token **SMAGORINSKYCONSTANT** allows the user to specify the Smagorinsky constant in the associated subgrid scale model. If this constant is not specified a default value of 0.15 is used. 
+
+Export to Laplace wall distancing solver
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The **EXPORTTODISTANCE** and **DISTANCEFILE** options tell the application to export a finite element input file for wall distance evaluation.
+
+Example input: ::
+
+  EXPORTTODISTANCE: TRUE
+  DISTANCEFILE: distanceInputFile.txt
+
 Vortex Criteria
 ^^^^^^^^^^^^^^^
 
