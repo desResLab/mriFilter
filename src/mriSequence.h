@@ -44,6 +44,9 @@ class MRISequence{
 
     // SAVE QUANTITIES TO OUTPUTS
     void saveVelocity();
+
+    // CREATE TOPOLOGY
+    void CreateTopology();
     
     // DIV FREE Filtering
     void ApplySMPFilter(MRIOptions* options, bool isBC, MRICommunicator* comm);

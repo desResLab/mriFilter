@@ -156,29 +156,13 @@ class MRIStructuredScan: public MRIScan{
     // ========
     // TOPOLOGY
     // ========
-    // MAIN
-    void CreateTopology();
-    // CELLS
-    void buildCellConnections();
-    int addToFaceConnections(std::vector<std::vector<mriFace* > > &AuxFirstNodeFaceList, std::vector<int> faceIds);
-    // FACES
-    void buildFaceConnections();
-    void buildFaceCells();
-    void buildFaceAreasAndNormals();
-    void getExternalFaceNormal(int cellID, int localFaceID, double* extNormal);
-    // EDGES
-    void buildEdgeConnections();
-    int  addToEdgeConnections(vector<vector<mriEdge*> > &AuxFirstNodeEdgeList, int* edgeIds);
-    void assembleEdgeToFaceConnectivity(std::vector<int> &vortexBottomFaces,std::vector<int> &vortexTopFaces,std::vector<int> &vortexLeftFaces,std::vector<int> &vortexRightFaces);
     // VORTEX COEFFICIENTS
     double getEdgeFaceVortexCoeff(int edgeID, int faceID);
     // AUXILIARY GEOMETRY
-    void   getAuxNodeCoordinates(int nodeNum, double* pos);
     void   getEdgeDirection(int edgeID, double* edgeDirVector);
     void   getEdgeCenter(int edgeID, double* ec);
     void   getFaceCenter(int faceID, double* fc);
     void   getEdgeToFaceDirection(int edgeID, int faceID, double* edgeFaceVector);
-    void   buildAuxNodesCoords();
     // VOLUME
     double evalCellVolume(int cellNumber);
     // OTHER

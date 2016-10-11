@@ -947,6 +947,10 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
 //    }
   }
 
+  // Compute the topology of the sequence
+  // The topology of the sequence must be the same
+  MyMRISequence->CreateTopology();
+
   // All processes are waiting for the root to read the files
   int mpiError = MPI_Barrier(comm->mpiComm);
   MRIUtils::checkMpiError(mpiError);
