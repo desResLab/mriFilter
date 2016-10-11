@@ -14,7 +14,7 @@ include_directories(${Boost_INCLUDE_DIR})
 include_directories(${MPI_INCLUDE_PATH})
 
 # SET COMPILER FLAGS
-add_definitions("-O3")
+add_definitions("-fmax-errors=5 -O3")
 
 # CREATE EXECUTABLE
 ADD_EXECUTABLE(${PROJECT_NAME} ${SRC_LIST})

@@ -580,9 +580,6 @@ void MRIStructuredScan::CreateSampleCase(MRISamples sampleType,vector<double> pa
   std::string Msgs = WriteStatistics();
   WriteSchMessage(Msgs);
 
-  // BUILD TOPOLOGY
-  CreateTopology();
-
   // Deallocate
   delete [] currentCoords;
 }

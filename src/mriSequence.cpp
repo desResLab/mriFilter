@@ -384,7 +384,7 @@ void MRISequence::EvalReynoldsStresses(MRIThresholdCriteria* threshold){
 // ==================
 // GET CELL FACE AREA
 // ==================
-void evalCellAreas(int cellNumber,double* Areas){
+void MRISequence::evalCellAreas(int cellNumber,double* Areas){
   int intCoords[3];
   MapIndexToCoords(cellNumber,intCoords);
   // Get the Three Edge Lengths
@@ -400,7 +400,7 @@ void evalCellAreas(int cellNumber,double* Areas){
 // ========================================
 // BUILD GRID CONNECTIVITY FOR THE SEQUENCE
 // ========================================
-void buildCellConnections(){
+void MRISequence::buildCellConnections(){
   // Allocate connections
   cellConnections.resize(totalCellPoints);
   // Loop through the cells
@@ -454,7 +454,7 @@ void buildCellConnections(){
 // ================================
 // GET CELL EXTERNAL NORMAL AT FACE
 // ================================
-void getExternalFaceNormal(int cellID, int localFaceID, double* extNormal){
+void MRISequence::getExternalFaceNormal(int cellID, int localFaceID, double* extNormal){
   // Get Face Nodes
   std::vector<int> faceIds;
   getFaceConnections(localFaceID,cellConnections[cellID],faceIds);
@@ -504,7 +504,7 @@ void getExternalFaceNormal(int cellID, int localFaceID, double* extNormal){
 // =====================
 // ADD FACE TO FACE LIST
 // =====================
-int addToFaceConnections(std::vector<std::vector<mriFace* > > &AuxFirstNodeFaceList, std::vector<int> faceIds){
+int MRISequence::addToFaceConnections(std::vector<std::vector<mriFace* > > &AuxFirstNodeFaceList, std::vector<int> faceIds){
   mriFace* newFace;
   // Get first node in connectivity
   int firstConnectivityNode = MRIUtils::getMinInt(faceIds);
@@ -538,7 +538,7 @@ int addToFaceConnections(std::vector<std::vector<mriFace* > > &AuxFirstNodeFaceL
 // =====================
 // ADD EDGE TO FACE LIST
 // =====================
-int addToEdgeConnections(vector<vector<mriEdge*> > &AuxFirstNodeEdgeList, int* edgeIds){
+int MRISequence::addToEdgeConnections(vector<vector<mriEdge*> > &AuxFirstNodeEdgeList, int* edgeIds){
   mriEdge* newEdge;
   vector<int> tmp;
   tmp.resize(2);
@@ -583,7 +583,7 @@ int addToEdgeConnections(vector<vector<mriEdge*> > &AuxFirstNodeEdgeList, int* e
 // =======================
 // BUILD FACE CONNECTIVITY
 // =======================
-void buildFaceConnections(){
+void MRISequence::buildFaceConnections(){
   std::vector<int> faceIds;
   std::vector<std::vector<mriFace* > > AuxFirstNodeFaceList;
   int currFace = 0;
@@ -604,7 +604,7 @@ void buildFaceConnections(){
 // =======================
 // BUILD EDGE CONNECTIVITY
 // =======================
-void buildFaceCells(){
+void MRISequence::buildFaceCells(){
   faceCells.resize(faceConnections.size());
   int currFace = 0;
   for(int loopA=0;loopA<totalCellPoints;loopA++){
@@ -618,7 +618,7 @@ void buildFaceCells(){
 // =======================
 // BUILD EDGE CONNECTIVITY
 // =======================
-void buildEdgeConnections(){
+void MRISequence::buildEdgeConnections(){
 
   int edgeIds[2];
   std::vector<std::vector<mriEdge*> > AuxFirstNodeEdgeList;

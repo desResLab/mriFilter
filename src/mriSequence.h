@@ -7,13 +7,35 @@
 class MRIScan;
 class MRICommunicator;
 
+// Generic Sequence Containing General 
+// Unstructured Data Sets
+
 class MRISequence{
-  protected:
+  public:
     int totalScans;
     std::vector<MRIScan*> sequence;
     std::string* fileNames;
     bool isCyclic;
-  public:
+
+    // TOPOLOGY COMMON TO EVERY SCAN
+    // Cells Totals
+    MRIIntVec cellTotals;
+    MRIDoubleMat cellLengths;
+    // Cells Topology
+    MRIIntMat cellConnections;
+    MRIIntMat cellFaces;
+    // Face Topology
+    MRIIntMat faceCells;
+    MRIIntMat faceConnections;
+    MRIIntMat faceEdges;
+    MRIDoubleVec faceArea;
+    MRIDoubleMat faceNormal;
+    // Edge Topology
+    MRIIntMat edgeConnections;
+    MRIIntMat edgeFaces;
+    // Auxiliary
+    MRIDoubleMat auxNodesCoords;
+
     // Constructor and
     MRISequence(bool cyclic);
     // Copy Constructor

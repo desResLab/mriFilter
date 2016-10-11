@@ -1,18 +1,15 @@
 #ifndef MIRCELL_H
 #define MIRCELL_H
 
-typedef double MRIReal;
-
-class MRICell
-{
-	public:
-    MRIReal concentration;
-    MRIReal velocity[3];
-    MRIReal position[3];
-    MRIReal auxVector[3];
-    MRIReal ReStress[6];
-    MRIReal pressGrad[3];
-    MRIReal relPressure;
+class MRICell{
+  public:
+    double concentration;
+    double velocity[3];
+    double position[3];
+    double auxVector[3];
+    double ReStress[6];
+    double pressGrad[3];
+    double relPressure;
     // Constructor and Destructor
     MRICell();
     ~MRICell();
