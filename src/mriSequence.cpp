@@ -12,6 +12,11 @@ MRISequence::MRISequence(bool cyclic){
   totalScans = 0;
   // Set If Cyclic
   isCyclic = cyclic;
+  // Reset Cell Totals
+  cellTotals.resize(3);
+  cellTotals[0] = 0;
+  cellTotals[1] = 0;
+  cellTotals[2] = 0;
 }
 
 // Copy Constructor
@@ -20,6 +25,51 @@ MRISequence::MRISequence(MRISequence* copySequence){
   totalScans = copySequence->totalScans;
   // Copy Cyclic Property
   isCyclic = copySequence->isCyclic;
+  // Copy cells totals
+  for(int loopA=0;loopA<3;loopA++){
+    domainSizeMin[loopA] = copySequence.domainSizeMin[loopA];
+    domainSizeMax[loopA] = copySequence.domainSizeMax[loopA];
+  }
+  // Max Velocity Module
+  maxVelModule = 0.0;
+  // Total number of Cells
+  totalCellPoints = copySequence.totalCellPoints;
+  // Allocate cell points
+  cellPoints.resize(totalCellPoints);
+  // Initialize
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    // Copy position
+    cellPoints[loopA].position[0] = copySequence.cellPoints[loopA].position[0];
+    cellPoints[loopA].position[1] = copySequence.cellPoints[loopA].position[1];
+    cellPoints[loopA].position[2] = copySequence.cellPoints[loopA].position[2];
+    // Concentration
+    cellPoints[loopA].concentration = 0.0;
+    // Velocity
+    cellPoints[loopA].velocity[0] = 0.0;
+    cellPoints[loopA].velocity[1] = 0.0;
+    cellPoints[loopA].velocity[2] = 0.0;
+    // Filtered Velocity
+    cellPoints[loopA].auxVector[0] = 0.0;
+    cellPoints[loopA].auxVector[1] = 0.0;
+    cellPoints[loopA].auxVector[2] = 0.0;
+    // Pressure Gradient
+    cellPoints[loopA].pressGrad[0] = 0.0;
+    cellPoints[loopA].pressGrad[1] = 0.0;
+    cellPoints[loopA].pressGrad[2] = 0.0;
+    // Relative Pressure
+    cellPoints[loopA].relPressure = 0.0;
+  }  
+  // COPY THE CELL TOTALS
+  cellLengths.resize(3);
+  for(int loopA=0;loopA<3;loopA++){
+    cellTotals[loopA] = copySequence.cellTotals[loopA];    
+    cellLengths[loopA].resize(copySequence.cellLengths[loopA].size());
+    // FILL THE LENGTHS
+    for(size_t loopB=0;loopB<copySequence.cellLengths[loopA].size();loopB++){
+      cellLengths[loopA][loopB] = copySequence.cellLengths[loopA][loopB];
+    }
+  }
+
   // Fill with Zero Scans
   for(int loopB=0;loopB<totalScans;loopB++){
     MRIScan* newScan = new MRIScan(*copySequence->GetScan(loopB));
@@ -381,6 +431,60 @@ void MRISequence::EvalReynoldsStresses(MRIThresholdCriteria* threshold){
   }
 }
 
+// ===================
+// GET TOTAL AUX NODES
+// ===================
+int MRISequence::getTotalAuxNodes(){
+  return (cellTotals[0] + 1)*(cellTotals[1] + 1)*(cellTotals[2] + 1);
+}
+
+// ===============
+// GET TOTAL FACES
+// ===============
+int MRISequence::GetTotalFaces(){
+  return cellTotals[0]*cellTotals[1]*(cellTotals[2] + 1)+
+         cellTotals[1]*cellTotals[2]*(cellTotals[0] + 1)+
+         cellTotals[2]*cellTotals[0]*(cellTotals[1] + 1);
+}
+
+// ============================================
+// WRITE SEQUENCE TOPOLOGY STATISTICS TO STDOUT
+// ============================================
+std::string MRIScan::WriteStatistics(){
+  std::string myresult = "\n";
+  myresult += "--------------------------------\n";
+  myresult += "FILE STATISTICS\n";
+  myresult += "--------------------------------\n";
+  myresult += "Total Number Of Cells: "+MRIUtils::IntToStr(totalCellPoints)+"\n";
+  myresult += "--------------------------------\n";
+  myresult += "Total Number Of Coordinate Cells\n";
+  myresult += "X Direction: "+MRIUtils::IntToStr(cellTotals[0])+"\n";
+  myresult += "Y Direction: "+MRIUtils::IntToStr(cellTotals[1])+"\n";
+  myresult += "Z Direction: "+MRIUtils::IntToStr(cellTotals[2])+"\n";
+  myresult += "Cells Lengths\n";
+  myresult += "X Direction - MIN: "+MRIUtils::FloatToStr(*min_element(cellLengths[0].begin(),cellLengths[0].end()))+"\n";
+  myresult += "X Direction - MAX: "+MRIUtils::FloatToStr(*max_element(cellLengths[0].begin(),cellLengths[0].end()))+"\n";
+  myresult += "Y Direction - MIN: "+MRIUtils::FloatToStr(*min_element(cellLengths[1].begin(),cellLengths[1].end()))+"\n";
+  myresult += "Y Direction - MAX: "+MRIUtils::FloatToStr(*max_element(cellLengths[1].begin(),cellLengths[1].end()))+"\n";
+  myresult += "Z Direction - MIN: "+MRIUtils::FloatToStr(*min_element(cellLengths[2].begin(),cellLengths[2].end()))+"\n";
+  myresult += "Z Direction - MAX: "+MRIUtils::FloatToStr(*max_element(cellLengths[2].begin(),cellLengths[2].end()))+"\n";
+  myresult += "--------------------------------\n";
+  myresult += "Domain Size\n";
+  myresult += "Minimum X: "+MRIUtils::FloatToStr(domainSizeMin[0])+"\n";
+  myresult += "Maximum X: "+MRIUtils::FloatToStr(domainSizeMax[0])+"\n";
+  myresult += "Minimum Y: "+MRIUtils::FloatToStr(domainSizeMin[1])+"\n";
+  myresult += "Maximum Y: "+MRIUtils::FloatToStr(domainSizeMax[1])+"\n";
+  myresult += "Minimum Z: "+MRIUtils::FloatToStr(domainSizeMin[2])+"\n";
+  myresult += "Maximum Z: "+MRIUtils::FloatToStr(domainSizeMax[2])+"\n";
+  myresult += "--------------------------------\n";
+  myresult += "Maximum Velocity Module: "+MRIUtils::FloatToStr(maxVelModule)+"\n";
+  myresult += "--------------------------------\n";
+  myresult += "\n";
+  // Return String
+  return myresult;
+}
+
+
 // ==================
 // GET CELL FACE AREA
 // ==================
@@ -448,56 +552,6 @@ void MRISequence::buildCellConnections(){
     // Add Node 8
     node8 = (zOffset + yOffset + xOffset + cellTotals[0] + 2);
     cellConnections[loopA].push_back(node8);
-  }
-}
-
-// ================================
-// GET CELL EXTERNAL NORMAL AT FACE
-// ================================
-void MRISequence::getExternalFaceNormal(int cellID, int localFaceID, double* extNormal){
-  // Get Face Nodes
-  std::vector<int> faceIds;
-  getFaceConnections(localFaceID,cellConnections[cellID],faceIds);
-
-  int node1Coords[3] = {0};
-  int node2Coords[3] = {0};
-  int node3Coords[3] = {0};
-  // Get the integer coordinates for the first three nodes
-  MapIndexToAuxNodeCoords(faceIds[0],node1Coords);
-  MapIndexToAuxNodeCoords(faceIds[1],node2Coords);
-  MapIndexToAuxNodeCoords(faceIds[2],node3Coords);
-  // Get the positions for the first three nodes
-  double node1Pos[3] = {0.0};
-  double node2Pos[3] = {0.0};
-  double node3Pos[3] = {0.0};
-  double centreCellPos[3] = {0.0};
-  MapAuxCoordsToPosition(node1Coords,node1Pos);
-  MapAuxCoordsToPosition(node2Coords,node2Pos);
-  MapAuxCoordsToPosition(node3Coords,node3Pos);
-  centreCellPos[0] = cellPoints[cellID].position[0];
-  centreCellPos[1] = cellPoints[cellID].position[1];
-  centreCellPos[2] = cellPoints[cellID].position[2];
-  // Get the difference
-  double diff1[3] = {0.0};
-  double diff2[3] = {0.0};
-  double normVec[3] = {0.0};
-  for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
-    diff1[loopB] = node2Pos[loopB] - node1Pos[loopB];
-    diff2[loopB] = node3Pos[loopB] - node2Pos[loopB];
-    normVec[loopB] = node1Pos[loopB] - centreCellPos[loopB];
-  }
-  // Get the normal
-  MRIUtils::Do3DExternalProduct(diff1,diff2,extNormal);
-  MRIUtils::Normalize3DVector(extNormal);
-  // Check Sign
-  double sign = 0.0;
-  for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
-    sign += normVec[loopB] * extNormal[loopB];
-  }
-  if(sign < 0.0){
-    extNormal[0] *= -1.0;
-    extNormal[1] *= -1.0;
-    extNormal[2] *= -1.0;
   }
 }
 
@@ -704,3 +758,426 @@ void MRISequence::CreateTopology(){
   WriteSchMessage(std::string("Topology Creation Completed.\n"));
 }
 
+// ======================
+// BUILD FACE AREA VECTOR
+// ======================
+void MRISequence::buildFaceAreasAndNormals(){
+  double prod = 0.0;
+  faceArea.resize(faceConnections.size());
+  faceNormal.resize(faceConnections.size());
+  // Declare
+  int node1Coords[3] = {0};
+  int node2Coords[3] = {0};
+  int node3Coords[3] = {0};
+  double node1Pos[3] = {0.0};
+  double node2Pos[3] = {0.0};
+  double node3Pos[3] = {0.0};
+  double diff1[3] = {0.0};
+  double diff2[3] = {0.0};
+  double diff3[3] = {0.0};
+  double d1 = 0.0;
+  double d2 = 0.0;
+  double currNormal[3] = {0.0};
+  double innerProd = 0.0;
+  for(size_t loopA=0;loopA<faceConnections.size();loopA++){
+    // Get the integer coordinates for the first three nodes
+    MapIndexToAuxNodeCoords(faceConnections[loopA][0],node1Coords);
+    MapIndexToAuxNodeCoords(faceConnections[loopA][1],node2Coords);
+    MapIndexToAuxNodeCoords(faceConnections[loopA][2],node3Coords);
+    // Get the positions for the first three nodes
+    MapAuxCoordsToPosition(node1Coords,node1Pos);
+    MapAuxCoordsToPosition(node2Coords,node2Pos);
+    MapAuxCoordsToPosition(node3Coords,node3Pos);   
+    // Get the difference
+    for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
+      diff1[loopB] = node2Pos[loopB] - node1Pos[loopB];
+      diff2[loopB] = node3Pos[loopB] - node2Pos[loopB];
+      diff3[loopB] = node1Pos[loopB] - cells[faceCells[loopA][0]].position[loopB];
+    }
+
+    innerProd = 0.0;
+    for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
+      innerProd += diff1[loopB] * diff2[loopB];
+    }
+    if(fabs(innerProd) > kMathZero){
+      throw MRIException("ERROR: Face sides are not Orthogonal in buildFaceAreasAndNormals\n");
+    }
+    d1 = MRIUtils::Do3DEucNorm(diff1);
+    d2 = MRIUtils::Do3DEucNorm(diff2);
+    // Evaluate Face Area
+    faceArea[loopA] = d1 * d2;
+    // Get the normal
+    MRIUtils::Do3DExternalProduct(diff1,diff2,currNormal);
+    MRIUtils::Normalize3DVector(currNormal);
+    //printf("NODE 1 POS: %f %f %f\n",node1Pos[0],node1Pos[1],node1Pos[2]);
+    //printf("CELL CENTRE POS: %f %f %f\n",cellPoints[faceCells[loopA][0]].position[0],cellPoints[faceCells[loopA][0]].position[1],cellPoints[faceCells[loopA][0]].position[2]);
+    //getchar();
+    if(faceCells[loopA].size() == 1){
+      prod = 0.0;
+      for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
+        prod += currNormal[loopB] * diff3[loopB];
+      }
+      if(prod > kMathZero){
+        //printf("NODE 1 POS: %f %f %f\n",node1Pos[0],node1Pos[1],node1Pos[2]);
+        //printf("CELL CENTRE POS: %f %f %f\n",cellPoints[faceCells[loopA][0]].position[0],cellPoints[faceCells[loopA][0]].position[1],cellPoints[faceCells[loopA][0]].position[2]);
+        //printf("FLIPPED! Prod: %e, %f %f %f, %f %f %f\n",prod,currNormal[0],currNormal[1],currNormal[2],diff3[0],diff3[1],diff3[2]);
+        //getchar();
+        currNormal[0] *= - 1.0;
+        currNormal[1] *= - 1.0;
+        currNormal[2] *= - 1.0;
+      }
+    }
+    faceNormal[loopA].push_back(currNormal[0]);
+    faceNormal[loopA].push_back(currNormal[1]);
+    faceNormal[loopA].push_back(currNormal[2]);
+  }
+}
+
+// ===================================
+// CREATE MATRIX WITH AUX NODES COORDS
+// ===================================
+void MRISequence::buildAuxNodesCoords(){
+  double nodePos[3] = {0.0};
+  MRIDoubleVec nodePosVec(3);
+  int totAuxNodes = getTotalAuxNodes();
+  for(int loopA=0;loopA<totAuxNodes;loopA++){
+    getAuxNodeCoordinates(loopA,nodePos);
+    nodePosVec[0] = nodePos[0];
+    nodePosVec[1] = nodePos[1];
+    nodePosVec[2] = nodePos[2];
+    auxNodesCoords.push_back(nodePosVec);
+  }
+}
+
+// CROP SCAN
+void MRISequence::crop(double* limitBox){
+  // Count The Number Of Cells Remaining
+  int remainingCells = 0;
+  for(int loopA=0;loopA<topology->totalCells;loopA++){
+    if (MRIUtils::IsPointInsideBox(topology->cellLocations[loopA][0],
+                                   topology->cellLocations[loopA][1],
+                                   topology->cellLocations[loopA][2],
+                                   limitBox)){
+      remainingCells++;
+    }
+  }
+  // Allocate New Cellpoints
+  std::vector<MRICell> tempCellPoints;
+  tempCellPoints.resize(remainingCells);
+  // Initialize Limits
+  topology->domainSizeMin[0] =  std::numeric_limits<double>::max();
+  topology->domainSizeMin[1] =  std::numeric_limits<double>::max();
+  topology->domainSizeMin[2] =  std::numeric_limits<double>::max();
+  topology->domainSizeMax[0] = -std::numeric_limits<double>::max();
+  topology->domainSizeMax[1] = -std::numeric_limits<double>::max();
+  topology->domainSizeMax[2] = -std::numeric_limits<double>::max();
+  maxVelModule = 0.0;
+  int TotalXCoords = 0;
+  int TotalYCoords = 0;
+  int TotalZCoords = 0;
+  std::vector<double> XCoords;
+  std::vector<double> YCoords;
+  std::vector<double> ZCoords;
+  double currVelModule = 0.0;
+  // Fill Temporary Cells
+  int tempCount = 0;
+  for(int loopA=0;loopA<topology->totalCells;loopA++){
+    if (MRIUtils::IsPointInsideBox(topology->cellLocations[loopA][0],
+                                   topology->cellLocations[loopA][1],
+                                   topology->cellLocations[loopA][2],limitBox)){
+      // Position
+      tempCellPoints[tempCount].position[0] = topology->cellLocations[loopA][0];
+      tempCellPoints[tempCount].position[1] = topology->cellLocations[loopA][1];
+      tempCellPoints[tempCount].position[2] = topology->cellLocations[loopA][2];
+      // Change the Domain Size
+      // Min X
+      if (tempCellPoints[tempCount].position[0]<topology->domainSizeMin[0]){
+        topology->domainSizeMin[0] = tempCellPoints[tempCount].position[0];
+      }
+      // Max X
+      if (tempCellPoints[tempCount].position[0]>topology->domainSizeMax[0]){
+        topology->domainSizeMax[0] = tempCellPoints[tempCount].position[0];
+      }
+      // Min Y
+      if (tempCellPoints[tempCount].position[1]<topology->domainSizeMin[1]){
+        topology->domainSizeMin[1] = tempCellPoints[tempCount].position[1];
+      }
+      // Max Y
+      if (tempCellPoints[tempCount].position[1]>topology->domainSizeMax[1]){
+        topology->domainSizeMin[1] = tempCellPoints[tempCount].position[1];
+      }
+      // Min Z
+      if (tempCellPoints[tempCount].position[0]<topology->domainSizeMin[2]){
+        topology->domainSizeMin[2] = tempCellPoints[tempCount].position[2];
+      }
+      // Max Z
+      if (tempCellPoints[tempCount].position[0]>topology->domainSizeMax[2]){
+        topology->domainSizeMax[2] = tempCellPoints[tempCount].position[2];
+      }
+      // Store Coordinates
+      MRIUtils::InsertInDoubleList(tempCellPoints[tempCount].position[0],TotalXCoords,XCoords);
+      MRIUtils::InsertInDoubleList(tempCellPoints[tempCount].position[1],TotalYCoords,YCoords);
+      MRIUtils::InsertInDoubleList(tempCellPoints[tempCount].position[2],TotalZCoords,ZCoords);   
+      // Concentration
+      tempCellPoints[tempCount].concentration = cells[loopA].concentration;
+      // Velocity
+      tempCellPoints[tempCount].velocity[0] = cells[loopA].velocity[0];
+      tempCellPoints[tempCount].velocity[1] = cells[loopA].velocity[1];
+      tempCellPoints[tempCount].velocity[2] = cells[loopA].velocity[2];
+      // Get Velocity Module
+      currVelModule = sqrt(tempCellPoints[tempCount].velocity[0]*tempCellPoints[tempCount].velocity[0]+
+                           tempCellPoints[tempCount].velocity[1]*tempCellPoints[tempCount].velocity[1]+
+                           tempCellPoints[tempCount].velocity[2]*tempCellPoints[tempCount].velocity[2]);
+      // Store Maximum Velocity Module
+      if (currVelModule>maxVelModule){
+        maxVelModule = currVelModule;
+      } 
+      // Pressure Gradient
+      tempCellPoints[tempCount].pressGrad[0] = cells[loopA].pressGrad[0];
+      tempCellPoints[tempCount].pressGrad[1] = cells[loopA].pressGrad[1];
+      tempCellPoints[tempCount].pressGrad[2] = cells[loopA].pressGrad[2];
+      // Relative Pressures
+      tempCellPoints[tempCount].relPressure = cells[loopA].relPressure;
+      // Update Counter
+      tempCount++;
+    }
+  }
+  // Store Totals in various directions
+  topology->cellTotals[0] = TotalXCoords;
+  topology->cellTotals[1] = TotalYCoords;
+  topology->cellTotals[2] = TotalZCoords;
+  // Store total number Of Cell
+  topology->totalCells = reminingCells;
+  cells.resize(reminingCells);
+  // Copy Back
+  for(int loopA=0;loopA<topology->totalCells;loopA++){
+    // Position
+    cells[loopA].position[0] = tempCellPoints[loopA].position[0];
+    cells[loopA].position[1] = tempCellPoints[loopA].position[1];
+    cells[loopA].position[2] = tempCellPoints[loopA].position[2];
+    // Concentration
+    cells[loopA].concentration = tempCellPoints[loopA].concentration;
+    // Velocity
+    cells[loopA].velocity[0] = tempCellPoints[loopA].velocity[0];
+    cells[loopA].velocity[1] = tempCellPoints[loopA].velocity[1];
+    cells[loopA].velocity[2] = tempCellPoints[loopA].velocity[2];
+    // Filtered Velocities
+    cells[loopA].auxVector[0] = 0.0;
+    cells[loopA].auxVector[1] = 0.0;
+    cells[loopA].auxVector[2] = 0.0;
+    // Pressure Gradients
+    cells[loopA].pressGrad[0] = tempCellPoints[loopA].pressGrad[0];
+    cells[loopA].pressGrad[1] = tempCellPoints[loopA].pressGrad[1];
+    cells[loopA].pressGrad[2] = tempCellPoints[loopA].pressGrad[2];
+    // Relative Pressure
+    cells[loopA].relPressure = tempCellPoints[loopA].relPressure;
+  }
+}
+
+// SCALE POSITIONS
+void MRISequence::scalePositions(double factor){
+  // SCALE CELL LENGTHS
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    for(size_t loopB=0;loopB<topology->cellLengths[loopA].size();loopB++){
+      topology->cellLengths[loopA][loopB] *= factor;
+    }
+  }
+  // SCALE POSITIONS
+  for(int loopA=0;loopA<topology->totalCells;loopA++){
+    cells[loopA].position[0] = (cells[loopA].position[0] - topology->domainSizeMin[0]) * factor;
+    cells[loopA].position[1] = (cells[loopA].position[1] - topology->domainSizeMin[1]) * factor;
+    cells[loopA].position[2] = (cells[loopA].position[2] - topology->domainSizeMin[2]) * factor;
+  }
+  // SCALE FACE AREA
+  for(int loopA=0;loopA<topology->faceConnections.size();loopA++){
+    topology->faceArea[loopA] = topology->faceArea[loopA] * factor * factor;
+  }
+  // SCALE DOMAIN DIMENSIONS
+  // Max
+  topology->domainSizeMax[0] = (topology->domainSizeMax[0] - topology->domainSizeMin[0])*factor;
+  topology->domainSizeMax[1] = (topology->domainSizeMax[1] - topology->domainSizeMin[1])*factor;
+  topology->domainSizeMax[2] = (topology->domainSizeMax[2] - topology->domainSizeMin[2])*factor;
+  // Min
+  topology->domainSizeMin[0] = 0.0;
+  topology->domainSizeMin[1] = 0.0;
+  topology->domainSizeMin[2] = 0.0;
+}
+
+// ======================
+// READ LIST OF ROW FILES
+// ======================
+void MRISequence::readRAWFileSequence(std::string fileListName){
+
+  // Init
+  MRIImageData data;
+  std::vector<std::string> fileList;
+
+  // Read File List
+  MRIUtils::ReadFileList(fileListName,fileList);
+
+  // Read the first File
+  std::string currFile = fileList[0];
+
+  // Read
+  readRawImage(currFile,data);
+
+  // Set Totals
+  topology->cellTotals[0] = data.sizeX;
+  topology->cellTotals[1] = data.sizeY;
+  topology->cellTotals[2] = fileList.size();
+
+  // Set cell Lengths 1.0 Uniform in all directions
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    for(size_t loopB=0;loopB<topology->cellLengths[loopA].size();loopB++){
+      topology->cellLengths[loopA][loopB] = 1.0;
+    }
+  }
+
+  // Set total Points
+  topology->totalCells = topology->cellTotals[0] * topology->cellTotals[1] * topology->cellTotals[2];
+
+  // Intialize Cells
+  MRICell myCellPoint;
+  myCellPoint.position[0] = 0.0;
+  myCellPoint.position[1] = 0.0;
+  myCellPoint.position[2] = 0.0;
+  myCellPoint.concentration = 0.0;
+  myCellPoint.velocity[0] = 0.0;
+  myCellPoint.velocity[1] = 0.0;
+  myCellPoint.velocity[2] = 0.0;
+  // Resize: CHECK!!!
+  cells.resize(topology->totalCells,myCellPoint);
+
+  // Fill Concentration with First Image Data
+  for(int loopA=0;loopA<data.sizeX*data.sizeY;loopA++){
+    cells[loopA].concentration = data.rawData[loopA];
+  }
+
+  // Intialize how many cells read so far
+  int readSoFar = data.sizeX*data.sizeY;
+  // Loop through all other images
+  for(unsigned int loopA=1;loopA<fileList.size();loopA++){
+    currFile = fileList[loopA];
+    // Read
+    readRawImage(currFile,data);
+    // Check Consistency
+    if((data.sizeX != topology->cellTotals[0])||(data.sizeY != topology->cellTotals[1])){
+      throw new MRIException("Error: Image Sequence not Consistent!");
+    }
+    // Fill Concentration with First Image Data
+    for(int loopB=readSoFar;loopB<readSoFar + data.sizeX*data.sizeY;loopB++){
+      cells[loopB].concentration = data.rawData[loopB];
+    }
+    // Increment readSoFar
+    readSoFar += data.sizeX*data.sizeY;
+  }
+}
+
+// ============================================
+// Create Grid from VTK Structured Scan Options
+// ============================================
+void MRIScan::createGridFromVTKStructuredPoints(vtkStructuredPointsOptionRecord opts){
+  // Assign cell totals
+  topology->cellTotals[0] = opts.dimensions[0];
+  topology->cellTotals[1] = opts.dimensions[1];
+  topology->cellTotals[2] = opts.dimensions[2];
+  // Assign total number of cells
+  topology->totalCells = topology->cellTotals[0] * topology->cellTotals[1] * topology->cellTotals[2];
+  cells.resize(topology->totalCells);
+  // Assign Cell spacing
+  topology->cellLengths.resize(3);
+  topology->cellLengths[0].resize(topology->cellTotals[0]);
+  topology->cellLengths[1].resize(topology->cellTotals[1]);
+  topology->cellLengths[2].resize(topology->cellTotals[2]);
+  for(int loopA=0;loopA<topology->cellTotals[0];loopA++){
+    topology->cellLengths[0][loopA] = opts.spacing[0];
+  }
+  for(int loopA=0;loopA<topology->cellTotals[1];loopA++){
+    topology->cellLengths[1][loopA] = opts.spacing[1];
+  }
+  for(int loopA=0;loopA<topology->cellTotals[2];loopA++){
+    topology->cellLengths[2][loopA] = opts.spacing[2];
+  }
+  // Set domain size
+  // Min
+  topology->domainSizeMin[0] = opts.origin[0];
+  topology->domainSizeMin[1] = opts.origin[1];
+  topology->domainSizeMin[2] = opts.origin[2];
+  // Max
+  topology->domainSizeMax[0] = opts.origin[0] + (opts.dimensions[0]-1) * opts.spacing[0];
+  topology->domainSizeMax[1] = opts.origin[1] + (opts.dimensions[1]-1) * opts.spacing[1];
+  topology->domainSizeMax[2] = opts.origin[2] + (opts.dimensions[2]-1) * opts.spacing[2];
+  // Allocate the cells
+  //cellPoints.reserve(totalCellPoints);
+  int count = 0;
+  // Fill the position vectors
+  double locCoordX = opts.origin[0];
+  double locCoordY = opts.origin[1];
+  double locCoordZ = opts.origin[2];
+  for(int loopA=0;loopA<topology->cellTotals[2];loopA++){
+    locCoordY = opts.origin[1];
+    for(int loopB=0;loopB<topology->cellTotals[1];loopB++){
+      locCoordX = opts.origin[0];
+      for(int loopC=0;loopC<topology->cellTotals[0];loopC++){
+        // Set Cell positions
+        cells[count].position[0] = locCoordX;
+        cells[count].position[1] = locCoordY;
+        cells[count].position[2] = locCoordZ;
+        count++;
+        locCoordX += opts.spacing[0];
+      }
+      locCoordY += opts.spacing[1];
+    }
+    locCoordZ += opts.spacing[2];
+  }
+}
+
+// ================================
+// GET CELL EXTERNAL NORMAL AT FACE
+// ================================
+void MRISequence::getExternalFaceNormal(int cellID, int localFaceID, double* extNormal){
+  // Get Face Nodes
+  std::vector<int> faceIds;
+  getFaceConnections(localFaceID,topology->cellConnections[cellID],faceIds);
+
+  int node1Coords[3] = {0};
+  int node2Coords[3] = {0};
+  int node3Coords[3] = {0};
+  // Get the integer coordinates for the first three nodes
+  mapIndexToAuxNodeCoords(faceIds[0],node1Coords);
+  mapIndexToAuxNodeCoords(faceIds[1],node2Coords);
+  mapIndexToAuxNodeCoords(faceIds[2],node3Coords);
+  // Get the positions for the first three nodes
+  double node1Pos[3] = {0.0};
+  double node2Pos[3] = {0.0};
+  double node3Pos[3] = {0.0};
+  double centreCellPos[3] = {0.0};
+  mapAuxCoordsToPosition(node1Coords,node1Pos);
+  mapAuxCoordsToPosition(node2Coords,node2Pos);
+  mapAuxCoordsToPosition(node3Coords,node3Pos);
+  centreCellPos[0] = cells[cellID].position[0];
+  centreCellPos[1] = cells[cellID].position[1];
+  centreCellPos[2] = cells[cellID].position[2];
+  // Get the difference
+  double diff1[3] = {0.0};
+  double diff2[3] = {0.0};
+  double normVec[3] = {0.0};
+  for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
+    diff1[loopB] = node2Pos[loopB] - node1Pos[loopB];
+    diff2[loopB] = node3Pos[loopB] - node2Pos[loopB];
+    normVec[loopB] = node1Pos[loopB] - centreCellPos[loopB];
+  }
+  // Get the normal
+  MRIUtils::Do3DExternalProduct(diff1,diff2,extNormal);
+  MRIUtils::Normalize3DVector(extNormal);
+  // Check Sign
+  double sign = 0.0;
+  for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
+    sign += normVec[loopB] * extNormal[loopB];
+  }
+  if(sign < 0.0){
+    extNormal[0] *= -1.0;
+    extNormal[1] *= -1.0;
+    extNormal[2] *= -1.0;
+  }
+}

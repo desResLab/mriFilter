@@ -1,33 +1,34 @@
 #ifndef MRISCAN_H
 #define MRISCAN_H
 
-#include <math.h>
-#include <stdio.h>
-#include <string>
-#include <limits>
-#include <vector>
-#include <iostream>
-#include <fstream>
-#include <boost/algorithm/string.hpp>
+# include <math.h>
+# include <stdio.h>
+# include <string>
+# include <limits>
+# include <vector>
+# include <iostream>
+# include <fstream>
+# include <boost/algorithm/string.hpp>
 
-#include "mriCell.h"
-#include "mriTypes.h"
-#include "mriExpansion.h"
-#include "mriThresholdCriteria.h"
-#include "mriUtils.h"
-#include "mriImagedata.h"
-#include "mriConstants.h"
-#include "mriVolData.h"
-#include "mriException.h"
-#include "schMessages.h"
-#include "mriCellMaterial.h"
-#include "mriSamplingOptions.h"
-#include "mriStreamline.h"
-#include "mriStreamlineOptions.h"
-#include "mriOutput.h"
+# include "mriUtils.h"
+# include "mriCell.h"
+# include "mriCellMaterial.h"
+# include "mriTypes.h"
+# include "mriExpansion.h"
+# include "mriThresholdCriteria.h"
+# include "mriImagedata.h"
+# include "mriConstants.h"
+# include "mriVolData.h"
+# include "mriException.h"
+# include "schMessages.h"
+# include "mriSamplingOptions.h"
+# include "mriStreamline.h"
+# include "mriStreamlineOptions.h"
+# include "mriOutput.h"
+# include "mriTopology.h"
 
-#include "mriOptions.h"
-#include "mriCommunicator.h"
+# include "mriOptions.h"
+# include "mriCommunicator.h"
 
 class MRIScan;
 class MRICommunicator;
@@ -40,15 +41,8 @@ class MRIScan{
     // ============
     // DATA MEMBERS
     // ============
-    // Domain Dimension
-    double domainSizeMin[3];
-    double domainSizeMax[3];
-    // Envelope Velocities
-    double maxVelModule;
-    // Velocities And Concentrations for all Measure Points
-    int totalCellPoints;
-    vector<MRICell> cellPoints;
-    MRIIntVec mriCellTags;
+    vector<MRICell> cells;
+    MRIIntVec       cellTags;
     // Output Quantities
     vector<MRIOutput> outputs;
     // Utility Functions
@@ -56,8 +50,12 @@ class MRIScan{
     bool hasRelativePressure;
     bool hasReynoldsStress;
     double scanTime;
+    double maxVelModule;
     // MRI Expansion
     MRIExpansion* expansion;
+
+    // POINTER TO A TOPOLOGY 
+    MRITopology* topology;
 
     // ================
     // MEMBER FUNCTIONS
@@ -73,50 +71,39 @@ class MRIScan{
     std::string WriteStatistics();
     int GetTotalFaces();
 
-    void CreateGridFromVTKStructuredPoints(vtkStructuredPointsOptionRecord opts);
-  
     // ==============
     // READ FUNCTIONS
     // ==============
-    void ReadVTKStructuredPoints(std::string vtkFileName, bool DoReorderCells);
-    void ReadPltFile(std::string PltFileName, bool DoReorderCells);
-    void ReadScanFromVOLFiles(std::string fileNameAn, std::string fileNameX, std::string fileNameY, std::string fileNameZ);
-    void ReadScanFromSingleVOLFile(std::string fileName);
-    void ReadFromExpansionFile(std::string fileName,bool applyThreshold,int thresholdType,double thresholdValue);
+    void createGridFromVTKStructuredPoints(vtkStructuredPointsOptionRecord opts);
+    void readVTKStructuredPoints(std::string vtkFileName, bool DoReorderCells);
+    void readPLTFile(std::string PltFileName, bool DoReorderCells);
+    void readFromExpansionFile(std::string fileName,bool applyThreshold,int thresholdType,double thresholdValue);
 
     // ==================
     // READ FROM RAW DATA
     // ==================
-    void ReadRAWFileSequence(std::string fileListName);
-    int  ReadRawImage(std::string FileName, MRIImageData &data);
+    void readRAWFileSequence(std::string fileListName);
+    int  readRawImage(std::string FileName, MRIImageData &data);
 	
     // ===============
     // WRITE FUNCTIONS
     // ===============
-    void FillPLTHeader(std::vector<std::string> &pltHeader, bool isFirstFile);
-    void ExportToLSDYNA(std::string LSFileName);
-    void ExportToCSV(std::string FileName);
-    void ExportNodesToFile(std::string FileName);
-    void FlushToFile(std::string FileName);
-    void ExportVelocitiesToFile(std::string fileName, bool append);
+    void fillPLTHeader(std::vector<std::string> &pltHeader, bool isFirstFile);
+    void exportToLSDYNA(std::string LSFileName, double scale);
+    void exportToCSV(std::string FileName);
+    void exportNodesToFile(std::string FileName);
+    void flushToFile(std::string FileName);
+    void exportVelocitiesToFile(std::string fileName, bool append);
     // VIRTUAL
-    void ExportToVOL(std::string FileName);
-    void ExportToTECPLOT(std::string FileName, bool isFirstFile);
-    void ExportToVTK(std::string fileName, MRIThresholdCriteria* threshold);
-    void WriteExpansionFile(std::string fileName);
+    void exportToVOL(std::string FileName);
+    void exportToTECPLOT(std::string FileName, bool isFirstFile);
+    void exportToVTK(std::string fileName, MRIThresholdCriteria* threshold);
+    void writeExpansionFile(std::string fileName);
     // Export to Poisson Solver Only element with significant concentration
-    void ExportForDistancing(string inputFileName, MRIThresholdCriteria* threshold);
-    void ExportForPoisson(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold, const MRIDoubleMat& timeDerivs,
+    void exportForDistancing(string inputFileName, MRIThresholdCriteria* threshold);
+    void exportForPoisson(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold, const MRIDoubleMat& timeDerivs,
                                   bool PPE_IncludeAccelerationTerm,bool PPE_IncludeAdvectionTerm,bool PPE_IncludeDiffusionTerm,bool PPE_IncludeReynoldsTerm,
                                   bool readMuTFromFile, string muTFile, double smagorinskyCoeff);
-
-    // ========
-    // VOL DATA
-    // ========
-    int  ReadBinVolFile(std::string FileName,MRIVolData & VolData);
-    bool ValidateVOLBinData(MRIVolData &VolDataAn, MRIVolData &VolDataX, MRIVolData &VolDataY, MRIVolData &VolDataZ);
-    void FormGlobadDataFromVOL(MRIVolData &VolDataAn, MRIVolData &VolDataX, MRIVolData &VolDataY, MRIVolData &VolDataZ);
-    void CreateVolDataRecord(int volDataType, MRIVolData &VolData);
 
     // ========
     // TOPOLOGY
@@ -131,58 +118,60 @@ class MRIScan{
     // VOLUME
     double evalCellVolume(int cellNumber);
     // OTHER
-    int GetCellFaceID(int CellId,int FaceId);
+    int  getCellFaceID(int CellId,int FaceId);
     bool hasUniformSpacing();
+    // NORMALS
+    void getExternalFaceNormal(int cellID, int localFaceID, double* extNormal);
 
     // =============================
     // TRANSFORMATIONS AND THRESHOLD
     // =============================
-    void Crop(double* limitBox);
-    void ScaleVelocities(double factor);
-    void ScalePositions(double factor);
+    void crop(const MRIDoubleVec& limitBox);
+    void scaleVelocities(double factor);
+    void scalePositions(double factor);
 
     // ==========================================
     // RECONSTRUCTION FROM EXPANSION COEFFICIENTS
     // ==========================================
-    void RebuildFromExpansion(MRIExpansion* expansion,bool useConstantFlux);
+    void rebuildFromExpansion(MRIExpansion* expansion,bool useConstantFlux);
 
     // ===============================
     // RECONSTRUCTION FROM FACE FLUXES
     // ==============================
-    void RebuildFromFaceFluxes(double* faceFluxes);
+    void rebuildFromFaceFluxes(double* faceFluxes);
 
     // Reorder Cells    
-    void ReorderCells(std::vector<int> Perm);
+    void reorderCells(std::vector<int> Perm);
     // Get Global Permutation
-    void GetGlobalPermutation(std::vector<int> &GlobalPerm);
+    void getGlobalPermutation(std::vector<int> &GlobalPerm);
     // REORDER GLOBAL SCAN
-    void ReorderScan();
+    void reorderScan();
 
     // MAPPING FUNCTIONS
     // Get Cell Number From Coords
-    int  GetCellNumber(double* coords);
-    void GetCartesianNeighbourCells(int CurrentCell, std::vector<int> &coords, bool addself);
-    void GetStructuredNeighbourCells(int centreCell,int order,MRIThresholdCriteria* threshold,MRIIntVec& cellNeighbors);
+    int  getCellNumber(double* coords);
+    void getCartesianNeighbourCells(int CurrentCell, std::vector<int> &coords, bool addself);
+    void getStructuredNeighbourCells(int centreCell,int order, MRIThresholdCriteria* threshold, MRIIntVec& cellNeighbors);
     bool isCompatibleWith(MRIScan* secondScan);
     // Get Face from Cell Vector
-    int  GetFacewithCellVector(int CurrentCell, double *UnitVector);
+    int  getFacewithCellVector(int CurrentCell, double *UnitVector);
     // Get Adjacency Face
-    int  GetAdjacentFace(int GlobalNodeNumber, int AdjType);
+    int  getAdjacentFace(int GlobalNodeNumber, int AdjType);
     // Get Unit Vector From Current Cell To Face Centre
-    void GetGlobalCoords(int DimNumber, int SliceNumber, double FaceCoord1, double FaceCoord2, double* &globalCoords);
-    int  FaceLocaltoGlobal(int LocalFace,int DimNumber,int SliceNumber);
+    void getGlobalCoords(int DimNumber, int SliceNumber, double FaceCoord1, double FaceCoord2, MRIDoubleVec& globalCoords);
+    int  faceLocaltoGlobal(int LocalFace, int DimNumber, int SliceNumber);
 
     // Sequential Index to Integer Coords
-    void MapIndexToCoords(int index, int* intCoords);
-    void MapIndexToAuxNodeCoords(int index, int* intCoords);
-    int  MapCoordsToIndex(int i, int j, int k);
+    void mapIndexToCoords(int index, MRIIntVec& intCoords);
+    void mapIndexToAuxNodeCoords(int index, MRIIntVec& intCoords);
+    int  mapCoordsToIndex(int i, int j, int k);
 
     // Map Integer Coords to Position
-    void MapCoordsToPosition(int* coords, bool addMeshMinima, double* pos);
-    void MapAuxCoordsToPosition(int* auxCoords, double* pos);
-    void GetLocalStarFaces(int StarNum, int CellsX, int CellsY, int &BottomFace, int &TopFace, int &LeftFace, int &RightFace);
-    int  findFirstNotVisited(int cellTotal, bool* visitedCell, std::vector<int> cellStack);
-    void formNotVisitedList(int cellTotal, bool* visitedCell,std::vector<bool>& notVisitedList);
+    void mapCoordsToPosition(int* coords, bool addMeshMinima, double* pos);
+    void mapAuxCoordsToPosition(int* auxCoords, double* pos);
+    void getLocalStarFaces(int StarNum, int CellsX, int CellsY, int &BottomFace, int &TopFace, int &LeftFace, int &RightFace);
+    int  findFirstNotVisited(int cellTotal, bool* visitedCell, MRIIntVec cellStack);
+    void formNotVisitedList(int cellTotal, const MRIBoolVec& visitedCell, MRIBoolVec& notVisitedList);
 
     // Map cell vector to face vector
     void cellToFace(bool deleteWalls, MRIThresholdCriteria* thresholdCriteria,MRIDoubleMat cellVec, MRIDoubleVec &faceVec);
@@ -192,132 +181,135 @@ class MRIScan{
     // =========
     // MP FILTER
     // =========
-    int    GetTotalBasisNumber();
+    int    getTotalBasisNumber();
     void   applySMPFilter(MRIOptions* options, bool isBC, MRICommunicator* comm);
-    void   AssembleResidualVector(bool useBCFilter, MRIThresholdCriteria* thresholdCriteria, int &totalFaces, double* &ResVec, double* &filteredVec, double &resNorm);
-    void   AssembleConstantPattern(int currentDim, int &totalConstantFaces, std::vector<int> &facesID, std::vector<double> &facesCoeffs);
-    void   AssembleConstantPatternMPI(int currentDim, int &totalConstantFacesOnProc,
+    void   assembleResidualVector(bool useBCFilter, MRIThresholdCriteria* thresholdCriteria, int &totalFaces, double* &ResVec, double* &filteredVec, double &resNorm);
+    void   assembleConstantPattern(int currentDim, int &totalConstantFaces, std::vector<int> &facesID, std::vector<double> &facesCoeffs);
+    void   assembleConstantPatternMPI(int currentDim, int &totalConstantFacesOnProc,
                                               std::vector<int> &facesIDOnProc, std::vector<double> &facesCoeffsOnProc,
                                               int minFaceOnProc, int maxFaceOnProc,MRICommunicator* comm);
-    void   AssembleStarShape(int vortexNumber, int &totalFaces,std::vector<int> &facesID,std::vector<double> &facesCoeffs);
-    double EvalMaxDivergence(double* filteredVec);
-    void   RecoverGlobalErrorEstimates(double& AvNormError, double& AvAngleError);
-    void   ExpandStarShape(int totalStarFaces, int* facesID, double* facesCoeffs, double* &fullStarVector);
-    void   RecoverCellVelocitiesRT0(bool useBCFilter, double* filteredVec);
-    void   ReconstructFromExpansion();
+    void   assembleStarShape(int vortexNumber, int &totalFaces,std::vector<int> &facesID,std::vector<double> &facesCoeffs);
+    double evalMaxDivergence(double* filteredVec);
+    void   recoverGlobalErrorEstimates(double& AvNormError, double& AvAngleError);
+    void   expandStarShape(int totalStarFaces, int* facesID, double* facesCoeffs, double* &fullStarVector);
+    void   recoverCellVelocitiesRT0(bool useBCFilter, double* filteredVec);
+    void   reconstructFromExpansion();
     void   getDimensionSliceStarFromVortex(int vortexNumber,int &dimNumber,int &sliceNumber,int &starNumber);
     
     // FILTER MATRICES
-    void AssembleEncodingMatrix(int &totalFaces, int &totalBasis, double** &Mat);
-    void AssembleDecodingMatrix(int &totalFaces, int &totalBasis, double** &Mat);
-    void AssembleStarMatrix(int &totalFaces, int &totalBasis, double** &Matrix);
+    void   assembleEncodingMatrix(int &totalFaces, int &totalBasis, double** &Mat);
+    void   assembleDecodingMatrix(int &totalFaces, int &totalBasis, double** &Mat);
+    void   assembleStarMatrix(int &totalFaces, int &totalBasis, double** &Matrix);
       
     // ==============
     // INFO FUNCTIONS
     // ==============
-    double EvalAverageVelocityMod();
+    double evalAverageVelocityMod();
     void   evalCellAreas(int cellNumber,double* Areas);
     int    getTotalAuxNodes();
-    int    EvalTotalVortex();
+    int    evalTotalVortex();
     int    getTotalFaces();
 
     // CELL SAMPLING
-    void SampleVelocities(MRISamplingOptions SamplingOptions);
+    void sampleVelocities(MRISamplingOptions SamplingOptions, MRIIntVec& bins);
 
     // GRADIENTS AND DERIVATIVES
-    void EvalSpaceDerivs(int currentCell, MRIThresholdCriteria* threshold, double** firstDerivs, double** secondDerivs);
-    void EvalSpaceGradient(int currentCell,int qtyID, double* gradient);
-    void ComputeQuantityGradient(int qtyID);
+    void evalSpaceDerivs(int currentCell, MRIThresholdCriteria* threshold, MRIDoubleMat& firstDerivs, MRIDoubleMat& secondDerivs);
+    void evalSpaceGradient(int currentCell,int qtyID, double* gradient);
+    void computeQuantityGradient(int qtyID);
 
     // DIVERGENCE
     MRIDoubleVec evalCellDivergences(MRIDoubleVec faceVec);
   
     // PRESSURE COMPUTATION
-    void EvalRelativePressure(int startingCell, double refPressure);
-    void PerformPressureIterations();
+    void evalRelativePressure(int startingCell, double refPressure);
+    void performPressureIterations();
+
     // Others
-    void EvalPressureIterative(int currentCell, double currentValue, bool* visitedCell,int* otherCells, std::vector<int> &cellStack,int& cellCount);
-    bool AreThereNotVisitedNeighbor(int cell, bool* visitedCell);
-    bool AreThereVisitedNeighbor(int cell, bool* visitedCell, bool* isBoundaryCell, int &visitedNeighbor);
-    int  GetCellFromStack(std::vector<int> &cellStack, bool* visitedCell, bool* isBoundaryCell, bool &finished, bool& secondStage);
-    int  GetNextStartingCell(int currentCell, bool* visitedCell, bool* isBoundaryCell, bool &finished, int &bookmark);
-    int EvalCentralCell();
-    int SolvePoissonEquation(MRICommunicator* comm);
+    void evalPressureIterative(int currentCell, double currentValue, bool* visitedCell,int* otherCells, std::vector<int> &cellStack,int& cellCount);
+    bool areThereNotVisitedNeighbor(int cell, bool* visitedCell);
+    bool areThereVisitedNeighbor(int cell, bool* visitedCell, bool* isBoundaryCell, int &visitedNeighbor);
+    int  getCellFromStack(std::vector<int> &cellStack, bool* visitedCell, bool* isBoundaryCell, bool &finished, bool& secondStage);
+    int  getNextStartingCell(int currentCell, bool* visitedCell, bool* isBoundaryCell, bool &finished, int &bookmark);
+    int  evalCentralCell();
 
     // REYNOLDS STRESS COMPUTATION    
-    void EvalReynoldsStressGradient(int currentCell, double** ReynoldsStressGradient);
+    void evalReynoldsStress(MRIThresholdCriteria* threshold);
+    void evalReynoldsStressGradient(int currentCell, MRIDoubleMat& ReynoldsStressGradient);
     void evalPradtlTurbViscosity(MRIDoubleMat cellDistance, MRIThresholdCriteria* threshold, double density, MRIDoubleMat& turbViscosity);
     void evalSmagorinskyLillyTurbViscosity(double density, double smagorinskyCoeff, MRIThresholdCriteria* threshold, MRIDoubleMat& turbViscosity);
+    void evalEddyViscosity_simple(MRIDoubleVec& nuT);
+    void evalTurbulentKineticEnergy(MRIThresholdCriteria* threshold, MRIDoubleVec& turbK);
     
     // APPLY SMOOTHING FILTER - LAVISION
-    void ApplySmoothingFilter();
-    void ApplyMedianFilter(int qtyID,int maxIt,int order,int filterType,MRIThresholdCriteria* threshold);
+    void applySmoothingFilter();
+    void applyMedianFilter(int qtyID,int maxIt,int order,int filterType,MRIThresholdCriteria* threshold);
 
     // THRESHOLD
-    void ThresholdQuantity(int qtyID,double threshold);
-    void EvalNoisyPressureGradientPoints();
+    void thresholdQuantity(int qtyID,double threshold);
+    void evalNoisyPressureGradientPoints();
   
     // SAMPLE FLOWS
-    void CreateSampleCase(MRISamples sampleType, vector<double> params);
-    void AssignVelocitySignature(MRIDirection dir, MRISamples sample, double currTime);
-    void AssignConstantSignature(MRIDirection dir);
-    void AssignStagnationFlowSignature(MRIDirection dir);
-    void AssignPoiseilleSignature(MRIDirection dir);
-    void AssignCylindricalFlowSignature(MRIDirection dir);
-    void AssignSphericalFlowSignature(MRIDirection dir);
-    void AssignToroidalVortexFlowSignature();
-    void AssignTimeDependentPoiseilleSignature(double omega, double radius, double viscosity, double currtime, double maxVel);
-    void AssignConstantFlowWithStep();
-    void AssignTaylorVortexSignature(MRIDirection dir);
-    void AssignRandomStandardGaussianFlow();
-    void AssignRandomComponent(const int kdirX,stdRndGenerator &generator);
-    void AssignZeroVelocities();
+    void createSampleCase(MRISamples sampleType, vector<double> params);
+    void assignVelocitySignature(MRIDirection dir, MRISamples sample, double currTime);
+    void assignConstantSignature(MRIDirection dir);
+    void assignStagnationFlowSignature(MRIDirection dir);
+    void assignPoiseilleSignature(MRIDirection dir);
+    void assignCylindricalFlowSignature(MRIDirection dir);
+    void assignSphericalFlowSignature(MRIDirection dir);
+    void assignToroidalVortexFlowSignature();
+    void assignTimeDependentPoiseilleSignature(double omega, double radius, double viscosity, double currtime, double maxVel);
+    void assignConstantFlowWithStep();
+    void assignTaylorVortexSignature(MRIDirection dir);
+    void assignRandomStandardGaussianFlow();
+    void assignRandomComponent(const int kdirX,stdRndGenerator &generator);
+    void assignZeroVelocities();
 
     // VORTEX IDENTIFICATION
-    void   EvalCellVelocityGradientDecomposition(int currentCell, double** deformation, double** rotation, double** firstDerivs);
-    double EvalCellQCriterion(int currentCell, double** deformation, double** rotation);
-    double EvalCellL2Criterion(int currentCell, double** deformation, double** rotation);
-    double EvalCellDeltaCriterion(int currentCell, double** deformation, double** rotation, double** velGradient);
-    double EvalCellVortexCriteria(int currentCell,int criteriaType, double** deformation, double** rotation, double** velGradient);
-    void   EvalVortexCriteria(MRIThresholdCriteria* threshold);
-    void   EvalVorticity(MRIThresholdCriteria* threshold);
-    void   EvalEnstrophy(MRIThresholdCriteria* threshold);
-    void   EvalSMPVortexCriteria(MRIExpansion* exp);
+    void   evalCellVelocityGradientDecomposition(int currentCell, double** deformation, double** rotation, double** firstDerivs);
+    double evalCellQCriterion(int currentCell, double** deformation, double** rotation);
+    double evalCellL2Criterion(int currentCell, double** deformation, double** rotation);
+    double evalCellDeltaCriterion(int currentCell, double** deformation, double** rotation, double** velGradient);
+    double evalCellVortexCriteria(int currentCell,int criteriaType, double** deformation, double** rotation, double** velGradient);
+    void   evalVortexCriteria(MRIThresholdCriteria* threshold);
+    void   evalVorticity(MRIThresholdCriteria* threshold);
+    void   evalEnstrophy(MRIThresholdCriteria* threshold);
+    void   evalSMPVortexCriteria(MRIExpansion* exp);
 
     // SPATIAL REPRESENTATION OF VORTEX COEFFICIENTS
-    double EvalVortexCriteria(MRIExpansion* exp);
+    double evalVortexCriteria(MRIExpansion* exp);
     void   getNeighborVortexes(int cellNumber,int dim, MRIIntVec& idx);
     
     // ADD GAUSSIAN NOISE
-    void ApplyGaussianNoise(double stDev);
+    void applyGaussianNoise(double stDev);
     
     // TESTING FUNCTIONALITIES
-    void TestScanAdjacency(std::string fileName);
+    void testScanAdjacency(std::string fileName);
     
    // STREAMLINES UTILITIES 
-   void ComputeStreamlines(std::string outName, MRIStreamlineOptions &options, std::vector<MRIStreamline*> &streamlines);
-   void PerformVelocityLinearInterpolation(double* coords, int CurrentCell, int xCell, int yCell, int zCell, double* &velocity);
-   void GetPointVelocity(double xCoord, double yCoord, double zCoord, double* &pointVel);
-   void EvalSingleStreamLine(double* start, MRIStreamlineOptions &options, MRIStreamline* &sL);
-   void EvalSLTransverseDiffusionWithSpace(int totalSL, std::vector<MRIStreamline*> &streamlines, MRIDirection dir, double minCoord, double maxCoord, int totalSteps, std::vector<double> &space, std::vector<double> &crossDeviations);
-   void EvalStreamLineStatistics(std::string outName, MRIDirection dir, MRIStreamlineOptions &options, std::vector<MRIStreamline*> &streamlines);
-   void EvalSLArrivalPointDistribution(int totalSL, std::vector<MRIStreamline*> &streamlines, MRIDirection dir, double minCoord, double maxCoord, int totalSlices, std::vector<double> &sliceCenter, std::vector<double> &sliceNormArrivals);
+   void computeStreamlines(std::string outName, MRIStreamlineOptions &options, std::vector<MRIStreamline*> &streamlines);
+   void performVelocityLinearInterpolation(double* coords, int CurrentCell, int xCell, int yCell, int zCell, double* &velocity);
+   void getPointVelocity(double xCoord, double yCoord, double zCoord, double* &pointVel);
+   void evalSingleStreamLine(double* start, MRIStreamlineOptions &options, MRIStreamline* &sL);
+   void evalSLTransverseDiffusionWithSpace(int totalSL, std::vector<MRIStreamline*> &streamlines, MRIDirection dir, double minCoord, double maxCoord, int totalSteps, std::vector<double> &space, std::vector<double> &crossDeviations);
+   void evalStreamLineStatistics(std::string outName, MRIDirection dir, MRIStreamlineOptions &options, std::vector<MRIStreamline*> &streamlines);
+   void evalSLArrivalPointDistribution(int totalSL, std::vector<MRIStreamline*> &streamlines, MRIDirection dir, double minCoord, double maxCoord, int totalSlices, std::vector<double> &sliceCenter, std::vector<double> &sliceNormArrivals);
 
    // COMPARISON BETWEEN SCANS
-   double GetDiffNorm(MRIScan* otherScan);
+   double getDiffNorm(MRIScan* otherScan);
 
    void buildMetisConnectivities(int *eptr,int *eind);
 
    // MESSAGE PASSING
    void formVortexList(int totVortex,int* minFace,int* maxFace,MRIIntVec& innerVortexList,MRIIntVec& boundaryVortexList,MRICommunicator* comm);
    void passScanData(MRICommunicator* comm);
-   void DistributeScanData(MRICommunicator* comm);
+   void distributeScanData(MRICommunicator* comm);
 
    // BOUNDARY CLEANING
    void cleanNormalComponentOnBoundary(MRIThresholdCriteria* threshold);
-   void InterpolateBoundaryVelocities(MRIThresholdCriteria* threshold);
+   void interpolateBoundaryVelocities(MRIThresholdCriteria* threshold);
    void projectCellVelocity(int cell,double* normal);
-   int getOppositeCell(int cell, double* normal);
+   int  getOppositeCell(int cell, double* normal);
    void tagByNeighbour(int tag,int* cellTags, bool* isTaggable,int startingCell);
    bool hasUntaggedNeighbours(int cell,int* cellTags, bool* isTaggable);
    void setWallFluxesToZero(bool* isFaceOnWalls, MRIDoubleVec& poissonSourceFaceVec);

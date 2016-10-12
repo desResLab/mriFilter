@@ -2,14 +2,17 @@
 #define MRITYPES_H
 
 # include <vector>
+# include <string>
+
+using namespace std;
 
 // ARRAYS
-typedef std::vector< std::vector<double> > MRIDoubleMat;
-typedef std::vector<double> MRIDoubleVec;
-typedef std::vector< std::vector<int> > MRIIntMat;
-typedef std::vector<int> MRIIntVec;
-typedef std::vector<bool> MRIBoolVec;
-typedef std::vector<std::string> MRIStringVec;
+typedef vector< vector<double> > MRIDoubleMat;
+typedef vector<double> MRIDoubleVec;
+typedef vector< vector<int> > MRIIntMat;
+typedef vector<int> MRIIntVec;
+typedef vector<bool> MRIBoolVec;
+typedef vector< string > MRIStringVec;
 
 // RELATIVE POSITION BETWEEN EDGE AND FACE
 enum EdgeFacePositionType{ptTop,ptBottom,ptLeft,ptRight};
@@ -58,7 +61,6 @@ struct vtkStructuredPointsOptionRecord{
   MRIIntVec dataBlockType;
   MRIBoolVec dataBlockRead;
 };
-
 
 #endif // MRITYPES_H
 

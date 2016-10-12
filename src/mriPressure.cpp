@@ -243,7 +243,7 @@ void MRISequence::EvalScanReynoldsStressDerivs(int currentScan,MRIDoubleMat& rey
 // ==========================================
 // EVAL FIRST AND SECOND DERIVATIVES IN SPACE
 // ==========================================
-void MRIStructuredScan::EvalSpaceDerivs(int currentCell, MRIThresholdCriteria* threshold, double** firstDerivs, double** secondDerivs){
+void MRIStructuredScan::EvalSpaceDerivs(int currentCell, MRIThresholdCriteria* threshold, MRIDoubleMat& firstDerivs, MRIDoubleMat& secondDerivs){
   // FirstDerivs
   // DVX/DX DVY/DX DVZ/DX
   // DVX/DY DVY/DY DVZ/DY
@@ -681,119 +681,6 @@ int getReynoldsStressIndex(int loopA,int loopB){
   }
   return result;
 }
-
-// ==============================
-// EVAL REYNOLDS STRESS GRADIENTS
-// ==============================
-void MRIStructuredScan::EvalReynoldsStressGradient(int currentCell, double** ReynoldsStressGradient){
-  // FirstDerivs
-  // DRXX/DX DRYX/DX DRZX/DX
-  // DRXY/DY DRYY/DY DRZY/DY
-  // DRXZ/DZ DRYZ/DZ DRZZ/DZ
-  // Map Index To Coords
-  int* currentCellCoords = new int[kNumberOfDimensions];
-  MapIndexToCoords(currentCell,currentCellCoords);
-  int firstCell,secondCell;
-  // Assemble Terms
-  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
-    switch(loopA){
-      case 0:
-        // X Deriv
-        if((currentCellCoords[0]-1)<0){
-          firstCell = -1;
-        }else{
-          firstCell = MapCoordsToIndex(currentCellCoords[0]-1,currentCellCoords[1],currentCellCoords[2]);
-        }
-        if((currentCellCoords[0]+1)>(cellTotals[0]-1)){
-          secondCell = -1;
-        }else{
-          secondCell = MapCoordsToIndex(currentCellCoords[0]+1,currentCellCoords[1],currentCellCoords[2]);
-        }
-        break;
-      case 1:
-        // Y Deriv
-        if((currentCellCoords[1]-1)<0){
-          firstCell = -1;
-        }else{
-          firstCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1]-1,currentCellCoords[2]);
-        }
-        if((currentCellCoords[1]+1)>(cellTotals[1]-1)){
-          secondCell = -1;
-        }else{
-          secondCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1]+1,currentCellCoords[2]);
-        }
-        break;
-      case 2:
-        // Z Deriv
-        if((currentCellCoords[2]-1)<0){
-          firstCell = -1;
-        }else{
-          firstCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1],currentCellCoords[2]-1);
-        }
-        if((currentCellCoords[2]+1)>(cellTotals[2]-1)){
-          secondCell = -1;
-        }else{
-          secondCell = MapCoordsToIndex(currentCellCoords[0],currentCellCoords[1],currentCellCoords[2]+1);
-        }
-        break;
-    }
-
-    // Get Deltas
-    double deltaMinus = 0.0;
-    double deltaPlus = 0.0;
-    if(firstCell>-1){
-      deltaMinus = 0.5*(cellLengths[loopA][currentCellCoords[loopA]] + cellLengths[loopA][currentCellCoords[loopA]-1]);
-    }else{
-      deltaMinus = 0.0;
-    }
-    if(secondCell>-1){
-      deltaPlus = 0.5*(cellLengths[loopA][currentCellCoords[loopA]] + cellLengths[loopA][currentCellCoords[loopA]+1]);
-    }else{
-      deltaPlus = 0.0;
-    }
-
-    // Eval Cell Distance for Coordinate LoopA
-    double firstVComponent = 0.0;
-    double secondVComponent = 0.0;
-    double currentVComponent = 0.0;
-    for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
-      int ReStressIndex = getReynoldsStressIndex(loopA,loopB);
-      // First Component
-      if(firstCell>-1){
-        firstVComponent = cellPoints[firstCell].ReStress[ReStressIndex];
-      }else{
-        firstVComponent = 0.0;
-      }
-      // Second Component
-      if(secondCell>-1){
-        secondVComponent = cellPoints[secondCell].ReStress[ReStressIndex];
-      }else{
-        secondVComponent = 0.0;
-      }
-      // Current Component
-      currentVComponent = cellPoints[currentCell].ReStress[ReStressIndex];
-
-      // FIRST DERIVS
-      if(firstCell<0){
-        // Simple Euler Formula
-        ReynoldsStressGradient[loopA][loopB] = (secondVComponent-currentVComponent)/(deltaPlus);
-      }else if (secondCell<0){
-        // Simple Euler Formula
-        ReynoldsStressGradient[loopA][loopB] = (currentVComponent-firstVComponent)/(deltaMinus);
-      }else if((firstCell>-1)&&(secondCell>-1)){
-        // Central Difference Formula
-        ReynoldsStressGradient[loopA][loopB] = (secondVComponent-firstVComponent)/(deltaPlus + deltaMinus);
-      }else{
-        // Show Error Message
-        throw MRIPressureComputationException("Error: Both First and Second Cells are Zero in EvalFirstSpaceDerivs");
-      }
-
-    }
-  }
-  // Deallocate
-  delete [] currentCellCoords;
-}
-
 
 // Print The Derivatives
 void PrintDerivatives(double** firstDerivs, double** secondDerivs){

@@ -12,29 +12,13 @@ class MRICommunicator;
 
 class MRISequence{
   public:
-    int totalScans;
+    int                   totalScans;
     std::vector<MRIScan*> sequence;
-    std::string* fileNames;
-    bool isCyclic;
+    std::string*          fileNames;
+    bool                  isCyclic;
 
     // TOPOLOGY COMMON TO EVERY SCAN
-    // Cells Totals
-    MRIIntVec cellTotals;
-    MRIDoubleMat cellLengths;
-    // Cells Topology
-    MRIIntMat cellConnections;
-    MRIIntMat cellFaces;
-    // Face Topology
-    MRIIntMat faceCells;
-    MRIIntMat faceConnections;
-    MRIIntMat faceEdges;
-    MRIDoubleVec faceArea;
-    MRIDoubleMat faceNormal;
-    // Edge Topology
-    MRIIntMat edgeConnections;
-    MRIIntMat edgeFaces;
-    // Auxiliary
-    MRIDoubleMat auxNodesCoords;
+    MRITopology* topology;
 
     // Constructor and
     MRISequence(bool cyclic);
@@ -42,6 +26,7 @@ class MRISequence{
     MRISequence(MRISequence* copySequence);
     // Destructor
     ~MRISequence();
+    
     // ================
     // MEMBER FUNCTIONS
     // ================
@@ -65,10 +50,28 @@ class MRISequence{
                           bool readMuTFromFile, string muTFile, double smagorinskyCoeff);
 
     // SAVE QUANTITIES TO OUTPUTS
-    void saveVelocity();
+    void   saveVelocity();
+    double getVelocityNormAtCell(int cell);
 
-    // CREATE TOPOLOGY
+    // TOPOLOGY AND MAPPING
     void CreateTopology();
+    bool isInnerCell(int cell);
+    void getCartesianNeighbourCells(int CurrentCell,MRIIntVec& cellNeighbors, bool addself);
+    void getUnitVector(int CurrentCell, const MRIDoubleVec& GlobalFaceCoords, MRIDoubleVec& myVect);
+    void getGlobalCoords(int DimNumber, int SliceNumber, double FaceCoord1, double FaceCoord2, MRIDoubleVec& globalCoords);
+    int  getCellNumber(const MRIDoubleVec& coords);
+    void getGlobalPermutation(MRIIntVec& GlobalPerm);
+    int  getAdjacentFace(int globalNodeNumber, int AdjType);
+    void getNeighborVortexes(int cellNumber,int dim,MRIIntVec& idx);
+    void getEdgeDirection(int edgeID, double* edgeDirVector);
+    void getAuxNodeCoordinates(int nodeNum, MRIDoubleVec& pos);
+    // MAPPING 
+    void mapIndexToCoords(int index, MRIIntVec& intCoords);
+    int  mapCoordsToIndex(int i, int j, int k);
+    void mapCoordsToPosition(const MRIIntVec& coords, bool addMeshMinima, MRIDoubleVec& pos);
+    void mapIndexToAuxNodeCoords(int index, MRIIntVec& intCoords);
+    void mapAuxCoordsToPosition(const MRIIntVec& auxCoords, MRIDoubleVec& pos);
+
     
     // DIV FREE Filtering
     void ApplySMPFilter(MRIOptions* options, bool isBC, MRICommunicator* comm);

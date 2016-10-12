@@ -1,10 +1,9 @@
 #include "mriSamplingOptions.h"
 
-MRISamplingOptions::MRISamplingOptions()
-{
+MRISamplingOptions::MRISamplingOptions(){
+  limitBox.resize(6);
 }
 
-MRISamplingOptions::~MRISamplingOptions()
-{
+MRISamplingOptions::~MRISamplingOptions(){
 }
 

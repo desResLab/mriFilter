@@ -5,7 +5,6 @@ class MRICell{
   public:
     double concentration;
     double velocity[3];
-    double position[3];
     double auxVector[3];
     double ReStress[6];
     double pressGrad[3];
