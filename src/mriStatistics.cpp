@@ -1,17 +1,12 @@
-#ifndef MRISTATISTICS_H
-#define MRISTATISTICS_H
+# include "mriException.h"
+# include "mriScan.h"
+# include "mriSequence.h"
+# include "mriSequence.h"
 
-#include "mriException.h"
-#include "mriScan.h"
-#include "mriSequence.h"
-
-namespace MRIStatistics
-{
-
-void NormalizeBinArray(int size, double* binArray,double currInterval){
+void normalizeBinArray(MRIDoubleVec& binArray,double currInterval){
   double sum = 0.0;
   // Compute Summation
-  for(int loopA=0;loopA<size;loopA++){
+  for(int loopA=0;loopA<binArray.size();loopA++){
     sum += binArray[loopA];
   }
   // Exit if zero sum
@@ -19,13 +14,13 @@ void NormalizeBinArray(int size, double* binArray,double currInterval){
     return;
   }
   // Normalize
-  for(int loopA=0;loopA<size;loopA++){
+  for(int loopA=0;loopA<binArray.size();loopA++){
     binArray[loopA] /= (sum*currInterval);
   }  
 }
 
 // Assign to BIN
-void AssignToBin(double currValue, int numberOfBins, double* binMin, double* binMax, double* binArray){
+void assignToBin(double currValue, int numberOfBins, const MRIDoubleVec& binMin, const MRIDoubleVec& binMax, MRIDoubleVec& binArray){
   bool found = false;
   int count = 0;
   bool isMoreThanMin = false;
@@ -51,12 +46,12 @@ void AssignToBin(double currValue, int numberOfBins, double* binMin, double* bin
     // Increase Bin Count
     binArray[count] = binArray[count] + 1.0;
   }else{
-    throw MRIStatisticsException("Error: Value Cannot fit in Bin.\n");
+    throw MRIException("Error: Value Cannot fit in Bin.\n");
   } 
 }
 
 // FORM BIN LIMITS FOR SINGLE SCAN
-void FormBinLimits(MRIScan* scan, int pdfQuantity, double &currInterval, double* limitBox, int numberOfBins, double* binMin, double* binMax, double* binCenter){
+void MRIScan::formBinLimits(int pdfQuantity, double& currInterval, const MRIDoubleVec& limitBox, int numberOfBins, MRIDoubleVec& binMin, MRIDoubleVec& binMax, MRIDoubleVec& binCenter){
     // Initialize Limits
   double  minRange = std::numeric_limits<double>::max();
   double  maxRange = -std::numeric_limits<double>::max();
@@ -64,13 +59,13 @@ void FormBinLimits(MRIScan* scan, int pdfQuantity, double &currInterval, double*
   double  otherQuantity = 0.0;
   double  refQuantity = 0.0;
   double  currValue = 0.0;
-  for(int loopA=0;loopA<scan->totalCellPoints;loopA++){
+  for(int loopA=0;loopA<topology->totalCells;loopA++){
     // Get Cell Coords
-    cellCoord = scan->cellPoints[loopA].position;
+    cellCoord = topology->cells[loopA].position;
     // Get quantity
-    currValue = scan->cellPoints[loopA].getQuantity(pdfQuantity);
+    currValue = topology->cells[loopA].getQuantity(pdfQuantity);
     // Check If Within the Bin 
-    if (MRIUtils::IsPointInsideBox(cellCoord[0],cellCoord[1],cellCoord[2],limitBox)){
+    if (MRIUtils::isPointInsideBox(cellCoord[0],cellCoord[1],cellCoord[2],limitBox)){
       // Assign Values
       if(currValue>maxRange) maxRange = currValue;
       if(currValue<minRange) minRange = currValue;
@@ -94,7 +89,7 @@ void FormBinLimits(MRIScan* scan, int pdfQuantity, double &currInterval, double*
 }
 
 // FORM BIN LIMITS
-void FormDifferenceBinLimits(MRIScan* scanOther, MRIScan* scanRef, int pdfQuantity, double &currInterval, double* limitBox, int numberOfBins, double* binMin, double* binMax, double* binCenter){
+void formDifferenceBinLimits(MRIScan* scanOther, MRIScan* scanRef, int pdfQuantity, double &currInterval, double* limitBox, int numberOfBins, double* binMin, double* binMax, double* binCenter){
   // Initialize Limits
   double minRange = std::numeric_limits<double>::max();
   double maxRange = -std::numeric_limits<double>::max();
@@ -135,7 +130,7 @@ void FormDifferenceBinLimits(MRIScan* scanOther, MRIScan* scanRef, int pdfQuanti
 }
 
 // Eval The PDF of a Single Scan
-void EvalScanPDF(MRIScan* scan, int pdfQuantity, int numberOfBins, bool useBox, double* limitBox,double* binCenter, double* binArray){
+void evalScanPDF(MRIScan* scan, int pdfQuantity, int numberOfBins, bool useBox, double* limitBox,double* binCenter, double* binArray){
   // Allocate Quantities
   double* binMin = new double[numberOfBins];
   double* binMax = new double[numberOfBins];
@@ -168,7 +163,7 @@ void EvalScanPDF(MRIScan* scan, int pdfQuantity, int numberOfBins, bool useBox, 
 }
 
 // Eval The Difference PDF of Scans
-void EvalScanDifferencePDF(MRISequence* sequence, int otherScan, int refScan, const int pdfQuantity, int numberOfBins, bool useBox, double* limitBox, double* binCenters, double* binArray){
+void evalScanDifferencePDF(MRISequence* sequence, int otherScan, int refScan, const int pdfQuantity, int numberOfBins, bool useBox, double* limitBox, double* binCenters, double* binArray){
   // Get The Scans out of the sequence
   MRIScan* scanOther = sequence->GetScan(otherScan);
   MRIScan* scanRef = sequence->GetScan(refScan);
@@ -210,6 +205,3 @@ void EvalScanDifferencePDF(MRISequence* sequence, int otherScan, int refScan, co
   delete [] binMax;
 }
 
-} // MRIStatistics
-
-#endif // MRISTATISTICS_H

@@ -313,6 +313,9 @@ class MRIScan{
    void tagByNeighbour(int tag,int* cellTags, bool* isTaggable,int startingCell);
    bool hasUntaggedNeighbours(int cell,int* cellTags, bool* isTaggable);
    void setWallFluxesToZero(bool* isFaceOnWalls, MRIDoubleVec& poissonSourceFaceVec);
+
+   // STATISTICS
+   void formBinLimits(int pdfQuantity, double& currInterval, const MRIDoubleVec& limitBox, int numberOfBins, MRIDoubleVec& binMin, MRIDoubleVec& binMax, MRIDoubleVec& binCenter);
 };
 
 #endif // MRISTRUCTUREDSCAN_H
