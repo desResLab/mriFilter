@@ -11,46 +11,6 @@
 
 # include "mpi.h"
 
-// ======================================
-// Read Scan Sequence from Raw Data Files
-// ======================================
-void ConvertDICOMToVTK(std::string inFileName,std::string outfileName){
-
-  // Initialize Sequence
-  MRISequence* seq = new MRISequence(false);
-
-  // Create Scan and Read from Raw Binary File
-  seq->readRAWFileSequence(inFileName);
-
-  // Init a Threshold with No quantity
-  MRIThresholdCriteria* thresholdCriteria = new MRIThresholdCriteria(kNoQuantity,kCriterionLessThen,0.0);
-
-  // Export to VTK
-  seq->exportToVTK("testVTK.vtk",thresholdCriteria);
-}
-
-// ============================
-// CONVERT TECPLOT ASCII TO VTK
-// ============================
-void ConvertPLToVTK(MRIOptions* opts){
-
-  // Add File to Sequence
-  MRIScan* MyMRIScan = new MRIScan(0.0);
-
-  // Init a Threshold with No quantity
-  MRIThresholdCriteria* thresholdCriteria = new MRIThresholdCriteria(kNoQuantity,kCriterionLessThen,0.0);
-
-  // Read from Raw Binary File
-  MyMRIScan->ReadPltFile(opts->inputFileName,true);
-
-  WriteSchMessage(std::string("ECCOLO\n"));
-  WriteSchMessage(MRIUtils::FloatToStr(MyMRIScan->cellPoints[300].velocity[1]) + std::string("\n"));
-
-  // Export to VTK
-  MyMRIScan->ExportToVTK(opts->outputFileName,thresholdCriteria);
-  //MyMRIScan->ExportToTECPLOT(outfileName.c_str(),true);
-}
-
 // =============================
 // EVAL STATISTICS BETWEEN SCANS
 // =============================
@@ -233,60 +193,6 @@ void ShowFaceFluxPatterns(std::string faceFluxFileName, std::string outFileName)
   }
 }
 
-// ===========================
-// Test Expansion Coefficients
-// ===========================
-void TEST_ExpansionCoefficients(MRIOptions* opts, MRICommunicator* comm){
-
-  // Create New Sequence
-  MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
-
-  // Add File to Sequence
-  MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
-  MyMRIScan->ReadPltFile(opts->inputFileName, true);
-  MyMRISequence->AddScan(MyMRIScan);
-
-  // APPLY FULL FILTER
-  MyMRISequence->ApplySMPFilter(opts,false,comm);
-
-  // GET FIRST SCAN
-  MRIScan* firstMRIScan = new MRIScan(0.0);
-  firstMRIScan = MyMRISequence->GetScan(0);
-
-  // THRESHOLDING ON EXPANSION COEFFICIENTS
-  firstMRIScan->expansion->ApplyVortexThreshold(kSoftThreshold,0.5);
-  //firstMRIScan->expansion->WriteToFile("Expansion.dat");
-
-  // REBUILD FROM EXPANSION
-  MRISequence* ReconstructedSequence = new MRISequence(MyMRISequence);
-  MRIScan* currScan = NULL;
-  for(int loopA=0;loopA<ReconstructedSequence->GetTotalScans();loopA++){
-    currScan = ReconstructedSequence->GetScan(loopA);
-    currScan->RebuildFromExpansion(firstMRIScan->expansion,false);
-  }
-
-  // COMPARE THE TWO SCANS
-  double currDiffNorm = 0.0;
-  MRIScan* currScan1 = NULL;
-  MRIScan* currScan2 = NULL;
-  for(int loopA=0;loopA<MyMRISequence->GetTotalScans();loopA++){
-    currScan1 = MyMRISequence->GetScan(loopA);
-    currScan2 = ReconstructedSequence->GetScan(loopA);
-    // Get Difference Norm
-    currDiffNorm += currScan1->GetDiffNorm(currScan2);
-  }
-
-  // Init a Threshold with No quantity
-  MRIThresholdCriteria* thresholdCriteria = new MRIThresholdCriteria(kNoQuantity,kCriterionLessThen,0.0);
-
-  // WRITE OUTPUT FILES TO VTK
-  MyMRISequence->ExportToVTK("FilteredSeq.vtk",thresholdCriteria);
-  ReconstructedSequence->ExportToVTK("ReconstructedSeq.vtk",thresholdCriteria);
-
-  // PRINT DIFFERENCE NORM
-  WriteSchMessage("Difference Norm " + MRIUtils::FloatToStr(currDiffNorm) + "\n");
-}
-
 // ==================
 // PRINT THRESHOLDING
 // ==================
@@ -380,64 +286,6 @@ void TEST03_EvalReynoldsStresses(MRIOptions* opts, MRICommunicator* comm){
 
   // WRITE OUTPUT FILES TO VTK
   MyRECSequence->ExportToVTK("ReynoldsStressSequence",thresholdCriteria);
-}
-
-// ===========================================
-// EVAL REYNOLDS STRESSES FROM EXPANSION FILES
-// ===========================================
-void EvalPressureFromExpansion(MRIOptions* opts){
-
-  // SET PARAMETERS
-  bool applyThreshold = true;
-  double thresholdRatio = 0.0;
-  bool doPressureSmoothing = true;
-
-  // CREATE NEW SEQUENCES
-  MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
-
-  // ADD FILE TO SEQUENCE
-  MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
-  //MyMRIScan->ReadFromExpansionFile(inFileName,applyThreshold,thresholdRatio);
-  MyMRIScan->ReadPltFile(opts->inputFileName,true);
-  MyMRISequence->AddScan(MyMRIScan);
-  // APPLY MEDIAN FILTER TO VELOCITIES
-  //MyMRISequence->GetScan(0)->ApplyMedianFilter(kQtyVelocityX,1);
-  //MyMRISequence->GetScan(0)->ApplyMedianFilter(kQtyVelocityY,1);
-  //MyMRISequence->GetScan(0)->ApplyMedianFilter(kQtyVelocityZ,1);
-
-  //MyMRISequence->GetScan(0)->ThresholdQuantity(kQtyVelocityZ,1.0e10);
-
-  // EVAL REYNOLDS STRESSES AND PRESSURE GRADIENTS
-  MyMRISequence->ComputePressureGradients(opts->thresholdCriteria);
-
-  // APPLY MEDIAN FILTER TO PRESSURE GRADIENT COMPONENTS
-  // JET FILIPPO
-  //MyMRISequence->GetScan(0)->ThresholdQuantity(kQtyPressGradientMod,2500.0);
-  //MyMRISequence->GetScan(0)->ThresholdQuantity(kQtyPressGradientMod,1200.0);
-  //MyMRISequence->GetScan(0)->ThresholdQuantity(kQtyPressGradientMod,200.0);
-
-  //MyMRISequence->GetScan(0)->ThresholdQuantity(kQtyPressGradientMod,50000.0);
-
-  //MyMRISequence->GetScan(0)->ApplyMedianFilter(kQtyPressGradientX,5);
-  //MyMRISequence->GetScan(0)->ApplyMedianFilter(kQtyPressGradientY,5);
-  //MyMRISequence->GetScan(0)->ApplyMedianFilter(kQtyPressGradientZ,5);
-
-  // EVAL LOCATIONS OF NOISY POINTS
-  MyMRISequence->GetScan(0)->EvalNoisyPressureGradientPoints();
-
-  // EVAL RELATIVE PRESSURE
-  MyMRISequence->ComputeRelativePressure(doPressureSmoothing);
-
-  if(opts->outputFormatType == otFILETECPLOT){
-    // WRITE OUTPUT FILES TO TECPLOT
-    MyMRISequence->ExportToTECPLOT(opts->outputFileName);
-  }else{
-    // Init a Threshold with No quantity
-    MRIThresholdCriteria* thresholdCriteria = new MRIThresholdCriteria(kNoQuantity,kCriterionLessThen,0.0);
-
-    // WRITE OUTPUT FILES TO VTK
-    MyMRISequence->ExportToVTK(opts->outputFileName,thresholdCriteria);
-  }
 }
 
 // =========================================
