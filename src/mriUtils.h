@@ -1,27 +1,28 @@
 #ifndef MRIUTILS_H
 #define MRIUTILS_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <limits.h>
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <vector>
-// String Utilities
-#include <boost/algorithm/string.hpp>
-// MPI
-#include "mpi.h"
+# include <stdio.h>
+# include <stdlib.h>
+# include <math.h>
+# include <limits.h>
+# include <iostream>
+# include <fstream>
+# include <sstream>
+# include <vector>
+# include <boost/algorithm/string.hpp>
+# include "mpi.h"
 
-#include "mriConstants.h"
-#include "mriCoordItem.h"
-#include "mriStreamline.h"
-#include "mriThresholdCriteria.h"
-#include "mriTypes.h"
-#include "schMessages.h"
+# include "mriConstants.h"
+# include "mriThresholdCriteria.h"
+# include "mriTypes.h"
 
 using namespace std;
+
+// PRINT FUNCTIONS 
+// WRITE PROGRAM HEADER
+void writeHeader();
+// WRITE MESSAGE TO SCREEN
+void writeSchMessage(std::string Msg);
 
 // MRI UTILITIES
 namespace MRIUtils{
@@ -72,13 +73,7 @@ namespace MRIUtils{
   void applyLimitBoxFactors(double xFactor, double yFactor, double zFactor, MRIDoubleVec& limitBox);
 
   // Print Matrix To File
-  void printMatrixToFile(string fileName, int totalRows, int totalCols, MRIDoubleMat& Mat);
-
-  // Write Streamlines to VTK
-  void printStreamlinesToVTK(vector<MRIStreamline*> streamlines,std::string fileName);
-
-  // Read Streamlines From VTK
-  void readStreamlinesFromLegacyVTK(string fileName, std::vector<MRIStreamline*> &streamlines);
+  void printMatrixToFile(string fileName, const MRIDoubleMat& Mat);
 
   // Read List of Files
   void readFileList(string listName, MRIStringVec& fileList);

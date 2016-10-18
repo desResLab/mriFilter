@@ -1181,3 +1181,477 @@ void MRISequence::getExternalFaceNormal(int cellID, int localFaceID, double* ext
     extNormal[2] *= -1.0;
   }
 }
+
+// =======================
+// READ SCAN FROM PLT FILE
+// =======================
+void MRISequence::readPLTFile(std::string PltFileName, bool DoReorderCells){
+  // Init Line Count
+  int lineCount = 0;
+  topology->totalCells = 0;
+
+  // Initialize Plt Option Record
+  PLTOptionRecord pltOptions;
+
+  // Init Domain Limits
+  topology->domainSizeMin[0] =  std::numeric_limits<double>::max();
+  topology->domainSizeMin[1] =  std::numeric_limits<double>::max();
+  topology->domainSizeMin[2] =  std::numeric_limits<double>::max();
+  topology->domainSizeMax[0] = -std::numeric_limits<double>::max();
+  topology->domainSizeMax[1] = -std::numeric_limits<double>::max();
+  topology->domainSizeMax[2] = -std::numeric_limits<double>::max();
+
+  // Assign File
+  std::ifstream PltFile;
+  WriteSchMessage(std::string("Open File: ") + PltFileName + std::string("\n"));
+  PltFile.open(PltFileName.c_str());
+
+  // Init
+  int TotalXCoords = 0;
+  int TotalYCoords = 0;
+  int TotalZCoords = 0;
+  maxVelModule = 0.0;
+
+  // Read The Number Of Lines
+  std::vector<std::string> tokenizedString;
+  bool foundheader = false;
+  bool areAllFloats = false;
+  int headerCount = 0;
+  WriteSchMessage(std::string("Computing input file size...\n"));
+  int totalLinesInFile = 0;
+  std::string Buffer;
+  while (std::getline(PltFile,Buffer)){
+    if(!foundheader){
+      boost::trim(Buffer);
+      boost::split(tokenizedString, Buffer, boost::is_any_of("= ,"), boost::token_compress_on);
+      areAllFloats = true;
+      assignPLTOptions(tokenizedString, pltOptions);
+      for(size_t loopA=0;loopA<tokenizedString.size();loopA++){
+        areAllFloats = (areAllFloats && (MRIUtils::isFloat(tokenizedString[loopA])));
+      }
+      foundheader = areAllFloats;
+      headerCount++;
+    }
+    // Increase cell and line number
+    totalLinesInFile++;
+  }
+  
+  // Done: Computing Input File Size
+  WriteSchMessage(string("Header Size: " + MRIUtils::intToStr(headerCount) + "\n"));
+  WriteSchMessage(string("Total Lines: " + MRIUtils::intToStr(totalLinesInFile) + "\n"));
+  WriteSchMessage(std::string("Done.\n"));
+
+  // Reset File
+  PltFile.clear();
+  PltFile.seekg(0, std::ios::beg);
+  MRICell myCellPoint;
+
+  // Skip Comments
+  std::string* PltFileHeader = new std::string[headerCount];
+  for(int loopA=0;loopA<headerCount-1;loopA++){
+    std::getline(PltFile,Buffer);
+    PltFileHeader[loopA] = Buffer;
+    lineCount++;
+  }
+
+  // Initialize Local Variables   
+  double LocalXCoord = 0.0;
+  double LocalYCoord = 0.0;
+  double LocalZCoord = 0.0;
+  double LocalConc = 0.0;
+  double LocalXVel = 0.0;
+  double LocalYVel = 0.0;
+  double LocalZVel = 0.0;
+  double CurrentModule = 0.0;
+  bool Continue = false;
+  std::string outString = "";
+  // Vector with X,Y,Z Coords
+  MRIDoubleVec XCoords;
+  MRIDoubleVec YCoords;
+  MRIDoubleVec ZCoords;
+  
+  // Read All Lines
+  int LocalCount = 0;
+  int precentProgress = 0;
+  int percentCounted = 0;
+  int valueCounter = 0;
+  int neededValues = 7;
+  double* LocalVal = new double[neededValues];
+  double* TempVal = new double[neededValues];
+  vector<string> ResultArray;
+  
+  // Reading Input File Message
+  WriteSchMessage(std::string("Reading input file...\n"));
+  
+  while (std::getline(PltFile,Buffer)){
+    // Read Line
+    lineCount++;
+    precentProgress = (int)(((double)lineCount/(double)totalLinesInFile)*100);
+    if (((precentProgress % 10) == 0)&&((precentProgress / 10) != percentCounted)){
+      percentCounted = (precentProgress / 10);
+      WriteSchMessage(std::string("Reading..."+MRIUtils::intToStr(precentProgress)+"\n"));
+    }
+
+    // Tokenize Line
+    ResultArray = MRIUtils::extractSubStringFromBufferMS(Buffer);
+    
+    // Store Local Structure
+    try{
+      // Set Continue
+      Continue = true;
+      // Check Ratio between ResultArray.size, valueCounter, neededValues
+      if((int)ResultArray.size()+valueCounter < neededValues){
+        // Read the whole Result Array
+        for(size_t loopA=0;loopA<ResultArray.size();loopA++){
+          LocalVal[loopA] = atof(ResultArray[loopA].c_str());
+        }
+        Continue = false;
+      }else{
+        // Read part of the result array
+        for(int loopA=0;loopA<neededValues-valueCounter;loopA++){
+          LocalVal[loopA] = atof(ResultArray[loopA].c_str());
+        }
+        // Put the rest in temporary array
+        for(size_t loopA=0;loopA<ResultArray.size()-(neededValues-valueCounter);loopA++){
+          TempVal[loopA] = atof(ResultArray[loopA].c_str());
+        }
+        Continue = true;
+        // Coords
+        LocalXCoord = LocalVal[0];
+        LocalYCoord = LocalVal[1];
+        LocalZCoord = LocalVal[2];
+        // Concentration
+        LocalConc = LocalVal[3];
+        // Velocity
+        LocalXVel = LocalVal[4];
+        LocalYVel = LocalVal[5];
+        LocalZVel = LocalVal[6];
+      }
+      Continue = true;
+      // Coords
+      LocalXCoord = LocalVal[0];
+      LocalYCoord = LocalVal[1];
+      LocalZCoord = LocalVal[2];
+      // Concentration
+      LocalConc = LocalVal[3];
+      // Velocity
+      LocalXVel = LocalVal[4];
+      LocalYVel = LocalVal[5];
+      LocalZVel = LocalVal[6];
+      // Update valueCounter
+      valueCounter = ((ResultArray.size() + valueCounter) % neededValues);
+      // Check Module
+      CurrentModule = sqrt((LocalXVel*LocalXVel)+(LocalYVel*LocalYVel)+(LocalZVel*LocalZVel));
+      if (CurrentModule>1000.0){
+        throw 20;
+      }
+    }catch (...){
+      //Set Continue
+      Continue = false;
+      std::string outString = "WARNING[*] Error Reading Line: "+MRIUtils::intToStr(lineCount)+"; Line Skipped.\n";
+      printf("%s",outString.c_str());
+    }
+    if (Continue){
+      // Update Limits
+      // Min
+      if (LocalXCoord<topology->domainSizeMin[0]) topology->domainSizeMin[0] = LocalXCoord;
+      if (LocalYCoord<topology->domainSizeMin[1]) topology->domainSizeMin[1] = LocalYCoord;
+      if (LocalZCoord<topology->domainSizeMin[2]) topology->domainSizeMin[2] = LocalZCoord;
+      // Max
+      if (LocalXCoord>topology->domainSizeMax[0]) topology->domainSizeMax[0] = LocalXCoord;
+      if (LocalYCoord>topology->domainSizeMax[1]) topology->domainSizeMax[1] = LocalYCoord;
+      if (LocalZCoord>topology->domainSizeMax[2]) topology->domainSizeMax[2] = LocalZCoord;
+
+      // Update Max Speeds
+      if (CurrentModule>maxVelModule) {
+        maxVelModule = CurrentModule;
+      }
+
+      // Store Node Coords To Find Grid Size
+      MRIUtils::insertInList(LocalXCoord,XCoords);
+      MRIUtils::insertInList(LocalYCoord,YCoords);
+      MRIUtils::insertInList(LocalZCoord,ZCoords);    
+
+      // Store Velocity/Concentrations
+      LocalCount++;
+    
+      // Conc
+      myCellPoint.concentration = LocalConc;
+      // Velocity
+      myCellPoint.velocity[0] = LocalXVel;
+      myCellPoint.velocity[1] = LocalYVel;
+      myCellPoint.velocity[2] = LocalZVel;
+    
+      // Add to Vector
+      cells.push_back(myCellPoint);
+
+      // Set Continue
+      Continue = true;
+    }
+  }
+  delete [] LocalVal;
+  delete [] TempVal;
+
+  // Set The Effective Number Of Data Read
+  topology->totalCells = LocalCount;
+
+  // Store Total Cells
+  topology->cellTotals[0] = XCoords.size();
+  topology->cellTotals[1] = YCoords.size();
+  topology->cellTotals[2] = ZCoords.size();
+
+  if(topology->totalCells != TotalXCoords * TotalYCoords * TotalZCoords){
+    WriteSchMessage(std::string("Total number of cells in X: " + MRIUtils::intToStr(TotalXCoords) + "\n"));
+    WriteSchMessage(std::string("Total number of cells in Y: " + MRIUtils::intToStr(TotalYCoords) + "\n"));
+    WriteSchMessage(std::string("Total number of cells in Z: " + MRIUtils::intToStr(TotalZCoords) + "\n"));
+    WriteSchMessage(std::string("Total number of cells: " + MRIUtils::intToStr(topology->totalCells) + "\n"));
+    throw MRIException("ERROR: Total Number of Cells does not match!\n");
+  }
+
+  // Complete To Full Grid: Set To Zero
+  topology->totalCells = TotalXCoords * TotalYCoords * TotalZCoords;
+
+  // Set a Zero mtCellPoint
+  myCellPoint.concentration = 0.0;
+  myCellPoint.velocity[0] = 0.0;
+  myCellPoint.velocity[1] = 0.0;
+  myCellPoint.velocity[2] = 0.0;
+
+  // Resize CellPoints
+  cells.resize(topology->totalCells,myCellPoint);
+
+  // Resize CellLenghts: UNIFORM CASE
+  topology->cellLengths.resize(3);
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    topology->cellLengths[loopA].resize(topology->cellTotals[loopA]);
+    if(topology->cellTotals[loopA] == 1){
+      topology->cellLengths[loopA][0] = 1.0;
+    }else{
+      for(int loopB=0;loopB<topology->cellTotals[loopA];loopB++){
+        topology->cellLengths[loopA][loopB] = fabs(topology->domainSizeMax[loopA]-topology->domainSizeMin[loopA])/(topology->cellTotals[loopA]-1);
+      }
+    }
+  }
+
+  // Finished Reading File
+  WriteSchMessage(std::string("File reading completed.\n"));
+
+  // Close File
+  PltFile.close();
+
+  // REORDER CELLS
+  if (DoReorderCells){
+    reorderScan();
+  }
+
+  // WRITE STATISTICS
+  std::string CurrentStats = WriteStatistics();
+  WriteSchMessage(CurrentStats);
+
+}
+
+// Eval The Difference PDF of Scans
+void MRISequence::evalScanDifferencePDF(int otherScan, int refScan, const int pdfQuantity, int numberOfBins, bool useBox, MRIDoubleVec& limitBox, MRIDoubleVec& binCenters, MRIDoubleVec& binArray){
+  // Get The Scans out of the sequence
+  MRIScan* scanOther = sequence->GetScan(otherScan);
+  MRIScan* scanRef = sequence->GetScan(refScan);
+  // Allocate Quantities
+  double* binMin = new double[numberOfBins];
+  double* binMax = new double[numberOfBins];
+  // Form Bin 
+  double currInterval = 0.0;
+  FormDifferenceBinLimits(scanOther,scanRef,pdfQuantity,currInterval,limitBox,numberOfBins,binMin,binMax,binCenters);
+  // Intialize bins
+  for(int loopA=0;loopA<numberOfBins;loopA++){
+    binArray[loopA] = 0.0;
+  }
+  // Loop through the points
+  double sourceValue = 0.0;
+  double refValue = 0.0;
+  double* cellCoord = NULL;
+  double otherQuantity = 0.0;
+  double refQuantity = 0.0;
+  double currValue = 0.0;
+  for(int loopA=0;loopA<scanRef->totalCellPoints;loopA++){
+    // Get Cell Coords
+    cellCoord = scanRef->cellPoints[loopA].position;
+    // Get quantity
+    otherQuantity = scanOther->cellPoints[loopA].getQuantity(pdfQuantity);
+    refQuantity = scanRef->cellPoints[loopA].getQuantity(pdfQuantity);
+    // Get Value
+    currValue = (otherQuantity - refQuantity);
+    // Assign Value to Bin
+    if (MRIUtils::IsPointInsideBox(cellCoord[0],cellCoord[1],cellCoord[2],limitBox)){
+      // COMPLETE
+      AssignToBin(currValue,numberOfBins,binMin,binMax,binArray);
+    }
+  }
+  // Normalize
+  NormalizeBinArray(numberOfBins,binArray,currInterval);
+  // DeAllocate
+  delete [] binMin;
+  delete [] binMax;
+}
+
+// READ SCAN FROM EXPANSION FILE
+void MRISequence::readFromExpansionFile(string fileName,bool applyThreshold, int thresholdType,double thresholdRatio){
+
+  // Allocate Variables
+  int tot[3];
+  std::vector<double> lengthX;
+  std::vector<double> lengthY;
+  std::vector<double> lengthZ;
+  double minlimits[3];
+  double maxlimits[3];
+  MRIExpansion* exp = NULL;
+
+  // Read Quantities From File
+  readExpansionFile(fileName,tot,lengthX,lengthY,lengthZ,minlimits,maxlimits,exp);
+
+  // SET UP SCAN QUANTITIES
+  // CELL TOTALS
+  topology->cellTotals[0] = tot[0];
+  topology->cellTotals[1] = tot[1];
+  topology->cellTotals[2] = tot[2];
+
+  // CELL LENGTHS
+  topology->cellLengths.resize(kNumberOfDimensions);
+  // X
+  for(size_t loopA=0;loopA<lengthX.size();loopA++){
+    topology->cellLengths[0].push_back(lengthX[loopA]);
+  }
+  // Y
+  for(size_t loopA=0;loopA<lengthY.size();loopA++){
+    topology->cellLengths[1].push_back(lengthY[loopA]);
+  }
+  // Z
+  for(size_t loopA=0;loopA<lengthZ.size();loopA++){
+    topology->cellLengths[2].push_back(lengthZ[loopA]);
+  }
+
+  // DIMENSIONS
+  // MIN
+  topology->domainSizeMin[0] = minlimits[0];
+  topology->domainSizeMin[1] = minlimits[1];
+  topology->domainSizeMin[2] = minlimits[2];
+  // MAX
+  topology->domainSizeMax[0] = maxlimits[0];
+  topology->domainSizeMax[1] = maxlimits[1];
+  topology->domainSizeMax[2] = maxlimits[2];
+  // MRI EXPANSION
+  expansion = new MRIExpansion(exp);
+
+  // APPLY THRESHOLD TO EXPANSION
+  if(applyThreshold){
+    expansion->ApplyVortexThreshold(thresholdType,thresholdRatio);
+  }
+
+  // INITIALIZE VALUES
+  hasPressureGradient = false;
+  hasRelativePressure = false;
+  scanTime = 0.0;
+  maxVelModule = 0.0;
+
+  // INITIALIZE SCAN
+  topology->totalCells = topology->cellTotals[0]*topology->cellTotals[1]*topology->cellTotals[2];
+  // CREATE NEW CELL
+  MRICell newCell;
+  // INITIALIZE QUANTITIES TO ZERO
+  for(int loopA=0;loopA<topology->totalCells;loopA++){
+    // ADD IT TO CELL POINTS
+    cells.push_back(newCell);
+  }
+
+  // INITIALIZE POSITIONS
+  int intCoords[3] = {0};
+  double Pos[3] = {0.0};
+  for(int loopA=0;loopA<topology->totalCells;loopA++){
+    mapIndexToCoords(loopA,intCoords);
+    mapCoordsToPosition(intCoords,true,Pos);
+    cells[loopA].setQuantity(kQtyPositionX,topology->domainSizeMin[0] + Pos[0]);
+    cells[loopA].setQuantity(kQtyPositionY,topology->domainSizeMin[1] + Pos[1]);
+    cells[loopA].setQuantity(kQtyPositionZ,topology->domainSizeMin[2] + Pos[2]);
+  }
+
+  // REORDER MODEL
+  reorderScan();
+
+  // REBUILD SCAN
+  //RebuildFromExpansion(expansion,true);
+  // No Constant Flux
+  rebuildFromExpansion(expansion,false);
+}
+
+// Make Difference of Scans
+// Put the Result Of the Operation in firstScan
+void MRISequence::MakeScanDifference(int firstScanID, int secondScanID){
+  // Get Scans
+  if((firstScanID<0)||(firstScanID>sequence.size())){
+    throw MRISequenceException("Cannot Make Difference. Invalid ID for First Scan.");
+  }
+  if((secondScanID<0)||(secondScanID>sequence.size())){
+    throw MRISequenceException("Cannot Make Difference. Invalid ID for Second Scan.");
+  }
+  MRIScan* firstScan = sequence[firstScanID];
+  MRIScan* secondScan = sequence[secondScanID];
+  // set the Tolerance Value
+  double DistTol = 1.0e-4;
+  // Check Compatibility
+  bool scansAreCompatible = firstScan->isCompatibleWith(secondScan);
+  if(!scansAreCompatible){
+    throw MRISequenceException("Scans are not compatible.");
+  }
+  // Write Progress Message
+  WriteSchMessage("Computing Scan Difference...");  
+  // SubTract Velocity Data
+  double diffX,diffY,diffZ;
+  for(int loopA=0;loopA<firstScan->totalCellPoints;loopA++){
+    // Check They have the same Coordinates
+    diffX = fabs((firstScan->cellPoints[loopA].position[0]-secondScan->cellPoints[loopA].position[0])/(firstScan->cellPoints[loopA].position[0]));
+    diffY = fabs((firstScan->cellPoints[loopA].position[1]-secondScan->cellPoints[loopA].position[1])/(firstScan->cellPoints[loopA].position[1]));
+    diffZ = fabs((firstScan->cellPoints[loopA].position[2]-secondScan->cellPoints[loopA].position[2])/(firstScan->cellPoints[loopA].position[2]));
+    // Throw exception if the coordinate is different
+    if((diffX>DistTol)||(diffY>DistTol)||(diffZ>DistTol)) throw new MRISequenceException("Error In MakeGlobalDataDifference: Different Coords");
+    for(int loopB=0;loopB<3;loopB++){
+      firstScan->cellPoints[loopA].velocity[loopB] = firstScan->cellPoints[loopA].velocity[loopB]-secondScan->cellPoints[loopA].velocity[loopB];
+    }
+  }
+}
+
+// Make Average
+// Put the Result Of the Operation in firstScan
+void MRISequence::MakeScanAverage(int numberOfMeasures, int firstScanID, int secondScanID){
+  // Get Scans
+  if((firstScanID<0)||(firstScanID>sequence.size())){
+    throw MRISequenceException("Cannot Make Difference. Invalid ID for First Scan.");
+  }
+  if((secondScanID<0)||(secondScanID>sequence.size())){
+    throw MRISequenceException("Cannot Make Difference. Invalid ID for Second Scan.");
+  }
+  MRIScan* firstScan = sequence[firstScanID];
+  MRIScan* secondScan = sequence[secondScanID];
+  // Get Distance Tolerance
+  double DistTol = 1.0e-4;
+  // Check Compatibility
+  bool scansAreCompatible = firstScan->isCompatibleWith(secondScan);
+  if(!scansAreCompatible){
+    throw MRISequenceException("Scans are not compatible.");
+  }
+  // Write Progress Message
+  WriteSchMessage("Computing Scan Average...");
+  // SubTract Velocity Data
+  double diffX,diffY,diffZ;
+  for(int loopA=0;loopA<firstScan->totalCellPoints;loopA++){
+    // Check They have the same Coordinates
+    diffX = fabs((firstScan->cellPoints[loopA].position[0]-secondScan->cellPoints[loopA].position[0])/(firstScan->cellPoints[loopA].position[0]));
+    diffY = fabs((firstScan->cellPoints[loopA].position[1]-secondScan->cellPoints[loopA].position[1])/(firstScan->cellPoints[loopA].position[1]));
+    diffZ = fabs((firstScan->cellPoints[loopA].position[2]-secondScan->cellPoints[loopA].position[2])/(firstScan->cellPoints[loopA].position[2]));
+    if((diffX>DistTol)||(diffY>DistTol)||(diffZ>DistTol))throw new MRISequenceException("Error In MakeGlobalDataAverage: Different Coords");
+    for(int loopB=0;loopB<3;loopB++){
+      firstScan->cellPoints[loopA].velocity[loopB] =
+      firstScan->cellPoints[loopA].velocity[loopB]*((double)(numberOfMeasures-1)/(double)numberOfMeasures)+
+      secondScan->cellPoints[loopA].velocity[loopB]*(1.0/(double)numberOfMeasures);
+    }
+  }
+}
+

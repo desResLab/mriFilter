@@ -40,7 +40,7 @@ MRIExpansion::MRIExpansion(MRIExpansion* otherExp){
 // ==========================
 // CONSTRUCT FROM STD::VECTOR
 // ==========================
-void MRIExpansion::FillFromVector(std::vector<double> Expansion){
+void MRIExpansion::fillFromVector(std::vector<double> Expansion){
   // INITIALIZE VALUES
   for(int loopA=0;loopA<3;loopA++){
     constantFluxCoeff[loopA] = Expansion[loopA];
@@ -59,7 +59,7 @@ MRIExpansion::~MRIExpansion(){
 // ===========================
 // Apply ratio-based Threshold
 // ===========================
-void MRIExpansion::ApplyVortexThreshold(int thresholdType, double ratio){
+void MRIExpansion::applyVortexThreshold(int thresholdType, double ratio){
   // Init
   double maxCoeff = 0.0;
   double currValue = 0.0;
@@ -87,7 +87,7 @@ void MRIExpansion::ApplyVortexThreshold(int thresholdType, double ratio){
 // =============
 // PRINT TO FILE
 // =============
-void MRIExpansion::WriteToFile(std::string outFile){
+void MRIExpansion::writeToFile(std::string outFile){
   // Open Output File
   FILE* fid;
   fid = fopen(outFile.c_str(),"w");
@@ -106,7 +106,7 @@ void MRIExpansion::WriteToFile(std::string outFile){
 // ==========
 // GET 2 NORM
 // ==========
-double MRIExpansion::Get2Norm(bool onlyVortex){
+double MRIExpansion::get2Norm(bool onlyVortex){
   // Init
   double currNorm = 0.0;
   // Consider Constant Flux Coefficient

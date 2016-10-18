@@ -12,18 +12,13 @@
 
 # include "mriUtils.h"
 # include "mriCell.h"
-# include "mriCellMaterial.h"
 # include "mriTypes.h"
 # include "mriExpansion.h"
 # include "mriThresholdCriteria.h"
 # include "mriImagedata.h"
 # include "mriConstants.h"
-# include "mriVolData.h"
 # include "mriException.h"
-# include "schMessages.h"
 # include "mriSamplingOptions.h"
-# include "mriStreamline.h"
-# include "mriStreamlineOptions.h"
 # include "mriOutput.h"
 # include "mriTopology.h"
 
@@ -197,9 +192,9 @@ class MRIScan{
     void   getDimensionSliceStarFromVortex(int vortexNumber,int &dimNumber,int &sliceNumber,int &starNumber);
     
     // FILTER MATRICES
-    void   assembleEncodingMatrix(int &totalFaces, int &totalBasis, double** &Mat);
-    void   assembleDecodingMatrix(int &totalFaces, int &totalBasis, double** &Mat);
-    void   assembleStarMatrix(int &totalFaces, int &totalBasis, double** &Matrix);
+    void   assembleEncodingMatrix(int &totalFaces, int &totalBasis, MRIDoubleMat& Mat);
+    void   assembleDecodingMatrix(int &totalFaces, int &totalBasis, MRIDoubleMat& Mat);
+    void   assembleStarMatrix(int &totalFaces, int &totalBasis, MRIDoubleMat& Matrix);
       
     // ==============
     // INFO FUNCTIONS
@@ -225,13 +220,14 @@ class MRIScan{
     void evalRelativePressure(int startingCell, double refPressure);
     void performPressureIterations();
 
-    // Others
+    // OTHERS
     void evalPressureIterative(int currentCell, double currentValue, bool* visitedCell,int* otherCells, std::vector<int> &cellStack,int& cellCount);
     bool areThereNotVisitedNeighbor(int cell, bool* visitedCell);
     bool areThereVisitedNeighbor(int cell, bool* visitedCell, bool* isBoundaryCell, int &visitedNeighbor);
     int  getCellFromStack(std::vector<int> &cellStack, bool* visitedCell, bool* isBoundaryCell, bool &finished, bool& secondStage);
     int  getNextStartingCell(int currentCell, bool* visitedCell, bool* isBoundaryCell, bool &finished, int &bookmark);
     int  evalCentralCell();
+    void updateVelocities();
 
     // REYNOLDS STRESS COMPUTATION    
     void evalReynoldsStress(MRIThresholdCriteria* threshold);
@@ -249,8 +245,10 @@ class MRIScan{
     void thresholdQuantity(int qtyID,double threshold);
     void evalNoisyPressureGradientPoints();
   
-    // SAMPLE FLOWS
-    void createSampleCase(MRISamples sampleType, vector<double> params);
+    // ==============
+    // TEMPLATE FLOWS
+    // ==============
+    void createSampleCase(MRISamples sampleType, const MRIDoubleVec& params);
     void assignVelocitySignature(MRIDirection dir, MRISamples sample, double currTime);
     void assignConstantSignature(MRIDirection dir);
     void assignStagnationFlowSignature(MRIDirection dir);
@@ -284,17 +282,8 @@ class MRIScan{
     void applyGaussianNoise(double stDev);
     
     // TESTING FUNCTIONALITIES
-    void testScanAdjacency(std::string fileName);
+    void testScanAdjacency(string fileName);
     
-   // STREAMLINES UTILITIES 
-   void computeStreamlines(std::string outName, MRIStreamlineOptions &options, std::vector<MRIStreamline*> &streamlines);
-   void performVelocityLinearInterpolation(double* coords, int CurrentCell, int xCell, int yCell, int zCell, double* &velocity);
-   void getPointVelocity(double xCoord, double yCoord, double zCoord, double* &pointVel);
-   void evalSingleStreamLine(double* start, MRIStreamlineOptions &options, MRIStreamline* &sL);
-   void evalSLTransverseDiffusionWithSpace(int totalSL, std::vector<MRIStreamline*> &streamlines, MRIDirection dir, double minCoord, double maxCoord, int totalSteps, std::vector<double> &space, std::vector<double> &crossDeviations);
-   void evalStreamLineStatistics(std::string outName, MRIDirection dir, MRIStreamlineOptions &options, std::vector<MRIStreamline*> &streamlines);
-   void evalSLArrivalPointDistribution(int totalSL, std::vector<MRIStreamline*> &streamlines, MRIDirection dir, double minCoord, double maxCoord, int totalSlices, std::vector<double> &sliceCenter, std::vector<double> &sliceNormArrivals);
-
    // COMPARISON BETWEEN SCANS
    double getDiffNorm(MRIScan* otherScan);
 
@@ -315,6 +304,7 @@ class MRIScan{
    void setWallFluxesToZero(bool* isFaceOnWalls, MRIDoubleVec& poissonSourceFaceVec);
 
    // STATISTICS
+   void evalScanPDF(int pdfQuantity, int numberOfBins, bool useBox, MRIDoubleVec& limitBox,MRIDoubleVec& binCenter, MRIDoubleVec& binArray);
    void formBinLimits(int pdfQuantity, double& currInterval, const MRIDoubleVec& limitBox, int numberOfBins, MRIDoubleVec& binMin, MRIDoubleVec& binMax, MRIDoubleVec& binCenter);
 };
 

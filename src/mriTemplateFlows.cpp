@@ -1,11 +1,9 @@
-#include <math.h>
-#include "mriStructuredScan.h"
-#include "mriConstants.h"
-#include "schMessages.h"
-#include "mriUtils.h"
+# include "mriScan.h"
+
+using namespace std;
 
 // STAGNATION FLOW SOLUTION
-void MRIStructuredScan::AssignStagnationFlowSignature(MRIDirection dir){
+void MRIScan::assignStagnationFlowSignature(MRIDirection dir){
   double bConst = -1.0;
   double xCoord,yCoord,zCoord;
   for(int loopA=0;loopA<totalCellPoints;loopA++){
@@ -39,8 +37,9 @@ void MRIStructuredScan::AssignStagnationFlowSignature(MRIDirection dir){
 }
 
 // EVAL TANGENT DIRECTION
-void EvalTangentDirection(MRIDirection dir, double* radialVector, double* tangVector){
-  double axialVec[3] = {0.0};
+void evalTangentDirection(MRIDirection dir, const MRIDoubleVec& radialVector, MRIDoubleVec& tangVector){
+  // Create Axial Direction
+  MRIDoubleVec axialVec(3,0.0);
   switch(dir){
     case kdirX:
       axialVec[0] = 1.0;
@@ -122,7 +121,7 @@ void MRIStructuredScan::AssignCylindricalFlowSignature(MRIDirection dir){
 }
 
 // ASSIGN SPHERICAL HILL VORTEX FLOW 
-void MRIStructuredScan::AssignSphericalFlowSignature(MRIDirection dir){
+void MRIScan::assignSphericalFlowSignature(MRIDirection dir){
   // Set Parameters
   double minDist = min(domainSizeMax[0]-domainSizeMin[0],min(domainSizeMax[1]-domainSizeMin[1],domainSizeMax[2]-domainSizeMin[2]));
   const double CONST_U0 = 0.1;
@@ -222,7 +221,7 @@ void MRIStructuredScan::AssignSphericalFlowSignature(MRIDirection dir){
 }
 
 // ASSIGN SPHERICAL VORTEX FLOW 
-void MRIStructuredScan::AssignToroidalVortexFlowSignature(){
+void MRIScan::assignToroidalVortexFlowSignature(){
   // Set Parameters
   const double CONST_A = 5.0;
   const double CONST_L = 1.3*1.3;
@@ -293,7 +292,7 @@ void MRIStructuredScan::AssignToroidalVortexFlowSignature(){
 }
 
 // ASSIGN CONSTANT FLOW
-void MRIStructuredScan::AssignConstantSignature(MRIDirection dir){
+void MRISScan::assignConstantSignature(MRIDirection dir){
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     switch(dir){
       case kdirX:
@@ -318,7 +317,7 @@ void MRIStructuredScan::AssignConstantSignature(MRIDirection dir){
 // ====================
 // TAYLOR FLOW VORTEX
 // ====================
-void MRIStructuredScan::AssignTaylorVortexSignature(MRIDirection dir){
+void MRIScan::assignTaylorVortexSignature(MRIDirection dir){
   double centrePoint[3] = {0.0};
   centrePoint[0] = 0.5 * (domainSizeMax[0]+domainSizeMin[0]);
   centrePoint[1] = 0.5 * (domainSizeMax[1]+domainSizeMin[1]);
@@ -348,7 +347,7 @@ void MRIStructuredScan::AssignTaylorVortexSignature(MRIDirection dir){
 
 
 // SET VELOCITIES TO ZERO
-void MRIStructuredScan::AssignZeroVelocities(){
+void MRIScan::assignZeroVelocities(){
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     cellPoints[loopA].velocity[0] = 0.0;
     cellPoints[loopA].velocity[1] = 0.0;
@@ -357,7 +356,7 @@ void MRIStructuredScan::AssignZeroVelocities(){
 }
 
 // Assign Constant Flow With Step
-void MRIStructuredScan::AssignConstantFlowWithStep(){
+void MRIScan::assignConstantFlowWithStep(){
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     if ((cellPoints[loopA].position[0]>(0.5*(domainSizeMin[0] + domainSizeMax[0])))&&
        (cellPoints[loopA].position[1]>(0.5*(domainSizeMin[1] + domainSizeMax[1])))){
@@ -377,7 +376,7 @@ void MRIStructuredScan::AssignConstantFlowWithStep(){
 }
 
 // Assign Standard Gaussian Random Velocities on the Three Separated Components
-void MRIStructuredScan::AssignRandomStandardGaussianFlow(){
+void MRIScan::assignRandomStandardGaussianFlow(){
   for(int loopA=0;loopA<totalCellPoints;loopA++){
     // Assign Constant Velocity
     cellPoints[loopA].concentration = 10.0;
@@ -390,7 +389,7 @@ void MRIStructuredScan::AssignRandomStandardGaussianFlow(){
 // =====================
 // ASSIGN POISEILLE FLOW
 // =====================
-void MRIStructuredScan::AssignPoiseilleSignature(MRIDirection dir){
+void MRIScan::assignPoiseilleSignature(MRIDirection dir){
   double currentVelocity = 0.0;
   double conc = 0.0;
   // SET CENTER POINT
@@ -456,7 +455,7 @@ void MRIStructuredScan::AssignPoiseilleSignature(MRIDirection dir){
 }
 
 // ASSIGN CONCENTRATIONS AND VELOCITIES
-void MRIStructuredScan::AssignVelocitySignature(MRIDirection dir, MRISamples sample, double currTime){
+void MRIScan::assignVelocitySignature(MRIDirection dir, MRISamples sample, double currTime){
   switch(sample){
     case kZeroVelocity:
       AssignZeroVelocities();
@@ -492,7 +491,7 @@ void MRIStructuredScan::AssignVelocitySignature(MRIDirection dir, MRISamples sam
 }
 
 // CREATE SAMPLE FLOWS
-void MRIStructuredScan::CreateSampleCase(MRISamples sampleType,vector<double> params){
+void MRIScan::createSampleCase(MRISamples sampleType,const MRIDoubleVec& params){
 
   // Store Parameter Values
   int sizeX = int(params[0]);
@@ -585,7 +584,7 @@ void MRIStructuredScan::CreateSampleCase(MRISamples sampleType,vector<double> pa
 }
 
 // ASSIGN TIME DEPENDENT FLOW
-void MRIStructuredScan::AssignTimeDependentPoiseilleSignature(double omega, double radius, double viscosity, double currtime, double maxVel){
+void MRIScan::assignTimeDependentPoiseilleSignature(double omega, double radius, double viscosity, double currtime, double maxVel){
   // Eval omegaMod
   double omegaMod = ((omega*radius*radius)/viscosity);
   double relCoordX = 0.0;

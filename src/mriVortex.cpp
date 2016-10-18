@@ -9,11 +9,11 @@
 // ===========================================
 // EVAL DECOMPOSITION OF THE VELOCITY GRADIENT
 // ===========================================
-void MRIStructuredScan::EvalCellVelocityGradientDecomposition(int currentCell, double** deformation, double** rotation, double** firstDerivs){
+void MRIScan::evalCellVelocityGradientDecomposition(int currentCell, const MRIDoubleMat& velGrad, MRIDoubleMat& deformation, MRIDoubleMat& rotation){
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
     for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
-      deformation[loopA][loopB] = 0.5*(firstDerivs[loopA][loopB] + firstDerivs[loopB][loopA]);
-      rotation[loopA][loopB] = 0.5*(firstDerivs[loopA][loopB] - firstDerivs[loopB][loopA]);
+      deformation[loopA][loopB] = 0.5*(velGrad[loopA][loopB] + velGrad[loopB][loopA]);
+      rotation[loopA][loopB] = 0.5*(velGrad[loopA][loopB] - velGrad[loopB][loopA]);
     }
   }
 }
@@ -21,7 +21,7 @@ void MRIStructuredScan::EvalCellVelocityGradientDecomposition(int currentCell, d
 // ================
 // EVAL Q CRITERION
 // ================
-double MRIStructuredScan::EvalCellQCriterion(int currentCell, double** deformation, double** rotation){
+double MRIScan::evalCellQCriterion(int currentCell, const MRIDoubleMat& deformation, const MRIDoubleMat& rotation){
   double traceDEF = 0.0;
   double traceROT = 0.0;
   double opResultDEF = 0.0;
@@ -48,7 +48,7 @@ double MRIStructuredScan::EvalCellQCriterion(int currentCell, double** deformati
 // =======================
 // EVAL LAMBDA-2 CRITERION
 // =======================
-double MRIStructuredScan::EvalCellL2Criterion(int currentCell, double** deformation, double** rotation){
+double MRIScan::evalCellL2Criterion(int currentCell, const MRIDoubleMat& deformation, const MRIDoubleMat& rotation){
   double mat[3][3];
   double eig[3];
   double opResultDEF = 0.0;
@@ -66,14 +66,14 @@ double MRIStructuredScan::EvalCellL2Criterion(int currentCell, double** deformat
     }
   }
   // Compute the second eigenvalue
-  MRIUtils::Compute3x3MatrixEigenvals(mat,eig);
+  MRIUtils::compute3x3MatrixEigenvals(mat,eig);
   return eig[1];
 }
 
 // ====================
 // EVAL DELTA CRITERION
 // ====================
-double MRIStructuredScan::EvalCellDeltaCriterion(int currentCell, double** deformation, double** rotation, double** velGradient){
+double MRIScan::evalCellDeltaCriterion(int currentCell, const MRIDoubleMat& deformation, const MRIDoubleMat& rotation, const MRIDoubleMat& velGradient){
   double qVal = EvalCellQCriterion(currentCell,deformation,rotation);
   double detVelGrad = (velGradient[0][0] * (velGradient[1][1] * velGradient[2][2] - velGradient[2][1] * velGradient[1][2])
                       -velGradient[1][0] * (velGradient[0][1] * velGradient[2][2] - velGradient[2][1] * velGradient[0][2])
@@ -84,7 +84,7 @@ double MRIStructuredScan::EvalCellDeltaCriterion(int currentCell, double** defor
 // ====================
 // EVAL DELTA CRITERION
 // ====================
-double MRIStructuredScan::EvalCellVortexCriteria(int currentCell,int criteriaType, double** deformation, double** rotation, double** velGradient){
+double MRIScan::evalCellVortexCriteria(int currentCell,int criteriaType, const MRIDoubleMat& velGradient, const MRIDoubleMat& deformation, const MRIDoubleMat& rotation){
   double critRes = 0.0;
   // Vortex Criterion
   switch(criteriaType){
@@ -95,7 +95,7 @@ double MRIStructuredScan::EvalCellVortexCriteria(int currentCell,int criteriaTyp
       critRes = EvalCellL2Criterion(currentCell,deformation,rotation);
       break;
     case kVortexDelta:
-      critRes = EvalCellDeltaCriterion(currentCell,deformation,rotation,velGradient);
+      critRes = EvalCellDeltaCriterion(currentCell,velGradient,deformation,rotation);
       break;
     default:
       throw MRIVortexException("Error: Invalid Vortex Criterion");
@@ -108,7 +108,7 @@ double MRIStructuredScan::EvalCellVortexCriteria(int currentCell,int criteriaTyp
 // =============================
 // EVALUATION OF VORTEX CRITERIA
 // =============================
-void MRIStructuredScan::EvalVortexCriteria(MRIThresholdCriteria* threshold){
+void MRIScan::evalVortexCriteria(MRIThresholdCriteria* threshold){
   // Velocity Gradient and Hessian
   // First and Second Derivatives
   double** deformation = new double*[kNumberOfDimensions];
@@ -152,7 +152,7 @@ void MRIStructuredScan::EvalVortexCriteria(MRIThresholdCriteria* threshold){
 }
 
 // COMPUTATION OF VORTICITY
-void ComputeVorticity(double** firstDerivs,double* auxVector){
+void computeVorticity(double** firstDerivs,double* auxVector){
   auxVector[0] = firstDerivs[1][2] - firstDerivs[2][1];
   auxVector[1] = firstDerivs[2][0] - firstDerivs[0][2];
   auxVector[2] = firstDerivs[0][1] - firstDerivs[1][0];
@@ -161,7 +161,7 @@ void ComputeVorticity(double** firstDerivs,double* auxVector){
 // ==============
 // EVAL VORTICITY
 // ==============
-void MRIStructuredScan::EvalVorticity(MRIThresholdCriteria* threshold){
+void MRIScan::evalVorticity(MRIThresholdCriteria* threshold){
   // Allocate derivatives
   double** firstDerivs = new double*[kNumberOfDimensions];
   double** secondDerivs = new double*[kNumberOfDimensions];
@@ -194,7 +194,7 @@ void MRIStructuredScan::EvalVorticity(MRIThresholdCriteria* threshold){
 // ==============
 // EVAL ENSTROPHY
 // ==============
-void MRIStructuredScan::EvalEnstrophy(MRIThresholdCriteria* threshold){
+void MRIScan::evalEnstrophy(MRIThresholdCriteria* threshold){
   // Allocate derivatives  
   double** firstDerivs = new double*[kNumberOfDimensions];
   double** secondDerivs = new double*[kNumberOfDimensions];

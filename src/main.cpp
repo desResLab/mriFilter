@@ -7,9 +7,10 @@
 # include "mriConstants.h"
 # include "mriOptions.h"
 # include "mriCommunicator.h"
-# include "schMessages.h"
 
 # include "mpi.h"
+
+using namespace std;
 
 // =============================
 // EVAL STATISTICS BETWEEN SCANS
@@ -17,59 +18,60 @@
 void ComputeScanStatistics(std::string firstFileName,std::string secondFileName,std::string statFileName){
 
     // Init File Names
-    std::string statFileNameFirst = statFileName+"_First.dat";
-    std::string statFileNameSecond = statFileName+"_Second.dat";
-    std::string statFileNameDiff = statFileName+"_Diff.dat";
+    string statFileNameFirst = statFileName+"_First.dat";
+    string statFileNameSecond = statFileName+"_Second.dat";
+    string statFileNameDiff = statFileName+"_Diff.dat";
+
+    // Cyclic Sequence
+    bool isCyclicSequence = false;
 
     // Read the File in a Sequence
     // Create New Sequence
-    MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
+    MRISequence* seq = new MRISequence(isCyclicSequence);
 
     // Add First File to Sequence
-    MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
-    MyMRIScan->ReadPltFile(firstFileName, true);
-    MyMRISequence->AddScan(MyMRIScan);
+    seq->readPLTFile(firstFileName, true);
 
-    // Add Second File to Sequence
-    MyMRIScan = new MRIStructuredScan(1.0);
-    MyMRIScan->ReadPltFile(secondFileName, true);
-    MyMRISequence->AddScan(MyMRIScan);
+    // Create New Sequence
+    seq->readPLTFile(secondFileName, true);
 
     // Create Statistics
     bool useBox = false;
     int numberOfBins = 301;
-    double* limitBox = new double[6];
+    MRIDoubleVec limitBox(6);
+    
     // Set Limits
-    limitBox[0] = MyMRISequence->GetScan(0)->domainSizeMin[0];
-    limitBox[1] = MyMRISequence->GetScan(0)->domainSizeMax[0];
-    limitBox[2] = MyMRISequence->GetScan(0)->domainSizeMin[1];
-    limitBox[3] = MyMRISequence->GetScan(0)->domainSizeMax[1];
-    limitBox[4] = MyMRISequence->GetScan(0)->domainSizeMin[2];
-    limitBox[5] = MyMRISequence->GetScan(0)->domainSizeMax[2];
+    limitBox[0] = seq->topology->domainSizeMin[0];
+    limitBox[1] = seq->topology->domainSizeMax[0];
+    limitBox[2] = seq->topology->domainSizeMin[1];
+    limitBox[3] = seq->topology->domainSizeMax[1];
+    limitBox[4] = seq->topology->domainSizeMin[2];
+    limitBox[5] = seq->topology->domainSizeMax[2];
+    
     // Apply Factors to limitBox
     double xFactor = 1.0;
     double yFactor = 1.0;
     double zFactor = 1.0;
-    MRIUtils::ApplylimitBoxFactors(xFactor,yFactor,zFactor,limitBox);
+    MRIUtils::applyLimitBoxFactors(xFactor,yFactor,zFactor,limitBox);
+    
     // Allocate Bin Arrays
-    double* binCenters = new double[numberOfBins];
-    double* binValues =  new double[numberOfBins];
+    MRIDoubleVec binCenters(numberOfBins);
+    MRIDoubleVec binValues(numberOfBins);
     // Eval Single PDFs
     // FIRST
-    MRIStatistics::EvalScanPDF(MyMRISequence->GetScan(0),kQtyVelModule,numberOfBins,useBox,limitBox,binCenters,binValues);
-    MRIUtils::PrintBinArrayToFile(statFileNameFirst,numberOfBins,binCenters,binValues);
+    seq->getScan(0)->evalScanPDF(kQtyVelModule,numberOfBins,useBox,limitBox,binCenters,binValues);
+    MRIUtils::printBinArrayToFile(statFileNameFirst,numberOfBins,binCenters,binValues);
 
     // SECOND
-    MRIStatistics::EvalScanPDF(MyMRISequence->GetScan(1),kQtyVelModule,numberOfBins,useBox,limitBox,binCenters,binValues);
-    MRIUtils::PrintBinArrayToFile(statFileNameSecond,numberOfBins,binCenters,binValues);
+    seq->getScan(0)->evalScanPDF(kQtyVelModule,numberOfBins,useBox,limitBox,binCenters,binValues);
+    MRIUtils::printBinArrayToFile(statFileNameSecond,numberOfBins,binCenters,binValues);
 
     // DIFFERENCE
-    MRIStatistics::EvalScanDifferencePDF(MyMRISequence,1,0,kQtyVelModule,numberOfBins,useBox,limitBox,binCenters,binValues);
-    MRIUtils::PrintBinArrayToFile(statFileNameDiff,numberOfBins,binCenters,binValues);
+    seq->evalScanDifferencePDF(1,0,kQtyVelModule,numberOfBins,useBox,limitBox,binCenters,binValues);
+    MRIUtils::printBinArrayToFile(statFileNameDiff,numberOfBins,binCenters,binValues);
 
-    // DEALLOCATE
-    delete [] binCenters;
-    delete [] binValues;
+    // Free Sequence
+    delete seq;
 }
 
 // =============================
@@ -79,98 +81,92 @@ void ComputeScanMatrices(){
   // VAR
   int totalERows = 0;
   int totalECols = 0;
-  double** EMat = NULL;
+  MRIDoubleMat EMat;
   int totalDRows = 0;
   int totalDCols = 0;
-  double** DMat = NULL;
+  MRIDoubleMat DMat;
   int totalStarRows = 0;
   int totalStarCols = 0;
-  double** StarMatrix = NULL;
+  MRIDoubleMat StarMatrix;
 
+  // SET PARAMETERS
   bool isIsotropic = true;
 
-  // Print Matrices for Matlab Analysis
+  // Cyclic Sequence
+  bool isCyclicSequence = false;
   // Create Scan
-  MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
+  MRISequence* seq = new MRISequence(isCyclicSequence);
+  
   // Set Template Parameters
-  vector<double> params;
-  params.push_back(5);
-  params.push_back(5);
-  params.push_back(5);
-  params.push_back(1.0);
-  params.push_back(1.0);
-  params.push_back(1.0);
-  params.push_back(0.0);
-  params.push_back(1.0);
+  MRIDoubleVec params(8);
+  params[0] = 5;
+  params[1] = 5;
+  params[2] = 5;
+  params[3] = 1.0;
+  params[4] = 1.0;
+  params[5] = 1.0;
+  params[6] = 0.0;
+  params[7] = 1.0;
+  
+  // SET ISOTROPIC OR ANISOTROPIC CASE
   if(isIsotropic){
     // ISOTROPIC
-    MyMRIScan->CreateSampleCase(kConstantFlow,params);
+    seq->createSampleCase(kConstantFlow,params);
   }else{
     // ANISOTROPIC
     params[3] = 1.0;
     params[4] = 2.0;
     params[5] = 3.0;
-    MyMRIScan->CreateSampleCase(kConstantFlow,params);
+    seq->createSampleCase(kConstantFlow,params);
   }
-  // Assemble All Matrices
-  // Assemble Encoding
-  MyMRIScan->AssembleEncodingMatrix(totalERows,totalECols,EMat);
-  MRIUtils::PrintMatrixToFile("EncodingMat.dat",totalERows,totalECols,EMat);
-  // Assemble Decoding
-  MyMRIScan->AssembleDecodingMatrix(totalDRows,totalDCols,DMat);
-  MRIUtils::PrintMatrixToFile("DecodingMat.dat",totalDRows,totalDCols,DMat);
-  // Assemble Star Matrix
-  MyMRIScan->AssembleStarMatrix(totalStarRows,totalStarCols,StarMatrix);
-  MRIUtils::PrintMatrixToFile("StarMat.dat",totalStarRows,totalStarCols,StarMatrix);
 
-  // Deallocate Matrices
-  for(int loopA=0;loopA<totalERows;loopA++){
-    delete [] EMat[loopA];
-  }
-  for(int loopA=0;loopA<totalDRows;loopA++){
-    delete [] DMat[loopA];
-  }
-  for(int loopA=0;loopA<totalStarRows;loopA++){
-    delete [] StarMatrix[loopA];
-  }
-  delete [] EMat;
-  delete [] DMat;
-  delete [] StarMatrix;
+  // RETRIEVE OPERATORS IN MATRIX FORM
+  // ENCODING
+  seq->getScan(0)->assembleEncodingMatrix(totalERows,totalECols,EMat);
+  MRIUtils::printMatrixToFile("EncodingMat.dat",EMat);
+  // DECODING
+  seq->getScan(0)->assembleDecodingMatrix(totalDRows,totalDCols,DMat);
+  MRIUtils::printMatrixToFile("DecodingMat.dat",DMat);
+  // VORTEX FRAME MATRIX
+  seq->getScan(0)->assembleStarMatrix(totalStarRows,totalStarCols,StarMatrix);
+  MRIUtils::printMatrixToFile("StarMat.dat",StarMatrix);
 }
 
 // ================
 // READ FACE FLUXES
 // ================
 void ShowFaceFluxPatterns(std::string faceFluxFileName, std::string outFileName){
-  // NEW SCAN
-  MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
+  
+  // Cyclic Sequence
+  bool isCyclicSequence = false;
+  MRISequence* seq = new MRISequence(isCyclicSequence);
 
   bool isIsotropic = true;
 
-  vector<double> params;
-  params.push_back(5.0);
-  params.push_back(5.0);
-  params.push_back(5.0);
-  params.push_back(1.0);
-  params.push_back(1.0);
-  params.push_back(1.0);
-  params.push_back(1.0);
+  MRIDoubleVec params(7);
+  params[0] = 5.0;
+  params[1] = 5.0;
+  params[2] = 5.0;
+  params[3] = 1.0;
+  params[4] = 1.0;
+  params[5] = 1.0;
+  params[6] = 1.0;
   if(isIsotropic){
     // ISOTROPIC
-    MyMRIScan->CreateSampleCase(kConstantFlow,params);
+    seq->createSampleCase(kConstantFlow,params);
   }else{
    // ANISOTROPIC
    params[3] = 1.0;
    params[4] = 2.0;
    params[5] = 3.0;
-   MyMRIScan->CreateSampleCase(kConstantFlow,params);
+   seq->createSampleCase(kConstantFlow,params);
   }
 
   // READ FACE FLUXES FROM FILE
   int totalRows = 0;
   int totalCols = 0;
-  std::vector<std::vector<double> > faceFluxMat;
-  MRIUtils::ReadMatrixFromFile(faceFluxFileName,totalRows,totalCols,faceFluxMat);
+  MRIDoubleMat faceFluxMat;
+  MRIUtils::readMatrixFromFile(faceFluxFileName,totalRows,totalCols,faceFluxMat);
 
   // COPY THE INTERESTING COLUMN
   double faceFluxVec[totalRows];
@@ -181,15 +177,16 @@ void ShowFaceFluxPatterns(std::string faceFluxFileName, std::string outFileName)
     }
 
     // TRASFORM FACE FLUXES IN VELOCITIES
-    MyMRIScan->RecoverCellVelocitiesRT0(false,faceFluxVec);
+    seq->getScan(0)->recoverCellVelocitiesRT0(false,faceFluxVec);
+    
     // UPDATE VELOCITIES
-    MyMRIScan->UpdateVelocities();
+    seq->getScan(0)->updateVelocities();
 
     // Init a Threshold with No quantity
     MRIThresholdCriteria* thresholdCriteria = new MRIThresholdCriteria(kNoQuantity,kCriterionLessThen,0.0);
 
     // EXPORT TO VTK
-    MyMRIScan->ExportToVTK(outFileName + "_" + MRIUtils::IntToStr(loop0) + ".vtk",thresholdCriteria);
+    seq->exportToVTK(outFileName + "_" + to_string(loop0) + ".vtk",thresholdCriteria);
   }
 }
 
@@ -199,39 +196,43 @@ void ShowFaceFluxPatterns(std::string faceFluxFileName, std::string outFileName)
 void TEST02_PrintThresholdingToVTK(MRIOptions* opts, MRICommunicator* comm){
 
   // Create New Sequence
-  MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
-  MRISequence* MyRECSequence = new MRISequence(false/*Cyclic Sequence*/);
+  bool isCyclicSequence = false;
+  MRISequence* mriSeq = new MRISequence(isCyclicSequence);
+  MRISequence* recSeq = new MRISequence(isCyclicSequence);
 
-  // Add File to Sequence
-  MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
-  MyMRIScan->ReadPltFile(opts->inputFileName, true);
-  MyMRISequence->AddScan(MyMRIScan);
+  // ADD FILE TO SEQUENCE
+  mriSeq->readPLTFile(opts->inputFileName, true);
 
   // APPLY FULL FILTER
-  MyMRISequence->ApplySMPFilter(opts,false,comm);
+  mriSeq->applySMPFilter(opts,false,comm);
 
   // APPLY SUCCESSIVE THRESHOLD
   for(int loopA=0;loopA<5;loopA++){
-    WriteSchMessage("Applying Threshold " + MRIUtils::IntToStr(loopA) + "\n");
+    writeSchMessage("Applying Threshold " + MRIUtils::intToStr(loopA) + "\n");
+    
     // CREATE NEW EXPANSION
-    MRIExpansion* currExp = new MRIExpansion(MyMRISequence->GetScan(0)->expansion);
+    MRIExpansion* currExp = new MRIExpansion(mriSeq->getScan(0)->expansion);
+    
     // APPLY THRESHOLD
-    currExp->ApplyVortexThreshold(kSoftThreshold,(0.95/4.0)*(loopA));
+    currExp->applyVortexThreshold(kSoftThreshold,(0.95/4.0)*(loopA));
+    
     // WRITE EXPANSION TO FILE
-    currExp->WriteToFile("Expansion_" + MRIUtils::IntToStr(loopA) + "\n");
+    currExp->writeToFile("Expansion_" + MRIUtils::intToStr(loopA) + "\n");
+    
     // GET A SCAN FROM ORIGINAL SEQUENCE
-    MRIScan* myScan = new MRIScan(*MyMRISequence->GetScan(0));
-    myScan->RebuildFromExpansion(currExp,false);
+    MRIScan* myScan = new MRIScan(*mriSeq->getScan(0));
+    myScan->rebuildFromExpansion(currExp,false);
+    
     // ADD SCAN TO RECONSTRUCTION
-    MyRECSequence->AddScan(myScan);
+    recSeq->addScan(myScan);
   }
 
   // Init a Threshold with No quantity
   MRIThresholdCriteria* thresholdCriteria = new MRIThresholdCriteria(kNoQuantity,kCriterionLessThen,0.0);
 
   // WRITE OUTPUT FILES TO VTK
-  MyMRISequence->ExportToVTK("FilteredSeq",thresholdCriteria);
-  MyRECSequence->ExportToVTK("ReconstructedSeq",thresholdCriteria);
+  mriSeq->exportToVTK("FilteredSeq",thresholdCriteria);
+  recSeq->exportToVTK("ReconstructedSeq",thresholdCriteria);
 }
 
 // ======================
@@ -240,88 +241,87 @@ void TEST02_PrintThresholdingToVTK(MRIOptions* opts, MRICommunicator* comm){
 void TEST03_EvalReynoldsStresses(MRIOptions* opts, MRICommunicator* comm){
 
   // CREATE NEW SEQUENCES
-  MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
-  MRISequence* MyRECSequence = new MRISequence(false/*Cyclic Sequence*/);
+  bool isCyclicSequence = false;
+  MRISequence* mriSeq = new MRISequence(isCyclicSequence);
+  MRISequence* recSeq = new MRISequence(isCyclicSequence);
 
   // ADD FILE TO SEQUENCE
-  MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
-  MyMRIScan->ReadPltFile(opts->inputFileName, true);
-  MyMRISequence->AddScan(MyMRIScan);
+  mriSeq->readPLTFile(opts->inputFileName, true);
 
   // APPLY FULL FILTER
-  MyMRISequence->ApplySMPFilter(opts,false,comm);
+  mriSeq->applySMPFilter(opts,false,comm);
 
-  WriteSchMessage("Filter Applied!\n");
+  writeSchMessage("Filter Applied!\n");
 
   // APPLY SUCCESSIVE THRESHOLD
   for(int loopA=0;loopA<2;loopA++){
 
     // WRITE MESSAGE
-    WriteSchMessage("Applying Threshold " + MRIUtils::IntToStr(loopA) + "\n");
+    writeSchMessage("Applying Threshold " + MRIUtils::intToStr(loopA) + "\n");
 
     // CREATE NEW EXPANSION
-    MRIExpansion* currExp = new MRIExpansion(MyMRISequence->GetScan(0)->expansion);
+    MRIExpansion* currExp = new MRIExpansion(mriSeq->getScan(0)->expansion);
 
     // APPLY THRESHOLD
-    currExp->ApplyVortexThreshold(kHardThresold,(0.99/1.0)*(loopA));
+    currExp->applyVortexThreshold(kHardThresold,(0.99/1.0)*(loopA));
 
     // WRITE EXPANSION TO FILE
-    currExp->WriteToFile("Expansion_" + MRIUtils::IntToStr(loopA) + "\n");
+    currExp->writeToFile("Expansion_" + MRIUtils::intToStr(loopA) + "\n");
 
     // GET A SCAN FROM ORIGINAL SEQUENCE
-    MRIScan* myScan = new MRIScan(*MyMRISequence->GetScan(0));
-    myScan->RebuildFromExpansion(currExp,false);
+    MRIScan* myScan = new MRIScan(*mriSeq->getScan(0));
+    myScan->rebuildFromExpansion(currExp,false);
 
     // EVAL REYNOLDS STRESSES
-    WriteSchMessage("Evaluating Reynolds Stresses...");
-    myScan->EvalReynoldsStressComponent(opts->thresholdCriteria);
-    WriteSchMessage("Done.\n");
+    writeSchMessage("Evaluating Reynolds Stresses...");
+    myScan->evalReynoldsStress(opts->thresholdCriteria);
+    writeSchMessage("Done.\n");
 
     // ADD SCAN TO RECONSTRUCTION
-    MyRECSequence->AddScan(myScan);
+    recSeq->addScan(myScan);
   }
 
   // Init a Threshold with No quantity
   MRIThresholdCriteria* thresholdCriteria = new MRIThresholdCriteria(kNoQuantity,kCriterionLessThen,0.0);
 
   // WRITE OUTPUT FILES TO VTK
-  MyRECSequence->ExportToVTK("ReynoldsStressSequence",thresholdCriteria);
+  recSeq->exportToVTK("ReynoldsStressSequence",thresholdCriteria);
 }
 
 // =========================================
 // EVAL PRESSURES FROM EXPANSION COFFICIENTS
 // =========================================
-void EvalConcentrationGradient(MRIOptions* opts){
+void evalConcentrationGradient(MRIOptions* opts){
 
   // CREATE NEW SEQUENCES
-  MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
+  bool isCyclicSequence = false;
+  MRISequence* mriSeq = new MRISequence(isCyclicSequence);
 
   bool doPressureSmoothing = false;
 
   // ADD FILE TO SEQUENCE
-  MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
-  MyMRIScan->ReadPltFile(opts->inputFileName,true);
-  MyMRIScan->ScalePositions(0.0058);
-  MyMRISequence->AddScan(MyMRIScan);
+  mriSeq->readPLTFile(opts->inputFileName,true);
+  mriSeq->scalePositions(0.0058);
 
   // EVAL REYNOLDS STRESSES AND PRESSURE GRADIENTS
-  MyMRISequence->GetScan(0)->ComputeQuantityGradient(kQtyConcentration);
+  mriSeq->getScan(0)->computeQuantityGradient(kQtyConcentration);
 
   // EVAL RELATIVE PRESSURE
-  MyMRISequence->ComputeRelativePressure(doPressureSmoothing);
+  mriSeq->computeRelativePressure(doPressureSmoothing);
 
   // Init a Threshold with No quantity
   MRIThresholdCriteria* thresholdCriteria = new MRIThresholdCriteria(kNoQuantity,kCriterionLessThen,0.0);
 
   // WRITE OUTPUT FILES TO VTK
-  MyMRISequence->ExportToVTK(opts->outputFileName,thresholdCriteria);
+  mriSeq->exportToVTK(opts->outputFileName,thresholdCriteria);
 
 }
 
 // ===================
 // PERFORM RANDOM TEST
 // ===================
-void PerformRandomTest(MRIOptions* opts,MRICommunicator* comm){
+void performRandomTest(MRIOptions* opts,MRICommunicator* comm){
+  
   // Set parameters
   int numberMC = 500;
 
@@ -329,244 +329,114 @@ void PerformRandomTest(MRIOptions* opts,MRICommunicator* comm){
   boost::variate_generator<boost::mt19937, boost::normal_distribution<> > generator(boost::mt19937(time(0)),boost::normal_distribution<>());
 
   // Declare Scan
-  MRIStructuredScan* MyMRIScan;
+  MRIScan* scan;
 
   // Monte Carlo Loops
   for(int loopA=0;loopA<numberMC;loopA++){
 
     // Generate Random Velocity Field - Standard Gaussian Distribution
-    MyMRIScan = new MRIStructuredScan(0.0);
+    scan = new MRIScan(0.0);
 
-    vector<double> params;
-    params.push_back(5.0);
-    params.push_back(5.0);
-    params.push_back(5.0);
-    params.push_back(1.0);
-    params.push_back(1.0);
-    params.push_back(1.0);
-    params.push_back(0.0);
-    params.push_back(1.0);
-    MyMRIScan->CreateSampleCase(kZeroVelocity,params);
+    MRIDoubleVec params(8);
+    params[0] = 5.0;
+    params[1] = 5.0;
+    params[2] = 5.0;
+    params[3] = 1.0;
+    params[4] = 1.0;
+    params[5] = 1.0;
+    params[6] = 0.0;
+    params[7] = 1.0;
+    scan->createSampleCase(kZeroVelocity,params);
 
     // Assign Random Component
-    MyMRIScan->AssignRandomComponent(kdirX,generator);
-    MyMRIScan->AssignRandomComponent(kdirY,generator);
-    MyMRIScan->AssignRandomComponent(kdirZ,generator);
+    scan->assignRandomComponent(kdirX,generator);
+    scan->assignRandomComponent(kdirY,generator);
+    scan->assignRandomComponent(kdirZ,generator);
 
     // Write Generated Velocities To File
-    MyMRIScan->ExportVelocitiesToFile("InputVelocities.dat",true);
+    scan->exportVelocitiesToFile("InputVelocities.dat",true);
 
     // Filter Velocities - NO GLOBAL ATOMS
-    MyMRIScan->applySMPFilter(opts,false,comm);
-    MyMRIScan->UpdateVelocities();
+    scan->applySMPFilter(opts,false,comm);
+    scan->updateVelocities();
 
     // Write Resultant Velocities
-    MyMRIScan->ExportVelocitiesToFile("OutputVelocities.dat",true);
+    scan->exportVelocitiesToFile("OutputVelocities.dat",true);
 
     // Deallocate
-    delete MyMRIScan;
-    MyMRIScan = NULL;
+    delete scan;
+    scan = NULL;
   }
-}
-
-// =========================
-// PERFORM STREAMLINE TEST 1
-// =========================
-void PerformStreamlineTest1(int intValue,std::string inFileName,std::string outfileName){
-
-  // Set Default Options For Streamlines
-  // Re   Xmin  Xmax Ymin  Ymax Zmin  Zmax
-  // 80   -18.0 15.0 -12.0 21.0 -78.0 75.0
-  // 145  -12.0 21.0 -22.0 11.0 -78.0 75.0
-  // 190  -14.0 19.0 -3.0  30.0 -78.0 75.0
-  // 240  -14.0 19.0 -3.0  30.0 -78.0 75.0
-  // 290  -12.0 21.0 -22.0 11.0 -78.0 75.0
-  // 458  -12.0 21.0 -22.0 11.0 -78.0 75.0
-  // 1390 -15.0 18.0 -12.0 21.0 -78.0 75.0
-  // 2740 -15.0 18.0 -12.0 21.0 -78.0 75.0
-  MRIStreamlineOptions slOptions(0.0,0.0,0.0,0.0,0.0,0.0);
-  switch (intValue){
-    case 0:
-      // Re 80
-      slOptions.setLimits(-18.0,15.0,-12.0,21.0,-78.0,75.0);
-      break;
-    case 1:
-      // Re 145
-      slOptions.setLimits(-12.0,21.0,-22.0,11.0,-78.0,75.0);
-      break;
-    case 2:
-      // Re 190
-      slOptions.setLimits(-14.0,19.0,-3.0,30.0,-78.0,75.0);
-      break;
-    case 3:
-      // Re 240
-      slOptions.setLimits(-14.0,19.0,-3.0,30.0,-78.0,75.0);
-      break;
-    case 4:
-      // Re 290
-      slOptions.setLimits(-12.0,21.0,-22.0,11.0,-78.0,75.0);
-      break;
-    case 5:
-      // Re 458
-      slOptions.setLimits(-12.0,21.0,-22.0,11.0,-78.0,75.0);
-      break;
-    case 6:
-      // Re 1390
-      slOptions.setLimits(-15.0,18.0,-12.0,21.0,-78.0,75.0);
-      break;
-    case 7:
-      // Re 2740
-      slOptions.setLimits(-15.0,18.0,-12.0,21.0,-78.0,75.0);
-      break;
-  }
-
-  // Get First Scan
-  MRIStructuredScan* myScan = new MRIStructuredScan(0.0);
-
-  // Read From File
-  //myScan->ReadPltFile(inFileName,true);
-
-  // Export to VTK
-  //myScan->ExportToVTK(outfileName+"_Model.vtk");
-
-  // Compute Streamlines
-  std::vector<MRIStreamline*> streamlines;
-  //myScan->ComputeStreamlines(outfileName+"_grid.dat",slOptions,streamlines);
-
-  // Read Streamlines from File
-  MRIUtils::ReadStreamlinesFromLegacyVTK(inFileName,streamlines);
-
-  // Print Streamlines To File
-  //MRIUtils::PrintStreamlinesToVTK(streamlines,outfileName+"_DebugStreamlines.vtk");
-
-  // Eval Streamlines Statistics
-  myScan->EvalStreamLineStatistics(outfileName,kdirZ,slOptions,streamlines);
-}
-
-// =========================
-// PERFORM STREAMLINE TEST 2
-// =========================
-void PerformStreamlineTest2(std::string inFileName,std::string outfileName){
-
-  // Set Default Options For Streamlines
-  // Re   Xmin  Xmax Ymin  Ymax Zmin  Zmax
-  // 80   -18.0 15.0 -12.0 21.0 -78.0 75.0
-  // 145  -12.0 21.0 -22.0 11.0 -78.0 75.0
-  // 190  -14.0 19.0 -3.0  30.0 -78.0 75.0
-  // 240  -14.0 19.0 -3.0  30.0 -78.0 75.0
-  // 290  -12.0 21.0 -22.0 11.0 -78.0 75.0
-  // 458  -12.0 21.0 -22.0 11.0 -78.0 75.0
-  // 1390 -15.0 18.0 -12.0 21.0 -78.0 75.0
-  // 2740 -15.0 18.0 -12.0 21.0 -78.0 75.0
-  MRIStreamlineOptions slOptions(0.0,0.0,0.0,0.0,0.0,0.0);
-  slOptions.setLimits(-18.0,15.0,-12.0,21.0,-78.0,75.0);
-
-  // Get First Scan
-  MRIStructuredScan* myScan = new MRIStructuredScan(0.0);
-
-  // Read From File
-  myScan->ReadPltFile(inFileName,true);
-
-  // Set Velocities constant in Z
-  for(int loopA=0;loopA<myScan->totalCellPoints;loopA++){
-    myScan->cellPoints[loopA].velocity[0] = 0.01;
-    myScan->cellPoints[loopA].velocity[1] = 0.01;
-    myScan->cellPoints[loopA].velocity[2] = 1.0;
-  }
-
-  // Init a Threshold with No quantity
-  MRIThresholdCriteria* thresholdCriteria = new MRIThresholdCriteria(kNoQuantity,kCriterionLessThen,0.0);
-
-  // Export to VTK
-  myScan->ExportToVTK(outfileName+"_Model.vtk",thresholdCriteria);
-
-  // Compute Streamlines
-  std::vector<MRIStreamline*> streamlines;
-  myScan->ComputeStreamlines(outfileName+"_grid.dat",slOptions,streamlines);
-
-  // Read Streamlines from File
-  //MRIUtils::ReadStreamlinesFromLegacyVTK(inFileName,streamlines);
-
-  // Print Streamlines To File
-  MRIUtils::PrintStreamlinesToVTK(streamlines,outfileName+"_DebugStreamlines.vtk");
-
-  // Eval Streamlines Statistics
-  myScan->EvalStreamLineStatistics(outfileName,kdirZ,slOptions,streamlines);
 }
 
 // ========================================
 // BUILD FROM COEFFICIENTS AND WRITE TO PLT
 // ========================================
-void BuildFromCoeffs(std::string coeffFileName,std::string plotOut,bool performThreshold,int thresholdType,double threshold){
+void buildFromCoeffs(std::string coeffFileName,std::string plotOut,bool performThreshold,int thresholdType,double threshold){
 
   // CREATE NEW SEQUENCES
-  MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
+  MRISequence* seq = new MRISequence(false/*Cyclic Sequence*/);
 
   // ADD FILE TO SEQUENCE
-  MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
-  MyMRIScan->ReadFromExpansionFile(coeffFileName,performThreshold,thresholdType,threshold);
-  MyMRISequence->AddScan(MyMRIScan);
+  seq->readFromExpansionFile(coeffFileName,performThreshold,thresholdType,threshold);
 
-  // APPLY THRESHOLDING
-  //MRIThresholdCriteria criteria(kCriterionLessThen,kQtyConcentration,1000.0);
-  //MyMRISequence->ApplyThresholding(criteria);
-
-  // Init a Threshold with No quantity
+  // INIT A THRESHOLD WITH NO QUANTITY
   MRIThresholdCriteria* thresholdCriteria = new MRIThresholdCriteria(kNoQuantity,kCriterionLessThen,0.0);
 
   // EXPORT TO PLT FILE
-  //MyMRISequence->ExportToTECPLOT(plotOut);
-  MyMRISequence->ExportToVTK(plotOut, thresholdCriteria);
+  seq->exportToVTK(plotOut, thresholdCriteria);
 }
 
 // ============================
 // EVAL VARIOUS VORTEX CRITERIA
 // ============================
-void EvalVortexCriteria(MRIOptions* opts){
+void evalVortexCriteria(MRIOptions* opts){
+
+  int vortexCrit = 0;
+  
   // CREATE NEW SEQUENCES
-  MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
+  MRISequence* seq = new MRISequence(false/*Cyclic Sequence*/);
 
   // ADD FILE TO SEQUENCE
-  MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
-  MyMRIScan->ReadPltFile(opts->inputFileName,true);
-  MyMRISequence->AddScan(MyMRIScan);
+  seq->readPLTFile(opts->inputFileName,true);
 
   // EVAL VORTEX CRITERIA
-  // MyMRISequence->GetScan(0)->EvalVortexCriteria();
-  // MyMRISequence->GetScan(0)->EvalVorticity();
-  MyMRISequence->GetScan(0)->EvalEnstrophy(opts->thresholdCriteria);
+  if(vortexCrit == 0){
+    seq->getScan(0)->evalVortexCriteria(opts->thresholdCriteria);
+  }else if(vortexCrit == 1){
+    seq->getScan(0)->evalVorticity(opts->thresholdCriteria);
+  }else if(vortexCrit == 2){
+    seq->getScan(0)->evalEnstrophy(opts->thresholdCriteria);
+  }else{
+    throw MRIException("ERROR: Invalid Vortex Criterion.\n");
+  }
 
   // Init a Threshold with No quantity
   MRIThresholdCriteria* thresholdCriteria = new MRIThresholdCriteria(kNoQuantity,kCriterionLessThen,0.0);
 
   // WRITE OUTPUT FILES TO VTK
-  MyMRISequence->ExportToVTK(opts->outputFileName,thresholdCriteria);
+  seq->exportToVTK(opts->outputFileName,thresholdCriteria);
 }
 
 // ===========================================
 // WRITE SPATIAL DISTRIBUTIONS OF COEFFICIENTS
 // ===========================================
-void WriteSpatialExpansion(MRIOptions* opts){
-  // CREATE NEW SEQUENCES
-  MRISequence* MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
+void writeSpatialExpansion(MRIOptions* opts){
 
-  // CREATE NEW SCAN
-  MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
+  // CREATE NEW SEQUENCES
+  MRISequence* seq = new MRISequence(false/*Cyclic Sequence*/);
 
   // READ FROM EXPANSION COEFFICIENTS
-  MyMRIScan->ReadFromExpansionFile(opts->inputFileName,false,kSoftThreshold,0.0);
-
-  // ADD TO SEQUENCE
-  MyMRISequence->AddScan(MyMRIScan);
+  seq->readFromExpansionFile(opts->inputFileName,false,kSoftThreshold,0.0);
 
   // SPATIALLY EVALUATE VORTEX COEFFICIENTS
-  MyMRISequence->GetScan(0)->EvalSMPVortexCriteria(MyMRISequence->GetScan(0)->expansion);
+  seq->getScan(0)->evalSMPVortexCriteria(seq->getScan(0)->expansion);
 
   // Init a Threshold with No quantity
   MRIThresholdCriteria* thresholdCriteria = new MRIThresholdCriteria(kNoQuantity,kCriterionLessThen,0.0);
 
   // EXPORT TO VTK
-  MyMRISequence->ExportToVTK(opts->outputFileName,thresholdCriteria);
+  seq->exportToVTK(opts->outputFileName,thresholdCriteria);
 }
 
 // ===============================
@@ -606,7 +476,7 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
           MyMRIScan->ReadPltFile(opts->sequenceFileList[loopA], true);
         }
         // ADD TO SEQUENCE
-        MyMRISequence->AddScan(MyMRIScan);
+        MyMRISequence->addScan(MyMRIScan);
       }
   }else{
     // LOOP ON THE NUMBER OF SCANS
@@ -616,13 +486,13 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
       // CREATE EMPTY SCAN
       MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
       // ADD TO SEQUENCE
-      MyMRISequence->AddScan(MyMRIScan);
+      MyMRISequence->addScan(MyMRIScan);
 //    }
   }
 
   // Compute the topology of the sequence
   // The topology of the sequence must be the same
-  MyMRISequence->CreateTopology();
+  MyMRISequence->createTopology();
 
   // All processes are waiting for the root to read the files
   int mpiError = MPI_Barrier(comm->mpiComm);
@@ -631,17 +501,16 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
   // Scale Model if required
   if(comm->currProc == 0){
     if (opts->scaleVelocities){
-      MyMRISequence->ScaleVelocities(opts->scaleVelocityFactor);
+      MyMRISequence->scaleVelocities(opts->scaleVelocityFactor);
     }
     if (opts->scalePositions){
-      MyMRISequence->ScalePositions(opts->scalePositionFactor);
+      MyMRISequence->scalePositions(opts->scalePositionFactor);
     }
   }
 
-
   // Distribute Sequence Data using MPI
   if(comm->totProc > 1){
-    MyMRISequence->DistributeSequenceData(comm);
+    MyMRISequence->distributeSequenceData(comm);
   }
   if(comm->currProc == 0){
     printf("Data Structure Communication OK.\n");

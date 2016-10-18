@@ -13,7 +13,7 @@
 // ===========================================
 // COMPUTE PRESSURE GRADIENTS FOR GENERIC CELL
 // ===========================================
-void MRIScan::EvalCellPressureGradients(int currentCell, MRICellMaterial material,
+void MRIScan::evalCellPressureGradients(int currentCell, MRICellMaterial material,
                                         double* timeDeriv, double** firstDerivs, double** secondDerivs,
                                         double** ReynoldsStressGrad,
                                         double* pressureGrad){
@@ -70,7 +70,7 @@ double findParabolicDeriv(double y1, double y2, double y3, double h1, double h2,
 }
 
 // Eval Time Derivatives: TODO: Complete for Transient Case
-void MRISequence::EvalTimeDerivs(int currentScan, int currentCell,double* timeDeriv){
+void MRISequence::evalTimeDerivs(int currentScan, int currentCell,double* timeDeriv){
   // Eval Difference Formulae
   if (totalScans>1){
     // multiple Scan
@@ -200,7 +200,7 @@ void MRISequence::EvalTimeDerivs(int currentScan, int currentCell,double* timeDe
 // ==================================
 // EVAL TIME DERIVATIVES FOR THE SCAN
 // ==================================
-void MRISequence::EvalScanTimeDerivs(int currentScan,MRIDoubleMat& timeDeriv){
+void MRISequence::evalScanTimeDerivs(int currentScan,MRIDoubleMat& timeDeriv){
   timeDeriv.clear();
   MRIDoubleVec temp;
   double cellTimeDeriv[3];
@@ -217,7 +217,7 @@ void MRISequence::EvalScanTimeDerivs(int currentScan,MRIDoubleMat& timeDeriv){
 // ================================
 // EVAL REYNOLDS STRESS DERIVATIVES
 // ================================
-void MRISequence::EvalScanReynoldsStressDerivs(int currentScan,MRIDoubleMat& reynoldsDeriv){
+void MRISequence::evalScanReynoldsStressDerivs(int currentScan,MRIDoubleMat& reynoldsDeriv){
   reynoldsDeriv.clear();
   MRIDoubleVec temp;
   double** rsg;
@@ -243,7 +243,7 @@ void MRISequence::EvalScanReynoldsStressDerivs(int currentScan,MRIDoubleMat& rey
 // ==========================================
 // EVAL FIRST AND SECOND DERIVATIVES IN SPACE
 // ==========================================
-void MRIStructuredScan::EvalSpaceDerivs(int currentCell, MRIThresholdCriteria* threshold, MRIDoubleMat& firstDerivs, MRIDoubleMat& secondDerivs){
+void MRIScan::evalSpaceDerivs(int currentCell, MRIThresholdCriteria* threshold, MRIDoubleMat& firstDerivs, MRIDoubleMat& secondDerivs){
   // FirstDerivs
   // DVX/DX DVY/DX DVZ/DX
   // DVX/DY DVY/DY DVZ/DY
@@ -527,7 +527,7 @@ void MRIStructuredScan::EvalSpaceDerivs(int currentCell, MRIThresholdCriteria* t
 // ==========================================
 // EVAL FIRST AND SECOND DERIVATIVES IN SPACE
 // ==========================================
-void MRIStructuredScan::EvalSpaceGradient(int currentCell,int qtyID, double* gradient){
+void MRIStructuredScan::evalSpaceGradient(int currentCell,int qtyID, double* gradient){
   // Map Index To Coords
   int* currentCellCoords = new int[kNumberOfDimensions];
   MapIndexToCoords(currentCell,currentCellCoords);
@@ -683,7 +683,7 @@ int getReynoldsStressIndex(int loopA,int loopB){
 }
 
 // Print The Derivatives
-void PrintDerivatives(double** firstDerivs, double** secondDerivs){
+void printDerivatives(double** firstDerivs, double** secondDerivs){
   printf("First Derivatives\n");
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
     printf("%e %e %e\n",firstDerivs[loopA][0],firstDerivs[loopA][1],firstDerivs[loopA][2]);
@@ -697,7 +697,7 @@ void PrintDerivatives(double** firstDerivs, double** secondDerivs){
 }
 
 // EVAL PRESSURE GRADIENTS
-void MRISequence::ComputePressureGradients(MRIThresholdCriteria* threshold){
+void MRISequence::computePressureGradients(MRIThresholdCriteria* threshold){
   
   // Allocate Local Velocity Gradients
   double* timeDerivs = new double[kNumberOfDimensions];

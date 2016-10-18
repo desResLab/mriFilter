@@ -646,7 +646,7 @@ int MRIScan::evalCentralCell(){
 }
 
 // ASSEMBLE ENCODING MATRIX
-void MRIScan::assembleEncodingMatrix(int &totalRows, int &totalColumns, double** &Mat){
+void MRIScan::assembleEncodingMatrix(int &totalRows, int &totalColumns, MRIDoubleMat& Mat){
   // VAR
   int faceXPlus =  0;
   int faceXMinus = 0;
@@ -673,10 +673,10 @@ void MRIScan::assembleEncodingMatrix(int &totalRows, int &totalColumns, double**
 
   // ALLOCATE MATRIX
   int faceConn[totalRows];
-  Mat = new double*[totalRows];
+  Mat.resize(totalRows);
   for(int loopA=0;loopA<totalRows;loopA++){
     faceConn[loopA] = 0;
-    Mat[loopA] = new double[totalColumns];
+    Mat[loopA].resize(totalColumns);
   }
   // INIT MATRIX
   for(int loopA=0;loopA<totalRows;loopA++){
@@ -775,7 +775,7 @@ void MRIScan::assembleEncodingMatrix(int &totalRows, int &totalColumns, double**
 }
 
 // Assemble Decoding Matrix
-void MRIScan::assembleDecodingMatrix(int &totalRows, int &totalColumns, double** &Mat){
+void MRIScan::assembleDecodingMatrix(int &totalRows, int &totalColumns, MRIDoubleMat& Mat){
   // VAR
   int faceXPlus  = 0;
   int faceXMinus = 0;
@@ -797,9 +797,9 @@ void MRIScan::assembleDecodingMatrix(int &totalRows, int &totalColumns, double**
   totalColumns = GetTotalFaces();
   
   // ALLOCATE MATRIX
-  Mat = new double*[totalRows];
+  Mat.resize(totalRows);
   for(int loopA=0;loopA<totalRows;loopA++){
-    Mat[loopA] = new double[totalColumns];
+    Mat[loopA].resize(totalColumns);
   }
   // INIT MATRIX
   for(int loopA=0;loopA<totalRows;loopA++){
@@ -1466,97 +1466,6 @@ void readExpansionFile(std::string fileName,int* tot,
 
   // CLOSE FILE
   inFile.close();
-}
-
-// =============================
-// READ SCAN FROM EXPANSION FILE
-// =============================
-void MRIScan::readFromExpansionFile(std::string fileName,bool applyThreshold, int thresholdType,double thresholdRatio){
-
-  // Allocate Variables
-  int tot[3];
-  std::vector<double> lengthX;
-  std::vector<double> lengthY;
-  std::vector<double> lengthZ;
-  double minlimits[3];
-  double maxlimits[3];
-  MRIExpansion* exp = NULL;
-
-  // Read Quantities From File
-  readExpansionFile(fileName,tot,lengthX,lengthY,lengthZ,minlimits,maxlimits,exp);
-
-  // SET UP SCAN QUANTITIES
-  // CELL TOTALS
-  topology->cellTotals[0] = tot[0];
-  topology->cellTotals[1] = tot[1];
-  topology->cellTotals[2] = tot[2];
-
-  // CELL LENGTHS
-  topology->cellLengths.resize(kNumberOfDimensions);
-  // X
-  for(size_t loopA=0;loopA<lengthX.size();loopA++){
-    topology->cellLengths[0].push_back(lengthX[loopA]);
-  }
-  // Y
-  for(size_t loopA=0;loopA<lengthY.size();loopA++){
-    topology->cellLengths[1].push_back(lengthY[loopA]);
-  }
-  // Z
-  for(size_t loopA=0;loopA<lengthZ.size();loopA++){
-    topology->cellLengths[2].push_back(lengthZ[loopA]);
-  }
-
-  // DIMENSIONS
-  // MIN
-  topology->domainSizeMin[0] = minlimits[0];
-  topology->domainSizeMin[1] = minlimits[1];
-  topology->domainSizeMin[2] = minlimits[2];
-  // MAX
-  topology->domainSizeMax[0] = maxlimits[0];
-  topology->domainSizeMax[1] = maxlimits[1];
-  topology->domainSizeMax[2] = maxlimits[2];
-  // MRI EXPANSION
-  expansion = new MRIExpansion(exp);
-
-  // APPLY THRESHOLD TO EXPANSION
-  if(applyThreshold){
-    expansion->ApplyVortexThreshold(thresholdType,thresholdRatio);
-  }
-
-  // INITIALIZE VALUES
-  hasPressureGradient = false;
-  hasRelativePressure = false;
-  scanTime = 0.0;
-  maxVelModule = 0.0;
-
-  // INITIALIZE SCAN
-  topology->totalCells = topology->cellTotals[0]*topology->cellTotals[1]*topology->cellTotals[2];
-  // CREATE NEW CELL
-  MRICell newCell;
-  // INITIALIZE QUANTITIES TO ZERO
-  for(int loopA=0;loopA<topology->totalCells;loopA++){
-    // ADD IT TO CELL POINTS
-    cells.push_back(newCell);
-  }
-
-  // INITIALIZE POSITIONS
-  int intCoords[3] = {0};
-  double Pos[3] = {0.0};
-  for(int loopA=0;loopA<topology->totalCells;loopA++){
-    mapIndexToCoords(loopA,intCoords);
-    mapCoordsToPosition(intCoords,true,Pos);
-    cells[loopA].setQuantity(kQtyPositionX,topology->domainSizeMin[0] + Pos[0]);
-    cells[loopA].setQuantity(kQtyPositionY,topology->domainSizeMin[1] + Pos[1]);
-    cells[loopA].setQuantity(kQtyPositionZ,topology->domainSizeMin[2] + Pos[2]);
-  }
-
-  // REORDER MODEL
-  reorderScan();
-
-  // REBUILD SCAN
-  //RebuildFromExpansion(expansion,true);
-  // No Constant Flux
-  rebuildFromExpansion(expansion,false);
 }
 
 // ====================
@@ -3287,4 +3196,63 @@ void MRIScan::exportForDistancing(string inputFileName,MRIThresholdCriteria* thr
 
   printf("\n");
   printf("Distancing Solver File Exported.\n");
+}
+
+// =================================
+// UPDATE VELOCITIES FROM AUX VECTOR
+// =================================
+void MRIScan::updateVelocities(){
+  maxVelModule = 0.0;
+  MRIReal currentNorm = 0.0;
+  // Update Velocities
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    // Assign Filtered Vectors
+    cellPoints[loopA].velocity[0] = cellPoints[loopA].auxVector[0];
+    cellPoints[loopA].velocity[1] = cellPoints[loopA].auxVector[1];
+    cellPoints[loopA].velocity[2] = cellPoints[loopA].auxVector[2];
+    // Get New Norm
+    currentNorm = MRIUtils::do3DEucNorm(cellPoints[loopA].auxVector);
+    if(currentNorm>maxVelModule){
+      maxVelModule = currentNorm;
+    }
+  }
+}
+
+void MRIScan::testScanAdjacency(string fileName){
+  FILE* outFile;
+  outFile = fopen(fileName.c_str(),"w");
+  // Write mesh Dimensions
+  fprintf(outFile,"Mesh Dims, X: %d, Y: %d, Z: %d\n",cellTotals[0],cellTotals[1],cellTotals[2]);
+  // TEST Face ADJACENCY
+  int currFace = 0;
+  int faceLocation = 0;
+  for(int loopA=0;loopA<totalCellPoints;loopA++){
+    fprintf(outFile,"Face Adjacency for Cell: %d\n",loopA);
+    for(int loopB=0;loopB<k3DNeighbors;loopB++){
+      switch(loopB){
+        case 0:
+          faceLocation = kfacePlusX;
+          break;
+        case 1:
+          faceLocation = kfaceMinusX;
+          break;
+        case 2:
+          faceLocation = kfacePlusY;
+          break;
+        case 3:
+          faceLocation = kfaceMinusY;
+          break;
+        case 4:
+          faceLocation = kfacePlusZ;
+          break;
+        case 5:
+          faceLocation = kfaceMinusZ;
+          break;
+      }        
+      currFace = GetAdjacentFace(loopA,faceLocation);  
+      fprintf(outFile,"%d\n",currFace);
+    }
+  }
+  // Close Output file
+  fclose(outFile);
 }

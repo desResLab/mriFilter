@@ -130,13 +130,13 @@ void formDifferenceBinLimits(MRIScan* scanOther, MRIScan* scanRef, int pdfQuanti
 }
 
 // Eval The PDF of a Single Scan
-void evalScanPDF(MRIScan* scan, int pdfQuantity, int numberOfBins, bool useBox, double* limitBox,double* binCenter, double* binArray){
+void MRIScan::evalScanPDF(int pdfQuantity, int numberOfBins, bool useBox, MRIDoubleVec& limitBox,MRIDoubleVec& binCenter, MRIDoubleVec& binArray){
   // Allocate Quantities
-  double* binMin = new double[numberOfBins];
-  double* binMax = new double[numberOfBins];
+  MRIDoubleVec binMin(numberOfBins);
+  MRIDoubleVec binMax(numberOfBins);
   // Form Bin 
   double currInterval = 0.0;
-  FormBinLimits(scan,pdfQuantity,currInterval,limitBox,numberOfBins,binMin,binMax,binCenter);
+  FormBinLimits(pdfQuantity,currInterval,limitBox,numberOfBins,binMin,binMax,binCenter);
   // Initialize binArray
   for(int loopA=0;loopA<numberOfBins;loopA++){
     binArray[loopA] = 0.0;
@@ -157,51 +157,4 @@ void evalScanPDF(MRIScan* scan, int pdfQuantity, int numberOfBins, bool useBox, 
   }
   // Normalize
   NormalizeBinArray(numberOfBins,binArray,currInterval);
-  // DeAllocate
-  delete [] binMin;
-  delete [] binMax;
 }
-
-// Eval The Difference PDF of Scans
-void evalScanDifferencePDF(MRISequence* sequence, int otherScan, int refScan, const int pdfQuantity, int numberOfBins, bool useBox, double* limitBox, double* binCenters, double* binArray){
-  // Get The Scans out of the sequence
-  MRIScan* scanOther = sequence->GetScan(otherScan);
-  MRIScan* scanRef = sequence->GetScan(refScan);
-  // Allocate Quantities
-  double* binMin = new double[numberOfBins];
-  double* binMax = new double[numberOfBins];
-  // Form Bin 
-  double currInterval = 0.0;
-  FormDifferenceBinLimits(scanOther,scanRef,pdfQuantity,currInterval,limitBox,numberOfBins,binMin,binMax,binCenters);
-  // Intialize bins
-  for(int loopA=0;loopA<numberOfBins;loopA++){
-    binArray[loopA] = 0.0;
-  }
-  // Loop through the points
-  double sourceValue = 0.0;
-  double refValue = 0.0;
-  double* cellCoord = NULL;
-  double otherQuantity = 0.0;
-  double refQuantity = 0.0;
-  double currValue = 0.0;
-  for(int loopA=0;loopA<scanRef->totalCellPoints;loopA++){
-    // Get Cell Coords
-    cellCoord = scanRef->cellPoints[loopA].position;
-    // Get quantity
-    otherQuantity = scanOther->cellPoints[loopA].getQuantity(pdfQuantity);
-    refQuantity = scanRef->cellPoints[loopA].getQuantity(pdfQuantity);
-    // Get Value
-    currValue = (otherQuantity - refQuantity);
-    // Assign Value to Bin
-    if (MRIUtils::IsPointInsideBox(cellCoord[0],cellCoord[1],cellCoord[2],limitBox)){
-      // COMPLETE
-      AssignToBin(currValue,numberOfBins,binMin,binMax,binArray);
-    }
-  }
-  // Normalize
-  NormalizeBinArray(numberOfBins,binArray,currInterval);
-  // DeAllocate
-  delete [] binMin;
-  delete [] binMax;
-}
-

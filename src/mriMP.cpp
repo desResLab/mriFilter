@@ -26,7 +26,7 @@ void writeVectorToFile(string outFile, int size, double* vec){
 // ===================
 // PRINT FASE ID INDEX
 // ===================
-void PrintFaceIDIndexes(std::string fileName, int totalStarFaces, std::vector<int> facesID, std::vector<double> facesCoeffs){
+void printFaceIDIndexes(std::string fileName, int totalStarFaces, std::vector<int> facesID, std::vector<double> facesCoeffs){
 	// Open Output File
 	FILE* outFile;
 	outFile = fopen(fileName.c_str(),"w");
@@ -41,7 +41,7 @@ void PrintFaceIDIndexes(std::string fileName, int totalStarFaces, std::vector<in
 // =====================
 // PRINT RESIDUAL VECTOR
 // =====================
-void PrintResidualVector(std::string fileName, int totalFaces, double* resVec){
+void printResidualVector(std::string fileName, int totalFaces, double* resVec){
 	// Open Output File
 	FILE* outFile;
 	outFile = fopen(fileName.c_str(),"w");
@@ -56,14 +56,14 @@ void PrintResidualVector(std::string fileName, int totalFaces, double* resVec){
 // =======================
 // ASSEMBLE CONSTANT SHAPE
 // =======================
-void MRIStructuredScan::AssembleConstantPattern(int currentDim, int &totalConstantFaces,
-                                                std::vector<int> &facesID, std::vector<double> &facesCoeffs){
+void MRIScan::assembleConstantPattern(int currentDim, int& totalConstantFaces,
+                                      MRIIntVec& &facesID, MRIDoubleVec& facesCoeffs){
 
   // Clear Vectors
   totalConstantFaces = 0;
   facesID.clear();
   facesCoeffs.clear();
-  std::vector<int> orientation;
+  MRIIntVec orientation;
 
   // Loop Over Faces
   int totNegFaces = 0;
@@ -79,14 +79,10 @@ void MRIStructuredScan::AssembleConstantPattern(int currentDim, int &totalConsta
     }
   }
 
-  //printf("NEGATIVE FACES: %d\n",totNegFaces);
-
   // Fill Coefficients
   for(size_t loopA=0;loopA<facesID.size();loopA++){
     facesCoeffs.push_back((orientation[loopA]/sqrt((double)facesID.size())));
   }
-
-  //printf("TOTAL FACES: %d\n",facesID.size());
 
   // Update Counter
   totalConstantFaces = facesID.size();
@@ -96,9 +92,9 @@ void MRIStructuredScan::AssembleConstantPattern(int currentDim, int &totalConsta
 // =======================
 // ASSEMBLE CONSTANT SHAPE
 // =======================
-void MRIStructuredScan::AssembleConstantPatternMPI(int currentDim, int &totalConstantFacesOnProc,
-                                                   std::vector<int> &facesIDOnProc, std::vector<double> &facesCoeffsOnProc,
-                                                   int minFaceOnProc, int maxFaceOnProc, MRICommunicator* comm){
+void MRIScan::assembleConstantPatternMPI(int currentDim, int& totalConstantFacesOnProc,
+                                         MRIIntVec& facesIDOnProc, MRIDoubleVec& facesCoeffsOnProc,
+                                         int minFaceOnProc, int maxFaceOnProc, MRICommunicator* comm){
 
   // Clear Vectors
   totalConstantFacesOnProc = 0;
@@ -134,8 +130,6 @@ void MRIStructuredScan::AssembleConstantPatternMPI(int currentDim, int &totalCon
     }
   }
 
-  //printf("[%d] NEGATIVE FACES: %d\n",comm->currProc,totNegative);
-
   // Fill Coefficients
   for(size_t loopA=0;loopA<facesIDOnProc.size();loopA++){
     facesCoeffsOnProc.push_back((orientation[loopA]/sqrt((double)totFacesThisDir)));
@@ -143,14 +137,13 @@ void MRIStructuredScan::AssembleConstantPatternMPI(int currentDim, int &totalCon
 
   // Update Counter
   totalConstantFacesOnProc = facesIDOnProc.size();
-
 }
 
 
 // ====================
 // ASSEMBLE STAR MATRIX
 // ====================
-void MRIStructuredScan::AssembleStarMatrix(int &totalFaces, int &totalBasis, double** &starMatrix){
+void MRIScan::assembleStarMatrix(int &totalFaces, int &totalBasis, double** &starMatrix){
   // Init Rows and Columns
   totalFaces = GetTotalFaces();
   totalBasis = GetTotalBasisNumber();
@@ -184,7 +177,7 @@ void MRIStructuredScan::AssembleStarMatrix(int &totalFaces, int &totalBasis, dou
 // =========================
 // GET TOTAL NUMBER OF BASIS
 // =========================
-int MRIStructuredScan::GetTotalBasisNumber(){
+int MRIScan::getTotalBasisNumber(){
   int totBasis = 0;
   int totalSlices = 0;
   int totalStars = 0;
@@ -214,7 +207,7 @@ int MRIStructuredScan::GetTotalBasisNumber(){
 // =================
 // CHECK PERMUTATION
 // =================
-bool CheckPermutation(int size, int* perm){
+bool checkPermutation(int size, int* perm){
   bool checkPerm[size];
   for(int loopA=0;loopA<size;loopA++) checkPerm[size] = false;
   // Sort Permutation
@@ -226,7 +219,7 @@ bool CheckPermutation(int size, int* perm){
 }
 
 // EXPAND STAR SHAPE TO FULL VECTOR
-void MRIStructuredScan::ExpandStarShape(int totalStarFaces, int* facesID, double* facesCoeffs, double* &fullStarVector){
+void MRIScan::expandStarShape(int totalStarFaces, int* facesID, double* facesCoeffs, double* &fullStarVector){
   // Get Total Number Of Faces
   int totalFaces = cellTotals[0]*cellTotals[1]*(cellTotals[2]+1)+
                    cellTotals[1]*cellTotals[2]*(cellTotals[0]+1)+
@@ -245,7 +238,7 @@ void MRIStructuredScan::ExpandStarShape(int totalStarFaces, int* facesID, double
 // ==============================
 // EVAL DIVERGENCE FOR EVERY CELL
 // ==============================
-double MRIStructuredScan::EvalMaxDivergence(double* filteredVec){
+double MRIScan::evalMaxDivergence(const MRIDoubleVec& filteredVec){
   double maxDivergence = 0.0;
   double currentDiv = 0.0;
   int currFace = 0;
@@ -280,7 +273,7 @@ double MRIStructuredScan::EvalMaxDivergence(double* filteredVec){
 // ====================================
 // EVAL CELL DIVERGENCE FOR A GIVEN QTY
 // ====================================
-MRIDoubleVec MRIStructuredScan::evalCellDivergences(MRIDoubleVec faceVec){
+MRIDoubleVec MRIScan::evalCellDivergences(const MRIDoubleVec& faceVec){
   MRIDoubleVec cellDivs;
   double currentDiv = 0.0;
   int currFace = 0;
@@ -315,7 +308,7 @@ MRIDoubleVec MRIStructuredScan::evalCellDivergences(MRIDoubleVec faceVec){
 // =============
 // REORDER CELLS
 // =============
-void MRIStructuredScan::ReorderCells(std::vector<int> Perm){
+void MRIStructuredScan::reorderCells(const MRIIntVec& Perm){
   // Allocate a copy of the Scan: Check if necessary!!!
   std::vector<MRICell> tempCellPoints;
   tempCellPoints.resize(totalCellPoints);
@@ -361,16 +354,16 @@ void MRIStructuredScan::ReorderCells(std::vector<int> Perm){
     cellPoints[loopA].velocity[1] = tempCellPoints[loopA].velocity[1];
     cellPoints[loopA].velocity[2] = tempCellPoints[loopA].velocity[2];
     // Pos
-    PosNorm = MRIUtils::Do3DEucNorm(tempCellPoints[loopA].position);
-    VelNorm = MRIUtils::Do3DEucNorm(tempCellPoints[loopA].velocity);
+    PosNorm = MRIUtils::do3DEucNorm(tempCellPoints[loopA].position);
+    VelNorm = MRIUtils::do3DEucNorm(tempCellPoints[loopA].velocity);
     if(PosNorm<kMathZero){
       invalidCount++;
     }
     if((PosNorm<kMathZero)&&(VelNorm<kMathZero)&&(invalidCount>1)){
       // Get Coords
-      MapIndexToCoords(loopA,intCoords);
+      mapIndexToCoords(loopA,intCoords);
       // Get Position
-      MapCoordsToPosition(intCoords,true,Pos);
+      mapCoordsToPosition(intCoords,true,Pos);
       // Assign
       cellPoints[loopA].position[0] = Pos[0];
       cellPoints[loopA].position[1] = Pos[1];
@@ -386,7 +379,7 @@ void MRIStructuredScan::ReorderCells(std::vector<int> Perm){
 // ===================================
 // RECOVER VELOCITIES FROM FACE FLUXES
 // ===================================
-void MRIStructuredScan::RecoverCellVelocitiesRT0(bool useBCFilter, double* filteredVec){
+void MRIScan::recoverCellVelocitiesRT0(bool useBCFilter, double* filteredVec){
   // Variables
   int locFace1 = 0;
   int locFace2 = 0;
