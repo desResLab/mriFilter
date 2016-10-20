@@ -62,10 +62,6 @@ void assignVTKOptions(int lineNum, std::vector<std::string> tokens, vtkStructure
 MRIScan::MRIScan(const MRIScan& copyScan){
   // Assign Scan Time
   scanTime = copyScan.scanTime;
-  // Resent Pressure Gradient and Relative Pressure
-  hasPressureGradient = copyScan.hasPressureGradient;
-  hasRelativePressure = copyScan.hasRelativePressure;
-  hasReynoldsStress = copyScan.hasReynoldsStress;
 }
 
 // Print the File List Log
@@ -153,15 +149,15 @@ void WriteIOLog(std::string LogFileName, std::string MsgsString)
 void MRIScan::reorderScan(){
   
   // Determine The Direct and Inverse Permutations
-  WriteSchMessage(std::string("Computing Permutation..."));
+  writeSchMessage(std::string("Computing Permutation..."));
   std::vector<int> DirectPerm;
   getGlobalPermutation(DirectPerm);
-  WriteSchMessage(std::string("Done.\n"));
+  writeSchMessage(std::string("Done.\n"));
   
   // Reorder Cells
-  WriteSchMessage(std::string("Reordering Cells..."));
+  writeSchMessage(std::string("Reordering Cells..."));
   reorderCells(DirectPerm);
-  WriteSchMessage(std::string("Done.\n"));
+  writeSchMessage(std::string("Done.\n"));
 }
 
 // ====================================
@@ -215,7 +211,7 @@ void MRIScan::readPLTFile(std::string PltFileName, bool DoReorderCells){
 
   // Assign File
   std::ifstream PltFile;
-  WriteSchMessage(std::string("Open File: ") + PltFileName + std::string("\n"));
+  writeSchMessage(std::string("Open File: ") + PltFileName + std::string("\n"));
   PltFile.open(PltFileName.c_str());
 
   // Init
@@ -229,7 +225,7 @@ void MRIScan::readPLTFile(std::string PltFileName, bool DoReorderCells){
   bool foundheader = false;
   bool areAllFloats = false;
   int headerCount = 0;
-  WriteSchMessage(std::string("Computing input file size...\n"));
+  writeSchMessage(std::string("Computing input file size...\n"));
   int totalLinesInFile = 0;
   std::string Buffer;
   while (std::getline(PltFile,Buffer)){
@@ -249,9 +245,9 @@ void MRIScan::readPLTFile(std::string PltFileName, bool DoReorderCells){
   }
   
   // Done: Computing Input File Size
-  WriteSchMessage(string("Header Size: " + MRIUtils::intToStr(headerCount) + "\n"));
-  WriteSchMessage(string("Total Lines: " + MRIUtils::intToStr(totalLinesInFile) + "\n"));
-  WriteSchMessage(std::string("Done.\n"));
+  writeSchMessage(string("Header Size: " + MRIUtils::intToStr(headerCount) + "\n"));
+  writeSchMessage(string("Total Lines: " + MRIUtils::intToStr(totalLinesInFile) + "\n"));
+  writeSchMessage(std::string("Done.\n"));
 
   // Reset File
   PltFile.clear();
@@ -293,7 +289,7 @@ void MRIScan::readPLTFile(std::string PltFileName, bool DoReorderCells){
   vector<string> ResultArray;
   
   // Reading Input File Message
-  WriteSchMessage(std::string("Reading input file...\n"));
+  writeSchMessage(std::string("Reading input file...\n"));
   
   while (std::getline(PltFile,Buffer)){
     // Read Line
@@ -301,7 +297,7 @@ void MRIScan::readPLTFile(std::string PltFileName, bool DoReorderCells){
     precentProgress = (int)(((double)lineCount/(double)totalLinesInFile)*100);
     if (((precentProgress % 10) == 0)&&((precentProgress / 10) != percentCounted)){
       percentCounted = (precentProgress / 10);
-      WriteSchMessage(std::string("Reading..."+MRIUtils::intToStr(precentProgress)+"\n"));
+      writeSchMessage(std::string("Reading..."+MRIUtils::intToStr(precentProgress)+"\n"));
     }
 
     // Tokenize Line
@@ -413,10 +409,10 @@ void MRIScan::readPLTFile(std::string PltFileName, bool DoReorderCells){
   topology->cellTotals[2] = ZCoords.size();
 
   if(topology->totalCells != TotalXCoords * TotalYCoords * TotalZCoords){
-    WriteSchMessage(std::string("Total number of cells in X: " + MRIUtils::intToStr(TotalXCoords) + "\n"));
-    WriteSchMessage(std::string("Total number of cells in Y: " + MRIUtils::intToStr(TotalYCoords) + "\n"));
-    WriteSchMessage(std::string("Total number of cells in Z: " + MRIUtils::intToStr(TotalZCoords) + "\n"));
-    WriteSchMessage(std::string("Total number of cells: " + MRIUtils::intToStr(topology->totalCells) + "\n"));
+    writeSchMessage(std::string("Total number of cells in X: " + MRIUtils::intToStr(TotalXCoords) + "\n"));
+    writeSchMessage(std::string("Total number of cells in Y: " + MRIUtils::intToStr(TotalYCoords) + "\n"));
+    writeSchMessage(std::string("Total number of cells in Z: " + MRIUtils::intToStr(TotalZCoords) + "\n"));
+    writeSchMessage(std::string("Total number of cells: " + MRIUtils::intToStr(topology->totalCells) + "\n"));
     throw MRIException("ERROR: Total Number of Cells does not match!\n");
   }
 
@@ -446,7 +442,7 @@ void MRIScan::readPLTFile(std::string PltFileName, bool DoReorderCells){
   }
 
   // Finished Reading File
-  WriteSchMessage(std::string("File reading completed.\n"));
+  writeSchMessage(std::string("File reading completed.\n"));
 
   // Close File
   PltFile.close();
@@ -457,8 +453,8 @@ void MRIScan::readPLTFile(std::string PltFileName, bool DoReorderCells){
   }
 
   // WRITE STATISTICS
-  std::string CurrentStats = WriteStatistics();
-  WriteSchMessage(CurrentStats);
+  std::string CurrentStats = writeStatistics();
+  writeSchMessage(CurrentStats);
 
 }
 
@@ -544,7 +540,7 @@ void MRIScan::exportToCSV(std::string FileName){
 // ============================
 void MRIScan::exportToTECPLOT(std::string FileName, bool isFirstFile){
   // Write Progress Message 
-	WriteSchMessage(std::string("Exporting to TECPLOT..."));
+	writeSchMessage(std::string("Exporting to TECPLOT..."));
   
   // Open Output File
 	FILE* outFile;
@@ -598,7 +594,7 @@ void MRIScan::exportToTECPLOT(std::string FileName, bool isFirstFile){
   fclose(outFile);
   
   // Write Done Message
-  WriteSchMessage(std::string("Done\n"));
+  writeSchMessage(std::string("Done\n"));
 };
 
 // ========================
@@ -660,7 +656,7 @@ void MRIScan::assembleEncodingMatrix(int &totalRows, int &totalColumns, MRIDoubl
   double faceXArea = 0.0;
   double faceYArea = 0.0;
   double faceZArea = 0.0;
-  double Areas[3] = {0.0};
+  MRIDoubleVec Areas(3,0.0);
 
   
   // Values For Internal and Edges
@@ -668,7 +664,7 @@ void MRIScan::assembleEncodingMatrix(int &totalRows, int &totalColumns, MRIDoubl
   double intFactor = 0.5;
   
   // FIND THE TOTAL NUMBER OF FACES
-  totalRows = GetTotalFaces();
+  totalRows = getTotalFaces();
   totalColumns = 3*topology->totalCells;
 
   // ALLOCATE MATRIX
@@ -787,14 +783,14 @@ void MRIScan::assembleDecodingMatrix(int &totalRows, int &totalColumns, MRIDoubl
   int faceXRow = 0;
   int faceYRow = 0;
   int faceZRow = 0;
-  double Areas[3] = {0.0};
+  MRIDoubleVec Areas(3,0.0);
   double faceXArea = 0.0;
   double faceYArea = 0.0;
   double faceZArea = 0.0;
   
   // FIND THE TOTAL NUMBER OF FACES
   totalRows = 3*topology->totalCells;
-  totalColumns = GetTotalFaces();
+  totalColumns = getTotalFaces();
   
   // ALLOCATE MATRIX
   Mat.resize(totalRows);
@@ -877,15 +873,14 @@ void MRIScan::exportVelocitiesToFile(std::string fileName, bool append){
   fclose(outFile);
 }
 
+// =========
 // CROP SCAN
-void MRIScan::crop(const MRIDoubleVec& limitBox){
+// =========
+void MRIScan::crop(const MRIDoubleVec& limitBox, const MRIBoolVec& indexesToCrop){
   // Count The Number Of Cells Remaining
   int remainingCells = 0;
   for(int loopA=0;loopA<topology->totalCells;loopA++){
-    if (MRIUtils::isPointInsideBox(topology->cellLocations[loopA][0],
-                                   topology->cellLocations[loopA][1],
-                                   topology->cellLocations[loopA][2],
-                                   limitBox)){
+    if (indexesToCrop[loopA]){
       remainingCells++;
     }
   }
@@ -893,12 +888,6 @@ void MRIScan::crop(const MRIDoubleVec& limitBox){
   std::vector<MRICell> tempCellPoints;
   tempCellPoints.resize(remainingCells);
   maxVelModule = 0.0;
-  int TotalXCoords = 0;
-  int TotalYCoords = 0;
-  int TotalZCoords = 0;
-  std::vector<double> XCoords;
-  std::vector<double> YCoords;
-  std::vector<double> ZCoords;
   double currVelModule = 0.0;
   // Fill Temporary Cells
   int tempCount = 0;
@@ -917,15 +906,9 @@ void MRIScan::crop(const MRIDoubleVec& limitBox){
                            tempCellPoints[tempCount].velocity[1]*tempCellPoints[tempCount].velocity[1]+
                            tempCellPoints[tempCount].velocity[2]*tempCellPoints[tempCount].velocity[2]);
       // Store Maximum Velocity Module
-      if (currVelModule>maxVelModule){
+      if (currVelModule > maxVelModule){
         maxVelModule = currVelModule;
       } 
-      // Pressure Gradient
-      tempCellPoints[tempCount].pressGrad[0] = cells[loopA].pressGrad[0];
-      tempCellPoints[tempCount].pressGrad[1] = cells[loopA].pressGrad[1];
-      tempCellPoints[tempCount].pressGrad[2] = cells[loopA].pressGrad[2];
-      // Relative Pressures
-      tempCellPoints[tempCount].relPressure = cells[loopA].relPressure;
       // Update Counter
       tempCount++;
     }
@@ -943,12 +926,6 @@ void MRIScan::crop(const MRIDoubleVec& limitBox){
     cells[loopA].auxVector[0] = 0.0;
     cells[loopA].auxVector[1] = 0.0;
     cells[loopA].auxVector[2] = 0.0;
-    // Pressure Gradients
-    cells[loopA].pressGrad[0] = tempCellPoints[loopA].pressGrad[0];
-    cells[loopA].pressGrad[1] = tempCellPoints[loopA].pressGrad[1];
-    cells[loopA].pressGrad[2] = tempCellPoints[loopA].pressGrad[2];
-    // Relative Pressure
-    cells[loopA].relPressure = tempCellPoints[loopA].relPressure;
   }
 }
 
@@ -1098,47 +1075,6 @@ void MRIScan::exportToVTK(std::string fileName, MRIThresholdCriteria* threshold)
     fprintf(outFile,"%e %e %e\n",cells[loopA].velocity[0],cells[loopA].velocity[1],cells[loopA].velocity[2]);
     //fprintf(outFile,"%e %e %e\n",cellPoints[loopA].filteredVel[0],cellPoints[loopA].filteredVel[1],cellPoints[loopA].filteredVel[2]);
   }
-
-  // Print Pressure Gradient
-  if (hasPressureGradient){
-    fprintf(outFile,"VECTORS PressureGrad float\n");
-    // Print pressure Gradient
-    for (int loopA=0;loopA<topology->totalCells;loopA++){
-      fprintf(outFile,"%e %e %e\n",cells[loopA].pressGrad[0],cells[loopA].pressGrad[1],cells[loopA].pressGrad[2]);
-    }
-  }
-
-  // Print Relative Pressure
-  if (hasRelativePressure){
-    fprintf(outFile,"SCALARS RelPressure double\n");
-    fprintf(outFile,"LOOKUP_TABLE default\n");
-    // Print Relative Pressure
-    for (int loopA=0;loopA<topology->totalCells;loopA++){
-      fprintf(outFile,"%e\n",cells[loopA].relPressure);
-    }
-  }
-
-  // Print Relative Pressure
-  if (hasRelativePressure){
-    fprintf(outFile,"SCALARS GradientMonitor double\n");
-    fprintf(outFile,"LOOKUP_TABLE default\n");
-    // Print Relative Pressure
-    for (int loopA=0;loopA<topology->totalCells;loopA++){
-      fprintf(outFile,"%e\n",cells[loopA].auxVector[0]);
-    }
-  }
-
-  // Print Reynolds Stresses
-  if (hasReynoldsStress){
-    fprintf(outFile,"TENSORS ReynoldsStress double\n");
-    // Print Reynolds Stress Tensor
-    for (int loopA=0;loopA<topology->totalCells;loopA++){
-      fprintf(outFile,"%e %e %e\n",cells[loopA].ReStress[0],cells[loopA].ReStress[1],cells[loopA].ReStress[2]);
-      fprintf(outFile,"%e %e %e\n",cells[loopA].ReStress[1],cells[loopA].ReStress[3],cells[loopA].ReStress[4]);
-      fprintf(outFile,"%e %e %e\n",cells[loopA].ReStress[2],cells[loopA].ReStress[4],cells[loopA].ReStress[5]);
-      fprintf(outFile,"\n");
-    }
-  }  
 
   // ==================
   // EXPORT DERIVATIVES
@@ -1462,7 +1398,7 @@ void readExpansionFile(std::string fileName,int* tot,
 
   // CREATE EXPANSION
   exp = new MRIExpansion((int)tempExpansion.size()-3);
-  exp->FillFromVector(tempExpansion);
+  exp->fillFromVector(tempExpansion);
 
   // CLOSE FILE
   inFile.close();
@@ -1518,7 +1454,7 @@ void MRIScan::writeExpansionFile(std::string fileName){
 // ==================
 void MRIScan::thresholdQuantity(int qtyID,double threshold){
   // DECLARE
-  WriteSchMessage(std::string("Applying threshold...\n"));
+  writeSchMessage(std::string("Applying threshold...\n"));
   double centerCellValue = 0.0;
   // LOOP ON ALL CELLS
   for(int loopA=0;loopA<topology->totalCells;loopA++){
@@ -1565,15 +1501,6 @@ void MRIScan::evalSMPVortexCriteria(MRIExpansion* exp){
   printf("Total SMP Intensities: %e\n",totalIntensity);
 }
 
-// ===============================================
-// GET TOTAL NUMBER OF FACES FOR STRUCTURED LAYOUT
-// ===============================================
-int MRIScan::getTotalFaces(){
-  return topology->cellTotals[0]*topology->cellTotals[1]*(topology->cellTotals[2] + 1) +
-         topology->cellTotals[1]*topology->cellTotals[2]*(topology->cellTotals[0] + 1) +
-         topology->cellTotals[2]*topology->cellTotals[0]*(topology->cellTotals[1] + 1);
-}
-
 // Get Face Starting From Cell and Unit Vector
 int MRIScan::getFacewithCellVector(int CurrentCell, double* UnitVector){
   double tolerance = 5.0e-3;
@@ -1598,177 +1525,6 @@ int MRIScan::getFacewithCellVector(int CurrentCell, double* UnitVector){
   // Get Adj Face
   resultFace = getAdjacentFace(CurrentCell,AdjType);
   return resultFace;
-}
-
-// ==========================
-// GET LOCAL FACE CONNECTIONS
-// ==========================
-void getFaceConnections(int faceID, std::vector<int> cellConnections, std::vector<int> &faceIds){
-  faceIds.clear();
-  switch(faceID){
-    case 0:
-      faceIds.push_back(cellConnections[0]);
-      faceIds.push_back(cellConnections[1]);
-      faceIds.push_back(cellConnections[3]);
-      faceIds.push_back(cellConnections[2]);
-      break;
-    case 1:
-      faceIds.push_back(cellConnections[4]);
-      faceIds.push_back(cellConnections[6]);
-      faceIds.push_back(cellConnections[7]);
-      faceIds.push_back(cellConnections[5]);
-      break;
-    case 2:
-      faceIds.push_back(cellConnections[0]);
-      faceIds.push_back(cellConnections[2]);
-      faceIds.push_back(cellConnections[6]);
-      faceIds.push_back(cellConnections[4]);
-      break;
-    case 3:
-      faceIds.push_back(cellConnections[1]);
-      faceIds.push_back(cellConnections[5]);
-      faceIds.push_back(cellConnections[7]);
-      faceIds.push_back(cellConnections[3]);
-      break;
-    case 4:
-      faceIds.push_back(cellConnections[0]);
-      faceIds.push_back(cellConnections[4]);
-      faceIds.push_back(cellConnections[5]);
-      faceIds.push_back(cellConnections[1]);
-      break;
-    case 5:
-      faceIds.push_back(cellConnections[2]);
-      faceIds.push_back(cellConnections[3]);
-      faceIds.push_back(cellConnections[7]);
-      faceIds.push_back(cellConnections[6]);
-      break;
-  }
-}
-
-// ====================================
-// GET LOCAL EDGE CONNECTIONS FROM FACE
-// ====================================
-void getEdgeConnections(int EdgeID, std::vector<int> faceConnections, int* edgeIds){
-    switch(EdgeID){
-      case 0:
-        edgeIds[0] = faceConnections[0];
-        edgeIds[1] = faceConnections[1];
-        break;
-      case 1:
-        edgeIds[0] = faceConnections[1];
-        edgeIds[1] = faceConnections[2];
-        break;
-      case 2:
-        edgeIds[0] = faceConnections[2];
-        edgeIds[1] = faceConnections[3];
-        break;
-      case 3:
-        edgeIds[0] = faceConnections[3];
-        edgeIds[1] = faceConnections[0];
-        break;
-    }
-}
-
-// ======================
-// GET VORTEX COEFFICIENT
-// ======================
-double MRIScan::getEdgeFaceVortexCoeff(int edgeID, int faceID){
-  double edgeDirVector[3];
-  double edgeFaceVector[3];
-  double resVec[3];
-  double res = 0.0;
-  // Get Vectors
-  getEdgeDirection(edgeID,edgeDirVector);
-  getEdgeToFaceDirection(edgeID,faceID,edgeFaceVector);
-
-  // Eval Vector Product
-  resVec[0] = edgeDirVector[1] * edgeFaceVector[2] - edgeFaceVector[1] * edgeDirVector[2];
-  resVec[1] = edgeDirVector[2] * edgeFaceVector[0] - edgeFaceVector[2] * edgeDirVector[0];
-  resVec[2] = edgeDirVector[0] * edgeFaceVector[1] - edgeFaceVector[0] * edgeDirVector[1];
-  double modulus = (resVec[0] * resVec[0] + resVec[1] * resVec[1] + resVec[2] * resVec[2]);
-  resVec[0] = resVec[0]/modulus;
-  resVec[1] = resVec[1]/modulus;
-  resVec[2] = resVec[2]/modulus;
-  // Get Sign
-  res = resVec[0] * topology->faceNormal[faceID][0] + 
-        resVec[1] * topology->faceNormal[faceID][1] + 
-        resVec[2] * topology->faceNormal[faceID][2];
-  return round(res);
-}
-
-// ==========================
-// GET EDGE TO FACE DIRECTION
-// ==========================
-void MRIScan::getEdgeToFaceDirection(int edgeID, int faceID, double* edgeFaceVector){
-  // Declare
-  double ec[3] = {0.0};
-  double fc[3] = {0.0};
-
-  // Get Edge Center
-  getEdgeCenter(edgeID,ec);
-
-  // Get Face Center
-  getFaceCenter(faceID,fc);
-
-  // Get the versor
-  edgeFaceVector[0] = fc[0] - ec[0];
-  edgeFaceVector[1] = fc[1] - ec[1];
-  edgeFaceVector[2] = fc[2] - ec[2];
-  double modulus = (edgeFaceVector[0] * edgeFaceVector[0] + edgeFaceVector[1] * edgeFaceVector[1] + edgeFaceVector[2] * edgeFaceVector[2]);
-  edgeFaceVector[0] = edgeFaceVector[0]/modulus;
-  edgeFaceVector[1] = edgeFaceVector[1]/modulus;
-  edgeFaceVector[2] = edgeFaceVector[2]/modulus;
-}
-
-// ===============
-// GET EDGE CENTER
-// ===============
-void MRIScan::getEdgeCenter(int edgeID, double* ec){
-  int node1 = 0;
-  int node2 = 0;
-  double node1Pos[3] = {0.0};
-  double node2Pos[3] = {0.0};
-
-  // Get The Two Nodes
-  node1 = topology->edgeConnections[edgeID][0];
-  node2 = topology->edgeConnections[edgeID][1];
-
-  // Eval Auxiliary Node Coordinates
-  node1Pos[0] = topology->auxNodesCoords[node1][0];
-  node1Pos[1] = topology->auxNodesCoords[node1][1];
-  node1Pos[2] = topology->auxNodesCoords[node1][2];
-  node2Pos[0] = topology->auxNodesCoords[node2][0];
-  node2Pos[1] = topology->auxNodesCoords[node2][1];
-  node2Pos[2] = topology->auxNodesCoords[node2][2];
-
-  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
-    ec[loopA] = 0.5*(node1Pos[loopA] + node2Pos[loopA]);
-  }
-}
-
-// ===============
-// GET FACE CENTER
-// ===============
-void MRIScan::getFaceCenter(int faceID, double* fc){
-  int currNode = 0;
-  double pos[3] = {0.0};
-
-  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
-    fc[loopA] = 0.0;
-  }
-
-  for(size_t loopA=0;loopA<topology->faceConnections[faceID].size();loopA++){
-    currNode = topology->faceConnections[faceID][loopA];
-    pos[0] = topology->auxNodesCoords[currNode][0];
-    pos[1] = topology->auxNodesCoords[currNode][1];
-    pos[2] = topology->auxNodesCoords[currNode][2];
-    for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
-      fc[loopA] += pos[loopA];
-    }
-  }
-  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
-    fc[loopA] /= (double)topology->faceConnections[faceID].size();
-  }
 }
 
 // ========================================================
@@ -1980,11 +1736,11 @@ void MRIScan::readVTKStructuredPoints(std::string vtkFileName, bool DoReorderCel
   topology->totalCells = 0;
 
   // Assign File
-  WriteSchMessage(std::string("\n"));
-  WriteSchMessage(std::string("--- READING STRUCTURED POINT FILE\n"));
-  WriteSchMessage(std::string("\n"));
+  writeSchMessage(std::string("\n"));
+  writeSchMessage(std::string("--- READING STRUCTURED POINT FILE\n"));
+  writeSchMessage(std::string("\n"));
   std::ifstream vtkFile;
-  WriteSchMessage(std::string("Open File: ") + vtkFileName + std::string("\n"));
+  writeSchMessage(std::string("Open File: ") + vtkFileName + std::string("\n"));
   vtkFile.open(vtkFileName.c_str());
 
   // Create and initialize vtkOption Vector
@@ -1993,7 +1749,7 @@ void MRIScan::readVTKStructuredPoints(std::string vtkFileName, bool DoReorderCel
 
   // Read Through and look for options
   std::vector<std::string> tokenizedString;
-  WriteSchMessage(std::string("Computing input file size..."));
+  writeSchMessage(std::string("Computing input file size..."));
   int totalLinesInFile = 0;
   std::string Buffer;
   while (std::getline(vtkFile,Buffer)){
@@ -2008,7 +1764,7 @@ void MRIScan::readVTKStructuredPoints(std::string vtkFileName, bool DoReorderCel
   vtkOptions.dataBlockRead.push_back(false);
 
   // Done: Computing Input File Size
-  WriteSchMessage(std::string("Done.\n"));
+  writeSchMessage(std::string("Done.\n"));
 
   // Check if all properties were defined
   bool fileOK = true;
@@ -2019,8 +1775,8 @@ void MRIScan::readVTKStructuredPoints(std::string vtkFileName, bool DoReorderCel
     }
   }
   if(!fileOK){
-    WriteSchMessage(std::string("ERROR: Invalid VTK File format.\n"));
-    WriteSchMessage(std::string("\n"));
+    writeSchMessage(std::string("ERROR: Invalid VTK File format.\n"));
+    writeSchMessage(std::string("\n"));
     exit(1);
   }
 
@@ -2028,9 +1784,9 @@ void MRIScan::readVTKStructuredPoints(std::string vtkFileName, bool DoReorderCel
   printVTKOptions(vtkOptions);
 
   // Creating Grid Geometry from Options
-  WriteSchMessage(std::string("Creating Grid Geometry ..."));
+  writeSchMessage(std::string("Creating Grid Geometry ..."));
   createGridFromVTKStructuredPoints(vtkOptions);
-  WriteSchMessage(std::string("Done.\n"));
+  writeSchMessage(std::string("Done.\n"));
 
   // Reset File
   vtkFile.clear();
@@ -2051,7 +1807,7 @@ void MRIScan::readVTKStructuredPoints(std::string vtkFileName, bool DoReorderCel
       // Read Scalars Or Vectors
       if(vtkOptions.dataBlockType[loopA] == 0){
         // Read Scalars
-        WriteSchMessage(std::string("Reading Scalars...\n"));
+        writeSchMessage(std::string("Reading Scalars...\n"));
         vtkScalar.clear();
         linesToRead = vtkOptions.dataBlockStart[loopA + 1] - vtkOptions.dataBlockStart[loopA] - 2;
         readVTKScalar(vtkFile,totalLinesInFile,linesToRead,vtkScalar);
@@ -2061,7 +1817,7 @@ void MRIScan::readVTKStructuredPoints(std::string vtkFileName, bool DoReorderCel
         }
       }else{
         // Read Vectors
-        WriteSchMessage(std::string("Reading Vectors...\n"));
+        writeSchMessage(std::string("Reading Vectors...\n"));
         vtkVector.clear();
         linesToRead = vtkOptions.dataBlockStart[loopA + 1] - vtkOptions.dataBlockStart[loopA];
         readVTKVector(vtkFile,totalLinesInFile,linesToRead,vtkVector);
@@ -2094,7 +1850,7 @@ void MRIScan::readVTKStructuredPoints(std::string vtkFileName, bool DoReorderCel
   }
 
   // Finished Reading File
-  WriteSchMessage(std::string("File reading completed.\n"));
+  writeSchMessage(std::string("File reading completed.\n"));
 
   // Close File
   vtkFile.close();
@@ -2105,8 +1861,8 @@ void MRIScan::readVTKStructuredPoints(std::string vtkFileName, bool DoReorderCel
   //}
 
   // WRITE STATISTICS
-  std::string CurrentStats = WriteStatistics();
-  WriteSchMessage(CurrentStats);
+  std::string CurrentStats = writeStatistics();
+  writeSchMessage(CurrentStats);
 
 }
 
@@ -2535,7 +2291,7 @@ void MRIScan::exportForPoisson(string inputFileName,double density,double viscos
 
   // Eval the integral of the divergence over the cell
   MRIDoubleVec cellDivs;
-  cellDivs = evalCellDivergences(poissonSourceFaceVec);
+  evalCellDivergences(poissonSourceFaceVec,cellDivs);
 
   // COMPUTE SOURCE TERMS TO APPLY
   MRIDoubleVec sourcesToApply;
@@ -2803,7 +2559,7 @@ void MRIScan::cellToFacePartial(MRIIntVec elUsageMap, MRIThresholdCriteria* thre
 // ====================
 double MRIScan::evalCellVolume(int cellNumber){
   // Get Integer Indexes
-  int intCoords[3];
+  MRIIntVec intCoords(3);
   mapIndexToCoords(cellNumber,intCoords);
   return topology->cellLengths[0][intCoords[0]] * topology->cellLengths[1][intCoords[1]] * topology->cellLengths[2][intCoords[2]];
 }
@@ -3203,16 +2959,16 @@ void MRIScan::exportForDistancing(string inputFileName,MRIThresholdCriteria* thr
 // =================================
 void MRIScan::updateVelocities(){
   maxVelModule = 0.0;
-  MRIReal currentNorm = 0.0;
+  double currentNorm = 0.0;
   // Update Velocities
-  for(int loopA=0;loopA<totalCellPoints;loopA++){
+  for(int loopA=0;loopA<topology->totalCells;loopA++){
     // Assign Filtered Vectors
-    cellPoints[loopA].velocity[0] = cellPoints[loopA].auxVector[0];
-    cellPoints[loopA].velocity[1] = cellPoints[loopA].auxVector[1];
-    cellPoints[loopA].velocity[2] = cellPoints[loopA].auxVector[2];
+    cells[loopA].velocity[0] = cells[loopA].auxVector[0];
+    cells[loopA].velocity[1] = cells[loopA].auxVector[1];
+    cells[loopA].velocity[2] = cells[loopA].auxVector[2];
     // Get New Norm
-    currentNorm = MRIUtils::do3DEucNorm(cellPoints[loopA].auxVector);
-    if(currentNorm>maxVelModule){
+    currentNorm = MRIUtils::do3DEucNorm(cells[loopA].auxVector);
+    if(currentNorm > maxVelModule){
       maxVelModule = currentNorm;
     }
   }
@@ -3222,11 +2978,11 @@ void MRIScan::testScanAdjacency(string fileName){
   FILE* outFile;
   outFile = fopen(fileName.c_str(),"w");
   // Write mesh Dimensions
-  fprintf(outFile,"Mesh Dims, X: %d, Y: %d, Z: %d\n",cellTotals[0],cellTotals[1],cellTotals[2]);
+  fprintf(outFile,"Mesh Dims, X: %d, Y: %d, Z: %d\n",topology->cellTotals[0],topology->cellTotals[1],topology->cellTotals[2]);
   // TEST Face ADJACENCY
   int currFace = 0;
   int faceLocation = 0;
-  for(int loopA=0;loopA<totalCellPoints;loopA++){
+  for(int loopA=0;loopA<topology->totalCells;loopA++){
     fprintf(outFile,"Face Adjacency for Cell: %d\n",loopA);
     for(int loopB=0;loopB<k3DNeighbors;loopB++){
       switch(loopB){
@@ -3249,10 +3005,82 @@ void MRIScan::testScanAdjacency(string fileName){
           faceLocation = kfaceMinusZ;
           break;
       }        
-      currFace = GetAdjacentFace(loopA,faceLocation);  
+      currFace = getAdjacentFace(loopA,faceLocation);  
       fprintf(outFile,"%d\n",currFace);
     }
   }
   // Close Output file
   fclose(outFile);
+}
+
+// ==========================
+// SAVE QUANTITIES TO OUTPUTS
+// ==========================
+void MRIScan::saveVelocity(){
+  MRIOutput out1("Original_Velocity",3);
+  double totalVel = 0.0;
+  for(int loopA=0;loopA<topology->totalCells;loopA++){
+    out1.values.push_back(cells[loopA].velocity[0]);
+    out1.values.push_back(cells[loopA].velocity[1]);
+    out1.values.push_back(cells[loopA].velocity[2]);
+    totalVel += (cells[loopA].velocity[0]*cells[loopA].velocity[0] +
+                 cells[loopA].velocity[1]*cells[loopA].velocity[1] +
+                 cells[loopA].velocity[2]*cells[loopA].velocity[2]);
+  }
+  // Add output quantities
+  outputs.push_back(out1);
+  printf("Velocity Energy: %e\n",totalVel);
+}
+
+// ============================================
+// WRITE SEQUENCE TOPOLOGY STATISTICS TO STDOUT
+// ============================================
+string MRIScan::writeStatistics(){
+  string myresult = "\n";
+  myresult += "--------------------------------\n";
+  myresult += "SCAN STATISTICS\n";
+  myresult += "--------------------------------\n";
+  myresult += "Total Number Of Cells: "+MRIUtils::intToStr(topology->totalCells)+"\n";
+  myresult += "--------------------------------\n";
+  myresult += "Total Number Of Coordinate Cells\n";
+  myresult += "X Direction: "+MRIUtils::intToStr(topology->cellTotals[0])+"\n";
+  myresult += "Y Direction: "+MRIUtils::intToStr(topology->cellTotals[1])+"\n";
+  myresult += "Z Direction: "+MRIUtils::intToStr(topology->cellTotals[2])+"\n";
+  myresult += "Cells Lengths\n";
+  myresult += "X Direction - MIN: "+MRIUtils::floatToStr(*min_element(topology->cellLengths[0].begin(),topology->cellLengths[0].end()))+"\n";
+  myresult += "X Direction - MAX: "+MRIUtils::floatToStr(*max_element(topology->cellLengths[0].begin(),topology->cellLengths[0].end()))+"\n";
+  myresult += "Y Direction - MIN: "+MRIUtils::floatToStr(*min_element(topology->cellLengths[1].begin(),topology->cellLengths[1].end()))+"\n";
+  myresult += "Y Direction - MAX: "+MRIUtils::floatToStr(*max_element(topology->cellLengths[1].begin(),topology->cellLengths[1].end()))+"\n";
+  myresult += "Z Direction - MIN: "+MRIUtils::floatToStr(*min_element(topology->cellLengths[2].begin(),topology->cellLengths[2].end()))+"\n";
+  myresult += "Z Direction - MAX: "+MRIUtils::floatToStr(*max_element(topology->cellLengths[2].begin(),topology->cellLengths[2].end()))+"\n";
+  myresult += "--------------------------------\n";
+  myresult += "Domain Size\n";
+  myresult += "Minimum X: "+MRIUtils::floatToStr(topology->domainSizeMin[0])+"\n";
+  myresult += "Maximum X: "+MRIUtils::floatToStr(topology->domainSizeMax[0])+"\n";
+  myresult += "Minimum Y: "+MRIUtils::floatToStr(topology->domainSizeMin[1])+"\n";
+  myresult += "Maximum Y: "+MRIUtils::floatToStr(topology->domainSizeMax[1])+"\n";
+  myresult += "Minimum Z: "+MRIUtils::floatToStr(topology->domainSizeMin[2])+"\n";
+  myresult += "Maximum Z: "+MRIUtils::floatToStr(topology->domainSizeMax[2])+"\n";
+  myresult += "--------------------------------\n";
+  myresult += "Maximum Velocity Module: "+MRIUtils::floatToStr(maxVelModule)+"\n";
+  myresult += "--------------------------------\n";
+  myresult += "\n";
+  // Return String
+  return myresult;
+}
+
+// ==================
+// GET CELL FACE AREA
+// ==================
+void MRIScan::evalCellAreas(int cellNumber, MRIDoubleVec& Areas){
+  MRIIntVec intCoords(3);
+  mapIndexToCoords(cellNumber,intCoords);
+  // Get the Three Edge Lengths
+  double EdgeX = topology->cellLengths[0][intCoords[0]];
+  double EdgeY = topology->cellLengths[1][intCoords[1]];
+  double EdgeZ = topology->cellLengths[2][intCoords[2]];
+  // Write Results
+  Areas[0] = EdgeY * EdgeZ;
+  Areas[1] = EdgeX * EdgeZ;
+  Areas[2] = EdgeX * EdgeY;
 }

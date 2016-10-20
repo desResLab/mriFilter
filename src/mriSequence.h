@@ -3,6 +3,8 @@
 
 #include "mriScan.h"
 #include "mriCommunicator.h"
+#include "mriThresholdCriteria.h"
+#include "mriIO.h"
 
 using namespace std;
 
@@ -37,7 +39,7 @@ class MRISequence{
 
     // READ SEQUENCE FROM FILE
     void readVTKStructuredPoints(std::string vtkFileName, bool DoReorderCells);
-    void readPLTFile(string PltFileName, bool DoReorderCells);
+    void readPLTFile(const MRIStringVec& pltFileNames, const MRIDoubleVec& scanTimes , bool DoReorderCells);
     void readFromVolSequence(string outfileName);
     void readFromExpansionFile(string fileName,bool applyThreshold, int thresholdType,double thresholdRatio);
     
@@ -57,8 +59,6 @@ class MRISequence{
 
     // TOPOLOGY AND MAPPING
     void createTopology();
-    bool isInnerCell(int cell);
-    void getCartesianNeighbourCells(int CurrentCell,MRIIntVec& cellNeighbors, bool addself);
     void getUnitVector(int CurrentCell, const MRIDoubleVec& GlobalFaceCoords, MRIDoubleVec& myVect);
     void getGlobalCoords(int DimNumber, int SliceNumber, double FaceCoord1, double FaceCoord2, MRIDoubleVec& globalCoords);
     int  getCellNumber(const MRIDoubleVec& coords);
@@ -67,13 +67,18 @@ class MRISequence{
     void getNeighborVortexes(int cellNumber,int dim,MRIIntVec& idx);
     void getEdgeDirection(int edgeID, double* edgeDirVector);
     void getAuxNodeCoordinates(int nodeNum, MRIDoubleVec& pos);
+    void buildCellConnections();
+    int  addToFaceConnections(const MRIIntVec& faceIds, vector<vector<mriFace* > >& AuxFirstNodeFaceList);
+    int  addToEdgeConnections(const MRIIntVec& edgeIds,vector<vector<mriEdge*> >& AuxFirstNodeEdgeList);
+    void buildFaceConnections();
+    void buildFaceCells();
+    void buildEdgeConnections();
     
-    // MAPPING 
-    void mapIndexToCoords(int index, MRIIntVec& intCoords);
+    // MAPPING     
     int  mapCoordsToIndex(int i, int j, int k);
     void mapCoordsToPosition(const MRIIntVec& coords, bool addMeshMinima, MRIDoubleVec& pos);
     void mapIndexToAuxNodeCoords(int index, MRIIntVec& intCoords);
-    void mapAuxCoordsToPosition(const MRIIntVec& auxCoords, MRIDoubleVec& pos);
+    void mapAuxCoordsToPosition(const MRIIntVec& auxCoords, MRIDoubleVec& pos);    
     
     // DIV FREE Filtering
     void applySMPFilter(MRICommunicator* comm, bool isBC, 
@@ -119,16 +124,16 @@ class MRISequence{
     void extractSinglePointTimeCurve(int cellNumber, int exportQty, string fileName);
 
     // TRANFORMATION
-    void crop(double* limitBox);
+    void crop(const MRIDoubleVec& limitBox);
     void scaleVelocities(double factor);
-    void scalePositions(double factor);
+    void scalePositions(const MRIDoubleVec& origin, double factor);
 
     // MESSAGE PASSING
     void distributeSequenceData(MRICommunicator* comm);
 
     // CLEAN COMPONENTS ON BOUNDARY
-    void cleanNormalComponentOnBoundary();
-    void interpolateBoundaryVelocities();
+    void cleanNormalComponentOnBoundary(MRIThresholdCriteria* threshold);
+    void interpolateBoundaryVelocities(MRIThresholdCriteria* threshold);
 
     // TEMPLATE FLOW SEQUENCE
     void createSampleCase(MRISamples sampleType,const MRIDoubleVec& params);

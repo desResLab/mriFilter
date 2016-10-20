@@ -11,7 +11,7 @@ using namespace std;
 // =================================
 // GET CARTESIAN NEIGHBORS OF A CELL
 // =================================
-void MRISequence::getCartesianNeighbourCells(int CurrentCell,MRIIntVec& cellNeighbors, bool addself){
+void MRIScan::getCartesianNeighbourCells(int CurrentCell,MRIIntVec& cellNeighbors, bool addself){
   MRIIntVec coords(3);
   cellNeighbors.clear();
   if(addself){
@@ -64,7 +64,7 @@ void MRISequence::getCartesianNeighbourCells(int CurrentCell,MRIIntVec& cellNeig
 // =====================================
 // CHECK IF IS BOUNDARY OR INTERNAL CELL
 // =====================================
-bool MRISequence::isInnerCell(int cell){
+bool MRIScan::isInnerCell(int cell){
   // Init Result
   bool isInside = true; 
   std::vector<int> others;
@@ -117,28 +117,6 @@ void MRISequence::getGlobalCoords(int DimNumber, int SliceNumber, double FaceCoo
       globalCoords[2] = topology->domainSizeMin[2] + sliceValue;
       break;
   }
-}
-
-// Map To Cells Coords
-void MRISequence::mapIndexToCoords(int index, MRIIntVec& intCoords){
-  int CurrentIndex = index;
-  intCoords[2] = (int)(CurrentIndex/(topology->cellTotals[0] * topology->cellTotals[1]));
-  CurrentIndex = (CurrentIndex-intCoords[2] * topology->cellTotals[0] * topology->cellTotals[1]);
-  intCoords[1] = (int)(CurrentIndex / topology->cellTotals[0]);
-  CurrentIndex = CurrentIndex-intCoords[1] * topology->cellTotals[0];
-  intCoords[0] = CurrentIndex;
-}
-
-// Map To Aux Cells Coords
-void MRISequence::mapIndexToAuxNodeCoords(int index, MRIIntVec& intCoords){
-  int CurrentIndex = index;
-  int totalX = topology->cellTotals[0] + 1;
-  int totalY = topology->cellTotals[1] + 1;
-  intCoords[2] = (int)(CurrentIndex/(totalX*totalY));
-  CurrentIndex = (CurrentIndex-intCoords[2]*totalX*totalY);
-  intCoords[1] = (int)(CurrentIndex/totalX);
-  CurrentIndex = CurrentIndex-intCoords[1]*totalX;
-  intCoords[0] = CurrentIndex;
 }
 
 
@@ -315,65 +293,4 @@ void MRISequence::mapCoordsToPosition(const MRIIntVec& coords, bool addMeshMinim
       pos[loopA] += topology->domainSizeMin[loopA];
     }
   }
-}
-
-// ========================================
-// MAP AUXILIARY INTEGER COORDS TO POSITION
-// ========================================
-void MRISequence::mapAuxCoordsToPosition(const MRIIntVec& auxCoords, MRIDoubleVec& pos){
-  // Loop on the three dimensions
-  for(int loopA=0;loopA<3;loopA++){
-    pos[loopA] = 0.0;
-    for(int loopB=0;loopB<auxCoords[loopA];loopB++){
-      pos[loopA] += topology->cellLengths[loopA][loopB];
-    }
-  }
-  for(int loopA=0;loopA<3;loopA++){
-    pos[loopA] = pos[loopA] + topology->domainSizeMin[loopA] - 0.5*topology->cellLengths[loopA][0];
-  }
-}
-
-// ====================================
-// GET COORDINATEDS FOR AUXILIARY NODES
-// ====================================
-void MRISequence::getAuxNodeCoordinates(int nodeNum, MRIDoubleVec& pos){
-  MRIIntVec intAuxCoords(3,0.0);
-  // Map To Integer Coordinates
-  mapIndexToAuxNodeCoords(nodeNum,intAuxCoords);
-  // Map To Spatial Position
-  mapAuxCoordsToPosition(intAuxCoords,pos);
-}
-
-// ==================
-// GET EDGE DIRECTION
-// ==================
-void MRISequence::getEdgeDirection(int edgeID, double* edgeDirVector){
-  int node1 = 0;
-  int node2 = 0;
-  MRIDoubleVec node1Pos(3,0.0);
-  MRIDoubleVec node2Pos(3,0.0);
-
-  // Get The Two Nodes
-  node1 = topology->edgeConnections[edgeID][0];
-  node2 = topology->edgeConnections[edgeID][1];
-
-  // Eval Auxiliary Node Coordinates
-  node1Pos[0] = topology->auxNodesCoords[node1][0];
-  node1Pos[1] = topology->auxNodesCoords[node1][1];
-  node1Pos[2] = topology->auxNodesCoords[node1][2];
-  node2Pos[0] = topology->auxNodesCoords[node2][0];
-  node2Pos[1] = topology->auxNodesCoords[node2][1];
-  node2Pos[2] = topology->auxNodesCoords[node2][2];
-
-  // Get the versor
-  edgeDirVector[0] = node1Pos[0] - node2Pos[0];
-  edgeDirVector[1] = node1Pos[1] - node2Pos[1];
-  edgeDirVector[2] = node1Pos[2] - node2Pos[2];
-  double modulus = (edgeDirVector[0] * edgeDirVector[0] + 
-                    edgeDirVector[1] * edgeDirVector[1] + 
-                    edgeDirVector[2] * edgeDirVector[2]);
-
-  edgeDirVector[0] = fabs(edgeDirVector[0]/modulus);
-  edgeDirVector[1] = fabs(edgeDirVector[1]/modulus);
-  edgeDirVector[2] = fabs(edgeDirVector[2]/modulus);
 }

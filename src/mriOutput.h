@@ -4,6 +4,8 @@
 # include <vector>
 # include <string>
 
+# include "mriTypes.h"
+
 using namespace std;
 
 class MRIOutput{

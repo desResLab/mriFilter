@@ -4,7 +4,6 @@
 
 # include "mriScan.h"
 # include "mriSamplingOptions.h"
-# include "schMessages.h"
 # include "mriUtils.h"
 
 using namespace std;
@@ -40,7 +39,7 @@ void MRIScan::sampleVelocities(MRISamplingOptions SamplingOptions, MRIIntVec& bi
   int endIndex = 0;
   if(SamplingOptions.totalSamples>topology->totalCells){
     // Write Message
-    WriteSchMessage("WARNING: Number of Samples exceeding the total number of cells. Reducing Samples.\n");
+    writeSchMessage("WARNING: Number of Samples exceeding the total number of cells. Reducing Samples.\n");
     endIndex = topology->totalCells;  
   }else{
     endIndex = SamplingOptions.totalSamples;  
@@ -53,7 +52,7 @@ void MRIScan::sampleVelocities(MRISamplingOptions SamplingOptions, MRIIntVec& bi
   while(count<endIndex){
     
     // Draw a Random Number Between 1 and GlobalData.TotalCellPoints
-    WriteSchMessage("ERROR: ADD LIBRARY TO GENERATE RANDOM NUMBERS!!!\n");
+    writeSchMessage("ERROR: ADD LIBRARY TO GENERATE RANDOM NUMBERS!!!\n");
     currentCell = distr(generator);
     
     if(!visited[currentCell]){

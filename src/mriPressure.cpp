@@ -628,60 +628,6 @@ void MRIStructuredScan::evalSpaceGradient(int currentCell,int qtyID, double* gra
   delete [] currentCellCoords;
 }
 
-
-// GET THE INDEX OF THE REYNOLDS STRESS COMPONENT
-int getReynoldsStressIndex(int loopA,int loopB){
-  // FirstDerivs
-  // DRXX/DX DRYX/DX DRZX/DX
-  // DRXY/DY DRYY/DY DRZY/DY
-  // DRXZ/DZ DRYZ/DZ DRZZ/DZ
-  // REYNOLDS STRESS INDEXES
-  // 0-RXX 1-RXY 2-RXZ 3-RYY 4-RYZ 5-RZZ
-  int result = 0;
-  switch(loopA){
-    case 0:
-      switch(loopB){
-        case 0:
-          result = 0;
-          break;
-        case 1:
-          result = 1;
-          break;
-        case 2:
-          result = 2;
-          break;
-      }
-      break;
-    case 1:
-      switch(loopB){
-        case 0:
-          result = 1;
-          break;
-        case 1:
-          result = 3;
-          break;
-        case 2:
-          result = 4;
-          break;
-      }
-      break;
-    case 2:
-      switch(loopB){
-        case 0:
-          result = 2;
-          break;
-        case 1:
-          result = 4;
-          break;
-        case 2:
-          result = 5;
-          break;
-      }
-      break;
-  }
-  return result;
-}
-
 // Print The Derivatives
 void printDerivatives(double** firstDerivs, double** secondDerivs){
   printf("First Derivatives\n");

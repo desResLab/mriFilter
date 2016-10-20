@@ -36,20 +36,23 @@ class MRIScan{
     // ============
     // DATA MEMBERS
     // ============
+
+    // Cell Data
     vector<MRICell> cells;
     MRIIntVec       cellTags;
+    
     // Output Quantities
     vector<MRIOutput> outputs;
+    
     // Utility Functions
-    bool hasPressureGradient;
-    bool hasRelativePressure;
-    bool hasReynoldsStress;
+    MRIDoubleMat reynoldsStress;
     double scanTime;
     double maxVelModule;
+    
     // MRI Expansion
     MRIExpansion* expansion;
 
-    // POINTER TO A TOPOLOGY 
+    // Pointer to the Common Topology of the Sequence
     MRITopology* topology;
 
     // ================
@@ -63,8 +66,7 @@ class MRIScan{
     // Destructor
     ~MRIScan(){}
     // INFO FUNCTIONS
-    std::string WriteStatistics();
-    int GetTotalFaces();
+    string writeStatistics();
 
     // ==============
     // READ FUNCTIONS
@@ -117,11 +119,12 @@ class MRIScan{
     bool hasUniformSpacing();
     // NORMALS
     void getExternalFaceNormal(int cellID, int localFaceID, double* extNormal);
+    bool isInnerCell(int cell);
 
     // =============================
     // TRANSFORMATIONS AND THRESHOLD
     // =============================
-    void crop(const MRIDoubleVec& limitBox);
+    void crop(const MRIDoubleVec& limitBox, const MRIBoolVec& indexesToCrop);
     void scaleVelocities(double factor);
     void scalePositions(double factor);
 
@@ -135,12 +138,20 @@ class MRIScan{
     // ==============================
     void rebuildFromFaceFluxes(double* faceFluxes);
 
+    // ============
+    // THRESHOLDING
+    // ============
+    void applyThresholding(MRIThresholdCriteria* thresholdCriteria);
+
     // Reorder Cells    
     void reorderCells(const MRIIntVec& Perm);
     // Get Global Permutation
     void getGlobalPermutation(std::vector<int> &GlobalPerm);
     // REORDER GLOBAL SCAN
     void reorderScan();
+
+    // SAVE VELOCITIES
+    void saveVelocity();
 
     // MAPPING FUNCTIONS
     // Get Cell Number From Coords
@@ -209,7 +220,7 @@ class MRIScan{
     // INFO FUNCTIONS
     // ==============
     double evalAverageVelocityMod();
-    void   evalCellAreas(int cellNumber,double* Areas);
+    void   evalCellAreas(int cellNumber,MRIDoubleVec& Areas);
     int    getTotalAuxNodes();
     int    evalTotalVortex();
     int    getTotalFaces();

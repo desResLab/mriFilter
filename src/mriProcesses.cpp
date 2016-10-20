@@ -201,7 +201,7 @@ double MRIScan::EvalAverageVelocityMod(){
 // ==================
 // APPLY THRESHOLDING
 // ==================
-void MRIScan::ApplyThresholding(MRIThresholdCriteria* thresholdCriteria){
+void MRIScan::applyThresholding(MRIThresholdCriteria* thresholdCriteria){
   WriteSchMessage(std::string("\n"));
   WriteSchMessage(std::string("Applying Thresholding...\n"));
   // Init Number Of Filtered

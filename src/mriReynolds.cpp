@@ -1,6 +1,4 @@
 # include "mriScan.h"
-# include "mriTurbModel.h"
-# include "schMessages.h"
 
 // ========================
 // BOUSSINESQ APPROXIMATION
@@ -44,6 +42,60 @@ void MRIScan::evalTurbulentKineticEnergy(MRIThresholdCriteria* threshold, MRIDou
   }
 }
 
+// ==============================================
+// GET THE INDEX OF THE REYNOLDS STRESS COMPONENT
+// ==============================================
+int getReynoldsStressIndex(int loopA,int loopB){
+  // FirstDerivs
+  // DRXX/DX DRYX/DX DRZX/DX
+  // DRXY/DY DRYY/DY DRZY/DY
+  // DRXZ/DZ DRYZ/DZ DRZZ/DZ
+  // REYNOLDS STRESS INDEXES
+  // 0-RXX 1-RXY 2-RXZ 3-RYY 4-RYZ 5-RZZ
+  int result = 0;
+  switch(loopA){
+    case 0:
+      switch(loopB){
+        case 0:
+          result = 0;
+          break;
+        case 1:
+          result = 1;
+          break;
+        case 2:
+          result = 2;
+          break;
+      }
+      break;
+    case 1:
+      switch(loopB){
+        case 0:
+          result = 1;
+          break;
+        case 1:
+          result = 3;
+          break;
+        case 2:
+          result = 4;
+          break;
+      }
+      break;
+    case 2:
+      switch(loopB){
+        case 0:
+          result = 2;
+          break;
+        case 1:
+          result = 4;
+          break;
+        case 2:
+          result = 5;
+          break;
+      }
+      break;
+  }
+  return result;
+}
 
 // ========================
 // EVAL TURBULENT VISCOSITY
@@ -73,14 +125,20 @@ void MRIScan::evalReynoldsStress(MRIThresholdCriteria* threshold){
   //int ReynoldsCriterion = 1;
 
   // WRITE MESSAGE
-  WriteSchMessage("\n");
-  WriteSchMessage("Computing Reynolds Stresses...");
+  writeSchMessage("\n");
+  writeSchMessage("Computing Reynolds Stresses...");
 
   // Eval Turbulent Viscosity in current Scan
   evalEddyViscosity_simple(turbNu);
 
   // Eval Turbulent Kinetic Energy in current Scan
   evalTurbulentKineticEnergy(threshold,turbK);
+
+  // Allocate Reynolds Stress matrix
+  reynoldsStress.resize(topology->totalCells);
+  for(int loopA=0;loopA<topology->totalCells;loopA++){
+    reynoldsStress[loopA].resize(6);
+  }
 
   // Cycle through all cells
   for(int loopA=0;loopA<topology->totalCells;loopA++){
@@ -91,54 +149,51 @@ void MRIScan::evalReynoldsStress(MRIThresholdCriteria* threshold){
     if(ReynoldsCriterion == 0){
       // COMPLETE STRESSES
       // RXXs
-      cells[loopA].ReStress[0] = 2.0*turbNu[loopA]*(0.5*(firstDerivs[0][0]+firstDerivs[0][0]))-((2.0)/(3.0))*turbK[loopA];
+      reynoldsStress[loopA][0] = 2.0*turbNu[loopA]*(0.5*(firstDerivs[0][0]+firstDerivs[0][0]))-((2.0)/(3.0))*turbK[loopA];
       //cellPoints[loopA].ReStress[0] = turbK[loopA];
       // RXY
-      cells[loopA].ReStress[1] = 2.0*turbNu[loopA]*(0.5*(firstDerivs[0][1]+firstDerivs[1][0]));
+      reynoldsStress[loopA][1] = 2.0*turbNu[loopA]*(0.5*(firstDerivs[0][1]+firstDerivs[1][0]));
       // RXZ
-      cells[loopA].ReStress[2] = 2.0*turbNu[loopA]*(0.5*(firstDerivs[0][2]+firstDerivs[2][0]));
+      reynoldsStress[loopA][2] = 2.0*turbNu[loopA]*(0.5*(firstDerivs[0][2]+firstDerivs[2][0]));
       // RYY
-      cells[loopA].ReStress[3] = 2.0*turbNu[loopA]*(0.5*(firstDerivs[1][1]+firstDerivs[1][1]))-((2.0)/(3.0))*turbK[loopA];
+      reynoldsStress[loopA][3] = 2.0*turbNu[loopA]*(0.5*(firstDerivs[1][1]+firstDerivs[1][1]))-((2.0)/(3.0))*turbK[loopA];
       // RYZ
-      cells[loopA].ReStress[4] = 2.0*turbNu[loopA]*(0.5*(firstDerivs[1][2]+firstDerivs[2][1]));
+      reynoldsStress[loopA][4] = 2.0*turbNu[loopA]*(0.5*(firstDerivs[1][2]+firstDerivs[2][1]));
       // RZZ
-      cells[loopA].ReStress[5] = 2.0*turbNu[loopA]*(0.5*(firstDerivs[2][2]+firstDerivs[2][2]))-((2.0)/(3.0))*turbK[loopA];
+      reynoldsStress[loopA][5] = 2.0*turbNu[loopA]*(0.5*(firstDerivs[2][2]+firstDerivs[2][2]))-((2.0)/(3.0))*turbK[loopA];
     }else if(ReynoldsCriterion == 1){
       // ONLY VELOCITY GRADIENTS
       // RXXs
-      cells[loopA].ReStress[0] = 2.0*turbNu[loopA]*(0.5*(firstDerivs[0][0]+firstDerivs[0][0]));
+      reynoldsStress[loopA][0] = 2.0*turbNu[loopA]*(0.5*(firstDerivs[0][0]+firstDerivs[0][0]));
       // RXY
-      cells[loopA].ReStress[1] = 2.0*turbNu[loopA]*(0.5*(firstDerivs[0][1]+firstDerivs[1][0]));
+      reynoldsStress[loopA][1] = 2.0*turbNu[loopA]*(0.5*(firstDerivs[0][1]+firstDerivs[1][0]));
       // RXZ
-      cells[loopA].ReStress[2] = 2.0*turbNu[loopA]*(0.5*(firstDerivs[0][2]+firstDerivs[2][0]));
+      reynoldsStress[loopA][2] = 2.0*turbNu[loopA]*(0.5*(firstDerivs[0][2]+firstDerivs[2][0]));
       // RYY
-      cells[loopA].ReStress[3] = 2.0*turbNu[loopA]*(0.5*(firstDerivs[1][1]+firstDerivs[1][1]));
+      reynoldsStress[loopA][3] = 2.0*turbNu[loopA]*(0.5*(firstDerivs[1][1]+firstDerivs[1][1]));
       // RYZ
-      cells[loopA].ReStress[4] = 2.0*turbNu[loopA]*(0.5*(firstDerivs[1][2]+firstDerivs[2][1]));
+      reynoldsStress[loopA][4] = 2.0*turbNu[loopA]*(0.5*(firstDerivs[1][2]+firstDerivs[2][1]));
       // RZZ
-      cells[loopA].ReStress[5] = 2.0*turbNu[loopA]*(0.5*(firstDerivs[2][2]+firstDerivs[2][2]));
+      reynoldsStress[loopA][5] = 2.0*turbNu[loopA]*(0.5*(firstDerivs[2][2]+firstDerivs[2][2]));
     }else if(ReynoldsCriterion == 2){
       // ONLY HYDROSTATIC PART
       // RXXs
-      cells[loopA].ReStress[0] = -((2.0)/(3.0))*turbK[loopA];
+      reynoldsStress[loopA][0] = -((2.0)/(3.0))*turbK[loopA];
       // RXY
-      cells[loopA].ReStress[1] = 0.0;
+      reynoldsStress[loopA][1] = 0.0;
       // RXZ
-      cells[loopA].ReStress[2] = 0.0;
+      reynoldsStress[loopA][2] = 0.0;
       // RYY
-      cells[loopA].ReStress[3] = -((2.0)/(3.0))*turbK[loopA];
+      reynoldsStress[loopA][3] = -((2.0)/(3.0))*turbK[loopA];
       // RYZ
-      cells[loopA].ReStress[4] = 0.0;
+      reynoldsStress[loopA][4] = 0.0;
       // RZZ
-      cells[loopA].ReStress[5] = -((2.0)/(3.0))*turbK[loopA];
+      reynoldsStress[loopA][5] = -((2.0)/(3.0))*turbK[loopA];
     }
   }
 
-  // SET THE FLAG FOR AVAILABILITY OF REYNOLDS STRESSES
-  hasReynoldsStress = true;
-
   // DONE
-  WriteSchMessage("Done.\n");
+  writeSchMessage("Done.\n");
 }
 
 // ================================================
@@ -203,7 +258,7 @@ void MRIScan::evalReynoldsStressGradient(int currentCell, MRIDoubleMat& Reynolds
         }else{
           firstCell = mapCoordsToIndex(currentCellCoords[0]-1,currentCellCoords[1],currentCellCoords[2]);
         }
-        if((currentCellCoords[0]+1)>(cellTotals[0]-1)){
+        if((currentCellCoords[0]+1)>(topology->cellTotals[0]-1)){
           secondCell = -1;
         }else{
           secondCell = mapCoordsToIndex(currentCellCoords[0]+1,currentCellCoords[1],currentCellCoords[2]);
@@ -216,7 +271,7 @@ void MRIScan::evalReynoldsStressGradient(int currentCell, MRIDoubleMat& Reynolds
         }else{
           firstCell = mapCoordsToIndex(currentCellCoords[0],currentCellCoords[1]-1,currentCellCoords[2]);
         }
-        if((currentCellCoords[1]+1)>(cellTotals[1]-1)){
+        if((currentCellCoords[1]+1)>(topology->cellTotals[1]-1)){
           secondCell = -1;
         }else{
           secondCell = mapCoordsToIndex(currentCellCoords[0],currentCellCoords[1]+1,currentCellCoords[2]);
@@ -229,7 +284,7 @@ void MRIScan::evalReynoldsStressGradient(int currentCell, MRIDoubleMat& Reynolds
         }else{
           firstCell = mapCoordsToIndex(currentCellCoords[0],currentCellCoords[1],currentCellCoords[2]-1);
         }
-        if((currentCellCoords[2]+1)>(cellTotals[2]-1)){
+        if((currentCellCoords[2]+1)>(topology->cellTotals[2]-1)){
           secondCell = -1;
         }else{
           secondCell = mapCoordsToIndex(currentCellCoords[0],currentCellCoords[1],currentCellCoords[2]+1);
@@ -241,12 +296,12 @@ void MRIScan::evalReynoldsStressGradient(int currentCell, MRIDoubleMat& Reynolds
     double deltaMinus = 0.0;
     double deltaPlus = 0.0;
     if(firstCell>-1){
-      deltaMinus = 0.5*(cellLengths[loopA][currentCellCoords[loopA]] + cellLengths[loopA][currentCellCoords[loopA]-1]);
+      deltaMinus = 0.5*(topology->cellLengths[loopA][currentCellCoords[loopA]] + topology->cellLengths[loopA][currentCellCoords[loopA]-1]);
     }else{
       deltaMinus = 0.0;
     }
     if(secondCell>-1){
-      deltaPlus = 0.5*(cellLengths[loopA][currentCellCoords[loopA]] + cellLengths[loopA][currentCellCoords[loopA]+1]);
+      deltaPlus = 0.5*(topology->cellLengths[loopA][currentCellCoords[loopA]] + topology->cellLengths[loopA][currentCellCoords[loopA]+1]);
     }else{
       deltaPlus = 0.0;
     }
@@ -259,18 +314,18 @@ void MRIScan::evalReynoldsStressGradient(int currentCell, MRIDoubleMat& Reynolds
       int ReStressIndex = getReynoldsStressIndex(loopA,loopB);
       // First Component
       if(firstCell>-1){
-        firstVComponent = cellPoints[firstCell].ReStress[ReStressIndex];
+        firstVComponent = reynoldsStress[firstCell][ReStressIndex];
       }else{
         firstVComponent = 0.0;
       }
       // Second Component
       if(secondCell>-1){
-        secondVComponent = cellPoints[secondCell].ReStress[ReStressIndex];
+        secondVComponent = reynoldsStress[secondCell][ReStressIndex];
       }else{
         secondVComponent = 0.0;
       }
       // Current Component
-      currentVComponent = cellPoints[currentCell].ReStress[ReStressIndex];
+      currentVComponent = reynoldsStress[currentCell][ReStressIndex];
 
       // FIRST DERIVS
       if(firstCell<0){
@@ -289,6 +344,4 @@ void MRIScan::evalReynoldsStressGradient(int currentCell, MRIDoubleMat& Reynolds
 
     }
   }
-  // Deallocate
-  delete [] currentCellCoords;
 }
