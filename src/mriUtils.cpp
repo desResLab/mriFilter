@@ -583,7 +583,86 @@ int readTableFromFile(string fileName, MRIDoubleMat& table, bool skipFirstRow){
   return 0;
 }
 
+// ===================
+// PRINT DOUBLE MATRIX
+// ===================
+void printDoubleMatToFile(string fileName, const MRIDoubleMat& faceNormals){
+  // Open Output File
+  FILE* f;
+  f = fopen(fileName.c_str(),"w");
+  // Write Header
+  for(int loopA=0;loopA<faceNormals.size();loopA++){
+    for(int loopB=0;loopB<faceNormals[loopA].size();loopB++){
+      fprintf(f,"%f ",faceNormals[loopA][loopB]);
+    }
+    fprintf(f,"\n");
+  }
+  // Close Output file
+  fclose(f);
+}
 
+// ================
+// PRINT INT MATRIX
+// ================
+void printIntMatToFile(string fileName, const MRIIntMat& mat){
+  // Open Output File
+  FILE* f;
+  f = fopen(fileName.c_str(),"w");
+  // Write Header
+  for(int loopA=0;loopA<mat.size();loopA++){
+    for(int loopB=0;loopB<mat[loopA].size();loopB++){
+      fprintf(f,"%d ",mat[loopA][loopB]);
+    }
+    fprintf(f,"\n");
+  }
+  // Close Output file
+  fclose(f);
+}
+
+// ===================
+// PRINT DOUBLE VECTOR
+// ===================
+void printDoubleVecToFile(string fileName, const MRIDoubleVec& vec){
+  // Open Output File
+  FILE* f;
+  f = fopen(fileName.c_str(),"w");
+  // Write Header
+  for(int loopA=0;loopA<vec.size();loopA++){
+    fprintf(f,"%f\n",vec[loopA]);
+  }
+  // Close Output file
+  fclose(f);
+}
+
+// ===================
+// PRINT DOUBLE VECTOR
+// ===================
+void printIntVecToFile(string fileName, const MRIIntVec& vec){
+  // Open Output File
+  FILE* f;
+  f = fopen(fileName.c_str(),"w");
+  // Write Header
+  for(int loopA=0;loopA<vec.size();loopA++){
+    fprintf(f,"%d\n",vec[loopA]);
+  }
+  // Close Output file
+  fclose(f);
+}
+
+// ===================
+// PRINT DOUBLE MATRIX
+// ===================
+void printDoubleArrayToFile(string fileName, int size, double* vec){
+  // Open Output File
+  FILE* f;
+  f = fopen(fileName.c_str(),"w");
+  // Write Header
+  for(int loopA=0;loopA<size;loopA++){
+    fprintf(f,"%f\n",vec[loopA]);
+  }
+  // Close Output file
+  fclose(f);
+}
 
 }
 #endif //MRIUTILS_H

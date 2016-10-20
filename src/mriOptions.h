@@ -5,6 +5,7 @@
 # include <vector>
 
 # include "mriThresholdCriteria.h"
+# include "mriOperation.h"
 # include "mriCommunicator.h"
 
 using namespace std;
@@ -51,76 +52,26 @@ public:
   string statFileName;
   // Input Templates
   int templateType;
-  vector<double> templateParams;
+  MRIDoubleVec templateParams;
   // Command File Options
   bool generateCommandFile;
   bool useCommandFile;
   string commandFileName;
-  double itTol;
-  int maxIt;
-  int thresholdQty;
-  int thresholdType;
-  double thresholdValue; 
-  MRIThresholdCriteria* thresholdCriteria;
-  // Noise to apply
-  bool applyNoise;
-  double noiseIntensity;
-  // Save Initial Velocities
-  bool saveInitialVel;
-  // Save Expansion Coefficients
-  bool saveExpansionCoeffs;
-  // Export File Format
-  int inputFormatType;
-  int outputFormatType;
-  // Apply SMP Filter
-  bool applySMPFilter;
-  // Apply BC Filter
-  bool applyBCFilter;
-  bool useConstantPatterns;
   // Sequence Processing
   bool haveSequence;
   string sequenceFileName;
-  vector<string> sequenceFileList;
-  vector<double> sequenceFileTimes;
-  // Post processing
-  bool evalPopVortexCriteria;
-  bool evalSMPVortexCriterion;
-  bool evalPressure;
-  // Pressure Gradient Components to include
-  bool PPE_IncludeAccelerationTerm;
-  bool PPE_IncludeAdvectionTerm;
-  bool PPE_IncludeDiffusionTerm;
-  bool PPE_IncludeReynoldsTerm;
-  // Turbulent Viscosity
-  bool readMuTFromFile;
-  string muTFile;
-  double smagorinskyCoeff;
-  // Export to Poisson Solver
-  bool exportToPoisson;
-  string poissonFileName;
-  // Export to Wall Distance Solver
-  bool exportToDistance;
-  string distanceFileName;
-
-  // Options for the material properties
+  MRIStringVec sequenceFileList;
+  MRIDoubleVec sequenceFileTimes;
+  // Export File Format
+  int inputFormatType;
+  int outputFormatType;
+  // Material Properties
   double density;
   double viscosity;
-
-  // Filtering Options
-  int applyMedianFilter;
-  int filterNumIterations;
-  int medianFilterType;
-  int medianFilterOrder;
-
-  // Clean Boundary Velocities
-  bool cleanBoundaryVelocities;
-  bool interpolateBoundaryVelocities;
-
-  // Scale Velocities and Positions
-  bool scaleVelocities;
-  double scaleVelocityFactor;
-  bool scalePositions;
-  double scalePositionFactor;
+  // threshold Criteria
+  MRIThresholdCriteria* thresholdCriteria;
+  // List of operations
+  vector<MRIOperation*> operationList;
 
   // CONSTRUCTOR
   MRIOptions();

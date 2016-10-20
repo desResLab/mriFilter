@@ -3,25 +3,18 @@
 #include "mriConstants.h"
 #include "mriException.h"
 
-MRICell::MRICell()
-{
+MRICell::MRICell(){
   // Initialize Cell
   concentration = 0.0;
-  relPressure = 0.0;
+  velocity.resize(3);
+  auxVector.resize(3);
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
     velocity[loopA] = 0.0;
-    position[loopA] = 0.0;
     auxVector[loopA] = 0.0;
-    pressGrad[loopA] = 0.0;    
   }
-  for(int loopA=0;loopA<6;loopA++){
-    ReStress[loopA] = 0.0;
-  }
-
 }
 
-MRICell::~MRICell()
-{
+MRICell::~MRICell(){
 }
 
 // ============
@@ -29,15 +22,6 @@ MRICell::~MRICell()
 // ============
 double MRICell::getQuantity(int qtyID){
   switch(qtyID){
-    case kQtyPositionX:
-      return position[0];
-      break;
-    case kQtyPositionY:
-      return position[1];
-      break;
-    case kQtyPositionZ:
-      return position[2];
-      break;
     case kQtyConcentration:
       return concentration;
       break;
@@ -50,26 +34,8 @@ double MRICell::getQuantity(int qtyID){
     case kQtyVelocityZ:
       return velocity[2];
       break;
-    case kQtyPressGradientX:
-      return pressGrad[0];
-      break;
-    case kQtyPressGradientY:
-      return pressGrad[1];
-      break;
-    case kQtyPressGradientZ:
-      return pressGrad[2];
-      break;
-    case kQtyPressGradientMod:
-      return sqrt(pressGrad[0]*pressGrad[0] + pressGrad[1]*pressGrad[1] + pressGrad[2]*pressGrad[2]);
-      break;
-    case kQtyRelPressure:
-      return relPressure;
-      break;
-    case kQtyVelModule:
-      return sqrt(velocity[0]*velocity[0] + velocity[1]*velocity[1] + velocity[2]*velocity[2]);
-      break;
     default:
-      throw MRIStatisticsException("Error: Invalid quantity in MRICell::getQuantity.\n");
+      throw MRIException("ERROR: Invalid quantity in MRICell::getQuantity.\n");
       break;
   }
 }
@@ -79,15 +45,6 @@ double MRICell::getQuantity(int qtyID){
 // ============
 void MRICell::setQuantity(int qtyID, double value){
   switch(qtyID){
-    case kQtyPositionX:
-      position[0] = value;
-      break;
-    case kQtyPositionY:
-      position[1] = value;
-      break;
-    case kQtyPositionZ:
-      position[2] = value;
-      break;
     case kQtyConcentration:
       concentration = value;
       break;
@@ -100,25 +57,8 @@ void MRICell::setQuantity(int qtyID, double value){
     case kQtyVelocityZ:
       velocity[2] = value;
       break;
-    case kQtyPressGradientX:
-      pressGrad[0] = value;
-      break;
-    case kQtyPressGradientY:
-      pressGrad[1] = value;
-      break;
-    case kQtyPressGradientZ:
-      pressGrad[2] = value;
-      break;
-    case kQtyPressGradientMod:
-      pressGrad[0] = value;
-      pressGrad[1] = value;
-      pressGrad[2] = value;
-      break;
-    case kQtyRelPressure:
-      relPressure = value;
-      break;
     default:
-      throw MRIStatisticsException("Error: Invalid quantity.\n");
+      throw MRIException("ERROR: Invalid quantity.\n");
       break;
   }
 }

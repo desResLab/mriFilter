@@ -136,7 +136,7 @@ class MRIScan{
     void rebuildFromFaceFluxes(double* faceFluxes);
 
     // Reorder Cells    
-    void reorderCells(std::vector<int> Perm);
+    void reorderCells(const MRIIntVec& Perm);
     // Get Global Permutation
     void getGlobalPermutation(std::vector<int> &GlobalPerm);
     // REORDER GLOBAL SCAN
@@ -177,14 +177,23 @@ class MRIScan{
     // MP FILTER
     // =========
     int    getTotalBasisNumber();
-    void   applySMPFilter(MRIOptions* options, bool isBC, MRICommunicator* comm);
-    void   assembleResidualVector(bool useBCFilter, MRIThresholdCriteria* thresholdCriteria, int &totalFaces, double* &ResVec, double* &filteredVec, double &resNorm);
+    void   applySMPFilter(MRICommunicator* comm, bool isBC, 
+                          MRIThresholdCriteria* thresholdCriteria,
+                          double itTol,
+                          int maxIt,
+                          bool useConstantPatterns);
+    void   assembleResidualVector(bool useBCFilter, 
+                                  MRIThresholdCriteria* thresholdCriteria,
+                                  int& totalFaces, 
+                                  MRIDoubleVec& resVec, 
+                                  MRIDoubleVec& filteredVec, 
+                                  double& resNorm);
     void   assembleConstantPattern(int currentDim, int &totalConstantFaces, std::vector<int> &facesID, std::vector<double> &facesCoeffs);
     void   assembleConstantPatternMPI(int currentDim, int &totalConstantFacesOnProc,
                                               std::vector<int> &facesIDOnProc, std::vector<double> &facesCoeffsOnProc,
                                               int minFaceOnProc, int maxFaceOnProc,MRICommunicator* comm);
     void   assembleStarShape(int vortexNumber, int &totalFaces,std::vector<int> &facesID,std::vector<double> &facesCoeffs);
-    double evalMaxDivergence(double* filteredVec);
+    double evalMaxDivergence(const MRIDoubleVec& filteredVec);
     void   recoverGlobalErrorEstimates(double& AvNormError, double& AvAngleError);
     void   expandStarShape(int totalStarFaces, int* facesID, double* facesCoeffs, double* &fullStarVector);
     void   recoverCellVelocitiesRT0(bool useBCFilter, double* filteredVec);
@@ -214,7 +223,7 @@ class MRIScan{
     void computeQuantityGradient(int qtyID);
 
     // DIVERGENCE
-    MRIDoubleVec evalCellDivergences(MRIDoubleVec faceVec);
+    void evalCellDivergences(const MRIDoubleVec& faceVec,MRIDoubleVec& cellDivs);
   
     // PRESSURE COMPUTATION
     void evalRelativePressure(int startingCell, double refPressure);
@@ -290,7 +299,13 @@ class MRIScan{
    void buildMetisConnectivities(int *eptr,int *eind);
 
    // MESSAGE PASSING
-   void formVortexList(int totVortex,int* minFace,int* maxFace,MRIIntVec& innerVortexList,MRIIntVec& boundaryVortexList,MRICommunicator* comm);
+   void formVortexList(MRICommunicator* comm,
+                       int totVortex,
+                       const MRIIntVec& minFace,
+                       const MRIIntVec& maxFace,
+                       MRIIntVec& innerVortexList,
+                       MRIIntVec& boundaryVortexList);
+
    void passScanData(MRICommunicator* comm);
    void distributeScanData(MRICommunicator* comm);
 

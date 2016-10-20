@@ -1655,3 +1655,143 @@ void MRISequence::MakeScanAverage(int numberOfMeasures, int firstScanID, int sec
   }
 }
 
+// ==========================
+// READ VTK STRUCTURED POINTS
+// ==========================
+void MRISequence::readVTKStructuredPoints(std::string vtkFileName, bool DoReorderCells){
+
+  // Init totalCellPoints
+  topology->totalCells = 0;
+
+  // Assign File
+  WriteSchMessage(std::string("\n"));
+  WriteSchMessage(std::string("--- READING STRUCTURED POINT FILE\n"));
+  WriteSchMessage(std::string("\n"));
+  std::ifstream vtkFile;
+  WriteSchMessage(std::string("Open File: ") + vtkFileName + std::string("\n"));
+  vtkFile.open(vtkFileName.c_str());
+
+  // Create and initialize vtkOption Vector
+  vtkStructuredPointsOptionRecord vtkOptions;
+  initVTKStructuredPointsOptions(vtkOptions);
+
+  // Read Through and look for options
+  std::vector<std::string> tokenizedString;
+  WriteSchMessage(std::string("Computing input file size..."));
+  int totalLinesInFile = 0;
+  std::string Buffer;
+  while (std::getline(vtkFile,Buffer)){
+    boost::split(tokenizedString, Buffer, boost::is_any_of(" ,"), boost::token_compress_on);
+    // Check if you find options
+    assignVTKOptions(totalLinesInFile,tokenizedString, vtkOptions);
+    // Increase line number
+    totalLinesInFile++;
+  }
+  vtkOptions.dataBlockStart.push_back(totalLinesInFile);
+  vtkOptions.dataBlockType.push_back(0);
+  vtkOptions.dataBlockRead.push_back(false);
+
+  // Done: Computing Input File Size
+  WriteSchMessage(std::string("Done.\n"));
+
+  // Check if all properties were defined
+  bool fileOK = true;
+  for(int loopA=0;loopA<vtkOptions.numDefined;loopA++){
+    fileOK = fileOK && vtkOptions.isDefined[loopA];
+    if(!fileOK){
+      printf("ERROR: DEFINITION %d\n",loopA);
+    }
+  }
+  if(!fileOK){
+    WriteSchMessage(std::string("ERROR: Invalid VTK File format.\n"));
+    WriteSchMessage(std::string("\n"));
+    exit(1);
+  }
+
+  // Print VTK OPTIONS
+  printVTKOptions(vtkOptions);
+
+  // Creating Grid Geometry from Options
+  WriteSchMessage(std::string("Creating Grid Geometry ..."));
+  createGridFromVTKStructuredPoints(vtkOptions);
+  WriteSchMessage(std::string("Done.\n"));
+
+  // Reset File
+  vtkFile.clear();
+  vtkFile.seekg(0, std::ios::beg);
+
+  // Read Concentration and Velocities
+  MRIDoubleVec vtkScalar;
+  MRIDoubleMat vtkVector;
+  int linesToRead = 0;
+  totalLinesInFile = 0;
+  for(int loopA=0;loopA<vtkOptions.dataBlockStart.size();loopA++){
+    if(vtkOptions.dataBlockRead[loopA]){
+      // Go to next block start
+      while(totalLinesInFile<vtkOptions.dataBlockStart[loopA]){
+        std::getline(vtkFile,Buffer);
+        totalLinesInFile++;
+      }
+      // Read Scalars Or Vectors
+      if(vtkOptions.dataBlockType[loopA] == 0){
+        // Read Scalars
+        WriteSchMessage(std::string("Reading Scalars...\n"));
+        vtkScalar.clear();
+        linesToRead = vtkOptions.dataBlockStart[loopA + 1] - vtkOptions.dataBlockStart[loopA] - 2;
+        readVTKScalar(vtkFile,totalLinesInFile,linesToRead,vtkScalar);
+        if(vtkScalar.size() != topology->totalCells){
+          printf("Scalar Size %d, Total Cells %d\n",(int)vtkScalar.size(), topology->totalCells);
+          throw MRIException("ERROR: Total number of scalars differ from number of cells.\n");
+        }
+      }else{
+        // Read Vectors
+        WriteSchMessage(std::string("Reading Vectors...\n"));
+        vtkVector.clear();
+        linesToRead = vtkOptions.dataBlockStart[loopA + 1] - vtkOptions.dataBlockStart[loopA];
+        readVTKVector(vtkFile,totalLinesInFile,linesToRead,vtkVector);
+        if(vtkVector.size() != topology->totalCells){
+          printf("Vector Size %d, Total Cells %d\n",(int)vtkVector.size(), topology->totalCells);
+          throw MRIException("ERROR: Total number of vectors differs from number of cells.\n");
+        }
+      }
+    }
+  }
+
+  // Transfer Scalars and Vectors to Cells
+  // Scalars
+  for(int loopA=0;loopA<topology->totalCells;loopA++){
+    cells[loopA].concentration = vtkScalar[loopA];
+  }
+  // Vectors
+  maxVelModule = 0.0;
+  double currModulus = 0.0;
+  for(int loopA=0;loopA<topology->totalCells;loopA++){
+      cells[loopA].velocity[0] = vtkVector[loopA][0];
+      cells[loopA].velocity[1] = vtkVector[loopA][1];
+      cells[loopA].velocity[2] = vtkVector[loopA][2];
+      currModulus = sqrt((cells[loopA].velocity[0] * cells[loopA].velocity[0]) +
+                         (cells[loopA].velocity[1] * cells[loopA].velocity[1]) +
+                         (cells[loopA].velocity[2] * cells[loopA].velocity[2]));
+      if(currModulus > maxVelModule){
+        maxVelModule = currModulus;
+      }
+  }
+
+  // Finished Reading File
+  WriteSchMessage(std::string("File reading completed.\n"));
+
+  // Close File
+  vtkFile.close();
+
+  // REORDER CELLS
+  //if (DoReorderCells){
+  //  ReorderScan();
+  //}
+
+  // WRITE STATISTICS
+  std::string CurrentStats = WriteStatistics();
+  WriteSchMessage(CurrentStats);
+
+}
+
+

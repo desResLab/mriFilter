@@ -117,5 +117,20 @@ namespace MRIUtils{
   // READ TABLE FROM FILE
   int readTableFromFile(string fileName, MRIDoubleMat& table,bool skipFirstRow);
 
+  // PRINT DOUBLE MATRIX
+  void printDoubleMatToFile(string fileName, const MRIDoubleMat& faceNormals);
+
+  // PRINT INT MATRIX
+  void printIntMatToFile(string fileName, const MRIIntMat& mat);
+
+  // PRINT DOUBLE VECTOR
+  void printDoubleVecToFile(string fileName, const MRIDoubleVec& vec);
+
+  // PRINT DOUBLE VECTOR
+  void printIntVecToFile(string fileName, const MRIIntVec& vec);
+
+  // PRINT DOUBLE MATRIX
+  void printDoubleArrayToFile(string fileName, int size, double* vec);
+
 }
 #endif //MRIUTILS_H

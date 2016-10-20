@@ -365,6 +365,7 @@ int MRIOptions::getOptionsFromCommandFile(string commandFile){
           throw MRIException("ERROR: Invalid Density Value.\n");
         }
     }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("APPLYSMOOTHINGFILTER")){
+        
         try{
           applyMedianFilter = true;
           filterNumIterations = atoi(tokenizedString[1].c_str());

@@ -36,6 +36,7 @@ class MRISequence{
     MRIScan* getScan(int scanNumber);
 
     // READ SEQUENCE FROM FILE
+    void readVTKStructuredPoints(std::string vtkFileName, bool DoReorderCells);
     void readPLTFile(string PltFileName, bool DoReorderCells);
     void readFromVolSequence(string outfileName);
     void readFromExpansionFile(string fileName,bool applyThreshold, int thresholdType,double thresholdRatio);
@@ -75,7 +76,11 @@ class MRISequence{
     void mapAuxCoordsToPosition(const MRIIntVec& auxCoords, MRIDoubleVec& pos);
     
     // DIV FREE Filtering
-    void applySMPFilter(MRIOptions* options, bool isBC, MRICommunicator* comm);
+    void applySMPFilter(MRICommunicator* comm, bool isBC, 
+                        MRIThresholdCriteria* thresholdCriteria,
+                        double itTol,
+                        int maxIt,
+                        bool useConstantPatterns);
     
     // APPLY THRESHOLDING 
     void applyThresholding(MRIThresholdCriteria* thresholdCriteria);

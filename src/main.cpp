@@ -190,104 +190,6 @@ void ShowFaceFluxPatterns(std::string faceFluxFileName, std::string outFileName)
   }
 }
 
-// ==================
-// PRINT THRESHOLDING
-// ==================
-void TEST02_PrintThresholdingToVTK(MRIOptions* opts, MRICommunicator* comm){
-
-  // Create New Sequence
-  bool isCyclicSequence = false;
-  MRISequence* mriSeq = new MRISequence(isCyclicSequence);
-  MRISequence* recSeq = new MRISequence(isCyclicSequence);
-
-  // ADD FILE TO SEQUENCE
-  mriSeq->readPLTFile(opts->inputFileName, true);
-
-  // APPLY FULL FILTER
-  mriSeq->applySMPFilter(opts,false,comm);
-
-  // APPLY SUCCESSIVE THRESHOLD
-  for(int loopA=0;loopA<5;loopA++){
-    writeSchMessage("Applying Threshold " + MRIUtils::intToStr(loopA) + "\n");
-    
-    // CREATE NEW EXPANSION
-    MRIExpansion* currExp = new MRIExpansion(mriSeq->getScan(0)->expansion);
-    
-    // APPLY THRESHOLD
-    currExp->applyVortexThreshold(kSoftThreshold,(0.95/4.0)*(loopA));
-    
-    // WRITE EXPANSION TO FILE
-    currExp->writeToFile("Expansion_" + MRIUtils::intToStr(loopA) + "\n");
-    
-    // GET A SCAN FROM ORIGINAL SEQUENCE
-    MRIScan* myScan = new MRIScan(*mriSeq->getScan(0));
-    myScan->rebuildFromExpansion(currExp,false);
-    
-    // ADD SCAN TO RECONSTRUCTION
-    recSeq->addScan(myScan);
-  }
-
-  // Init a Threshold with No quantity
-  MRIThresholdCriteria* thresholdCriteria = new MRIThresholdCriteria(kNoQuantity,kCriterionLessThen,0.0);
-
-  // WRITE OUTPUT FILES TO VTK
-  mriSeq->exportToVTK("FilteredSeq",thresholdCriteria);
-  recSeq->exportToVTK("ReconstructedSeq",thresholdCriteria);
-}
-
-// ======================
-// EVAL REYNOLDS STRESSES
-// ======================
-void TEST03_EvalReynoldsStresses(MRIOptions* opts, MRICommunicator* comm){
-
-  // CREATE NEW SEQUENCES
-  bool isCyclicSequence = false;
-  MRISequence* mriSeq = new MRISequence(isCyclicSequence);
-  MRISequence* recSeq = new MRISequence(isCyclicSequence);
-
-  // ADD FILE TO SEQUENCE
-  mriSeq->readPLTFile(opts->inputFileName, true);
-
-  // APPLY FULL FILTER
-  mriSeq->applySMPFilter(opts,false,comm);
-
-  writeSchMessage("Filter Applied!\n");
-
-  // APPLY SUCCESSIVE THRESHOLD
-  for(int loopA=0;loopA<2;loopA++){
-
-    // WRITE MESSAGE
-    writeSchMessage("Applying Threshold " + MRIUtils::intToStr(loopA) + "\n");
-
-    // CREATE NEW EXPANSION
-    MRIExpansion* currExp = new MRIExpansion(mriSeq->getScan(0)->expansion);
-
-    // APPLY THRESHOLD
-    currExp->applyVortexThreshold(kHardThresold,(0.99/1.0)*(loopA));
-
-    // WRITE EXPANSION TO FILE
-    currExp->writeToFile("Expansion_" + MRIUtils::intToStr(loopA) + "\n");
-
-    // GET A SCAN FROM ORIGINAL SEQUENCE
-    MRIScan* myScan = new MRIScan(*mriSeq->getScan(0));
-    myScan->rebuildFromExpansion(currExp,false);
-
-    // EVAL REYNOLDS STRESSES
-    writeSchMessage("Evaluating Reynolds Stresses...");
-    myScan->evalReynoldsStress(opts->thresholdCriteria);
-    writeSchMessage("Done.\n");
-
-    // ADD SCAN TO RECONSTRUCTION
-    recSeq->addScan(myScan);
-  }
-
-  // Init a Threshold with No quantity
-  MRIThresholdCriteria* thresholdCriteria = new MRIThresholdCriteria(kNoQuantity,kCriterionLessThen,0.0);
-
-  // WRITE OUTPUT FILES TO VTK
-  recSeq->exportToVTK("ReynoldsStressSequence",thresholdCriteria);
-}
-
 // =========================================
 // EVAL PRESSURES FROM EXPANSION COFFICIENTS
 // =========================================
@@ -317,126 +219,57 @@ void evalConcentrationGradient(MRIOptions* opts){
 
 }
 
-// ===================
-// PERFORM RANDOM TEST
-// ===================
-void performRandomTest(MRIOptions* opts,MRICommunicator* comm){
-  
-  // Set parameters
-  int numberMC = 500;
+// =================================================
+// READ FILES IN VARIOUS FORMATS AND DISTRIBUTE GRID
+// =================================================
 
-  // Generating Random Numbers
-  boost::variate_generator<boost::mt19937, boost::normal_distribution<> > generator(boost::mt19937(time(0)),boost::normal_distribution<>());
+void readAndDistribute(MRICommunicator* comm, MRIOptions* opts, MRISequence* seq){
 
-  // Declare Scan
-  MRIScan* scan;
+  // INIT SEQUENCE
+  seq = new MRISequence(true/*Cyclic Sequence*/);
 
-  // Monte Carlo Loops
-  for(int loopA=0;loopA<numberMC;loopA++){
+  // LOOP ON THE NUMBER OF SCANS
+  for(size_t loopA=0;loopA<opts->sequenceFileList.size();loopA++){
 
-    // Generate Random Velocity Field - Standard Gaussian Distribution
-    scan = new MRIScan(0.0);
-
-    MRIDoubleVec params(8);
-    params[0] = 5.0;
-    params[1] = 5.0;
-    params[2] = 5.0;
-    params[3] = 1.0;
-    params[4] = 1.0;
-    params[5] = 1.0;
-    params[6] = 0.0;
-    params[7] = 1.0;
-    scan->createSampleCase(kZeroVelocity,params);
-
-    // Assign Random Component
-    scan->assignRandomComponent(kdirX,generator);
-    scan->assignRandomComponent(kdirY,generator);
-    scan->assignRandomComponent(kdirZ,generator);
-
-    // Write Generated Velocities To File
-    scan->exportVelocitiesToFile("InputVelocities.dat",true);
-
-    // Filter Velocities - NO GLOBAL ATOMS
-    scan->applySMPFilter(opts,false,comm);
-    scan->updateVelocities();
-
-    // Write Resultant Velocities
-    scan->exportVelocitiesToFile("OutputVelocities.dat",true);
-
-    // Deallocate
-    delete scan;
-    scan = NULL;
+    // CHOOSE INPUT FORMAT
+    if(opts->inputFormatType == itTEMPLATE){
+      // CREATE TEMPLATE
+      seq->createSampleCase(opts->templateType,opts->templateParams);
+    }else if(opts->inputFormatType == itEXPANSION){
+      // READ FROM EXPANSION COEFFICIENTS
+      bool applyThreshold = true;
+      int thresholdType = kHardThresold;
+      double thresholdRatio = 0.5;
+      seq->readFromExpansionFile(opts->sequenceFileList[loopA],applyThreshold,thresholdType,thresholdRatio);
+    }else if (opts->inputFormatType == itFILEVTK){
+      // READ FROM FILE          
+      seq->readVTKStructuredPoints(opts->sequenceFileList[loopA], true);
+    }else if (opts->inputFormatType == itFILETECPLOT){
+      // READ FROM FILE
+      seq->readPLTFile(opts->sequenceFileList[loopA], true);
+    }
   }
-}
-
-// ========================================
-// BUILD FROM COEFFICIENTS AND WRITE TO PLT
-// ========================================
-void buildFromCoeffs(std::string coeffFileName,std::string plotOut,bool performThreshold,int thresholdType,double threshold){
-
-  // CREATE NEW SEQUENCES
-  MRISequence* seq = new MRISequence(false/*Cyclic Sequence*/);
-
-  // ADD FILE TO SEQUENCE
-  seq->readFromExpansionFile(coeffFileName,performThreshold,thresholdType,threshold);
-
-  // INIT A THRESHOLD WITH NO QUANTITY
-  MRIThresholdCriteria* thresholdCriteria = new MRIThresholdCriteria(kNoQuantity,kCriterionLessThen,0.0);
-
-  // EXPORT TO PLT FILE
-  seq->exportToVTK(plotOut, thresholdCriteria);
-}
-
-// ============================
-// EVAL VARIOUS VORTEX CRITERIA
-// ============================
-void evalVortexCriteria(MRIOptions* opts){
-
-  int vortexCrit = 0;
   
-  // CREATE NEW SEQUENCES
-  MRISequence* seq = new MRISequence(false/*Cyclic Sequence*/);
-
-  // ADD FILE TO SEQUENCE
-  seq->readPLTFile(opts->inputFileName,true);
-
-  // EVAL VORTEX CRITERIA
-  if(vortexCrit == 0){
-    seq->getScan(0)->evalVortexCriteria(opts->thresholdCriteria);
-  }else if(vortexCrit == 1){
-    seq->getScan(0)->evalVorticity(opts->thresholdCriteria);
-  }else if(vortexCrit == 2){
-    seq->getScan(0)->evalEnstrophy(opts->thresholdCriteria);
-  }else{
-    throw MRIException("ERROR: Invalid Vortex Criterion.\n");
-  }
-
-  // Init a Threshold with No quantity
-  MRIThresholdCriteria* thresholdCriteria = new MRIThresholdCriteria(kNoQuantity,kCriterionLessThen,0.0);
-
-  // WRITE OUTPUT FILES TO VTK
-  seq->exportToVTK(opts->outputFileName,thresholdCriteria);
+  // Compute the topology for all sequences in all processors
+  seq->createTopology();
 }
 
-// ===========================================
-// WRITE SPATIAL DISTRIBUTIONS OF COEFFICIENTS
-// ===========================================
-void writeSpatialExpansion(MRIOptions* opts){
-
-  // CREATE NEW SEQUENCES
-  MRISequence* seq = new MRISequence(false/*Cyclic Sequence*/);
-
-  // READ FROM EXPANSION COEFFICIENTS
-  seq->readFromExpansionFile(opts->inputFileName,false,kSoftThreshold,0.0);
-
-  // SPATIALLY EVALUATE VORTEX COEFFICIENTS
-  seq->getScan(0)->evalSMPVortexCriteria(seq->getScan(0)->expansion);
-
-  // Init a Threshold with No quantity
-  MRIThresholdCriteria* thresholdCriteria = new MRIThresholdCriteria(kNoQuantity,kCriterionLessThen,0.0);
-
-  // EXPORT TO VTK
-  seq->exportToVTK(opts->outputFileName,thresholdCriteria);
+// ============
+// WRITE OUTPUT
+// ============
+void writeOutput(MRICommunicator* comm, MRIOptions* opts, MRISequence* seq){
+  // EXPORT FILE FROM ALL PROECESSORS IN ORDER
+  if(comm->currProc == 0){
+    if(opts->outputFormatType == itFILEVTK){
+      // READ FROM FILE
+      seq->exportToVTK(opts->outputFileName,opts->thresholdCriteria);
+    }else if (opts->outputFormatType == itFILETECPLOT){
+      // READ FROM FILE
+      seq->exportToTECPLOT(opts->outputFileName);
+    }else{
+      throw MRIException("ERROR: Invalid output file format.\n");
+    }
+  }
 }
 
 // ===============================
@@ -444,213 +277,26 @@ void writeSpatialExpansion(MRIOptions* opts){
 // ===============================
 void runApplication(MRIOptions* opts, MRICommunicator* comm){
 
-  MRISequence* MyMRISequence;
+  // CREATE NEW SEQUENCE
+  MRISequence* seq;
 
-  // MASTER PROCESSOR DOES THE READING
-  if(comm->currProc == 0){
+  // READ AND DISTRIBUTED MEASUREMENT GRID
+  readAndDistribute(comm,opts,seq);
 
-      // INIT SEQUENCE
-      MyMRISequence = new MRISequence(true/*Cyclic Sequence*/);
-
-      // LOOP ON THE NUMBER OF SCANS
-      for(size_t loopA=0;loopA<opts->sequenceFileList.size();loopA++){
-
-        // CREATE NEW SCAN
-        MRIStructuredScan* MyMRIScan = new MRIStructuredScan(opts->sequenceFileTimes[loopA]);
-
-        // CHOOSE INPUT FORMAT
-        if(opts->inputFormatType == itTEMPLATE){
-          // CREATE TEMPLATE
-          MyMRIScan->CreateSampleCase(opts->templateType,opts->templateParams);
-        }else if(opts->inputFormatType == itEXPANSION){
-          // READ FROM EXPANSION COEFFICIENTS
-          bool applyThreshold = true;
-          int thresholdType = kHardThresold;
-          double thresholdRatio = 0.5;
-          MyMRIScan->ReadFromExpansionFile(opts->sequenceFileList[loopA],applyThreshold,thresholdType,thresholdRatio);
-        }else if (opts->inputFormatType == itFILEVTK){
-          // READ FROM FILE          
-          MyMRIScan->ReadVTKStructuredPoints(opts->sequenceFileList[loopA], true);
-        }else if (opts->inputFormatType == itFILETECPLOT){
-          // READ FROM FILE
-          MyMRIScan->ReadPltFile(opts->sequenceFileList[loopA], true);
-        }
-        // ADD TO SEQUENCE
-        MyMRISequence->addScan(MyMRIScan);
-      }
-  }else{
-    // LOOP ON THE NUMBER OF SCANS
-      // INIT SEQUENCE
-      MyMRISequence = new MRISequence(false/*Cyclic Sequence*/);
-//    for(size_t loopA=0;loopA<opts->sequenceFileList.size();loopA++){
-      // CREATE EMPTY SCAN
-      MRIStructuredScan* MyMRIScan = new MRIStructuredScan(0.0);
-      // ADD TO SEQUENCE
-      MyMRISequence->addScan(MyMRIScan);
-//    }
-  }
-
-  // Compute the topology of the sequence
-  // The topology of the sequence must be the same
-  MyMRISequence->createTopology();
-
-  // All processes are waiting for the root to read the files
+  // SYNC PROCESSES
   int mpiError = MPI_Barrier(comm->mpiComm);
   MRIUtils::checkMpiError(mpiError);
 
-  // Scale Model if required
-  if(comm->currProc == 0){
-    if (opts->scaleVelocities){
-      MyMRISequence->scaleVelocities(opts->scaleVelocityFactor);
-    }
-    if (opts->scalePositions){
-      MyMRISequence->scalePositions(opts->scalePositionFactor);
-    }
+  // PERFOM OPERATIONS ACCORDING TO LIST
+  for(int loopA=0;loopA<opts->operationList.size();loopA++){
+    opts->operationList[loopA]->processSequence(seq);
   }
 
-  // Distribute Sequence Data using MPI
-  if(comm->totProc > 1){
-    MyMRISequence->distributeSequenceData(comm);
-  }
-  if(comm->currProc == 0){
-    printf("Data Structure Communication OK.\n");
-  }
+  // WRITE TO OUTPUT
+  writeOutput(comm,opts,seq);
 
-  // SAVE INITIAL VELOCITIES ON ROOT PROCESSOR
-  if(comm->currProc == 0){
-    if (opts->saveInitialVel){
-      MyMRISequence->saveVelocity();
-    }
-  }
-
-  // APPLY NOISE
-  if (opts->applyNoise){
-    MyMRISequence->applyNoise(opts->noiseIntensity);
-  }
-
-  // FILTER DATA IF REQUIRED
-  if(comm->currProc == 0){
-    if (opts->applyMedianFilter){
-      MyMRISequence->ApplyMedianFilter(kQtyVelocityX,opts->filterNumIterations,opts->medianFilterOrder,opts->medianFilterType,opts->thresholdCriteria);
-      MyMRISequence->ApplyMedianFilter(kQtyVelocityY,opts->filterNumIterations,opts->medianFilterOrder,opts->medianFilterType,opts->thresholdCriteria);
-      MyMRISequence->ApplyMedianFilter(kQtyVelocityZ,opts->filterNumIterations,opts->medianFilterOrder,opts->medianFilterType,opts->thresholdCriteria);
-    }
-  }
-
-  // CLEAN VELOCITY COMPONENTS ON BOUNDARY
-  if(comm->currProc == 0){
-    if (opts->cleanBoundaryVelocities){
-      MyMRISequence->cleanNormalComponentOnBoundary();
-    }
-  }
-
-  // INTERPOLATE BOUNDARY VELOCITIES WITH POLYNOMIALS
-  if(comm->currProc == 0){
-    if (opts->interpolateBoundaryVelocities){
-      MyMRISequence->InterpolateBoundaryVelocities();
-    }
-  }
-
-  //if(comm->currProc == 0){
-  //  // Open Output File
-  //  FILE* outFile;
-  //  outFile = fopen("testGauss.log","w");
-  //  // Write Header
-
-  //  for(int loopA=0;loopA<MyMRISequence->GetScan(0)->totalCellPoints;loopA++){
-  //    fprintf(outFile,"%e %e %e\n",MyMRISequence->GetScan(0)->cellPoints[loopA].velocity[0],MyMRISequence->GetScan(0)->cellPoints[loopA].velocity[1],MyMRISequence->GetScan(0)->cellPoints[loopA].velocity[2]);
-  //  }
-  //  // Close Output file
-  //  fclose(outFile);
-  //}
-
-
-  // APPLY FULL FILTER
-  if (opts->applySMPFilter){
-    MyMRISequence->ApplySMPFilter(opts,false,comm);
-  }
-
-  // APPLY BOUNDARY CONDITION FILTER
-  if (opts->applyBCFilter){
-    MyMRISequence->ApplySMPFilter(opts,true,comm);
-  }
-
-  // APPLY THRESHOLD
-  if(comm->currProc == 0){
-    MyMRISequence->ApplyThresholding(opts->thresholdCriteria);
-  }
-
-  // EVAL VORTEX CRITERIA
-  if(comm->currProc == 0){
-    if(opts->evalPopVortexCriteria){
-      MyMRISequence->EvalVortexCriteria(opts->thresholdCriteria);
-      MyMRISequence->EvalVorticity(opts->thresholdCriteria);
-      MyMRISequence->EvalEnstrophy(opts->thresholdCriteria);
-    }
-  }
-
-  if(comm->currProc == 0){
-    if(opts->applySMPFilter && opts->evalSMPVortexCriterion){
-      // SPATIALLY EVALUATE VORTEX COEFFICIENTS
-      MyMRISequence->EvalSMPVortexCriteria();
-      // Threshold Vortex Expansion
-      //void ApplyVortexThreshold(int thresholdType, double ratio);
-      // Eval 2-Norm of Coefficient Vector
-      //double Get2Norm(bool onlyVortex);
-    }
-  }
-
-  if(opts->evalPressure){
-    // Compute Pressure Gradient
-    MyMRISequence->ComputePressureGradients(opts->thresholdCriteria);
-
-    // Compute Relative Pressure
-    MyMRISequence->ComputeRelativePressure(false);
-  }
-
-  // SAVE EXPANSION COEFFICIENTS IF REQUESTED
-  if(comm->currProc == 0){
-    if(opts->applySMPFilter && opts->saveExpansionCoeffs){
-      MyMRISequence->WriteExpansionFile(std::string(opts->outputFileName + "_expCoeff"));
-    }
-  }
-
-  // SAVE FILE FOR POISSON COMPUTATION
-  if(comm->currProc == 0){
-    if (opts->exportToPoisson){
-      MyMRISequence->ExportForPoisson(opts->poissonFileName,opts->density,opts->viscosity,opts->thresholdCriteria,
-                                      opts->PPE_IncludeAccelerationTerm,
-                                      opts->PPE_IncludeAdvectionTerm,
-                                      opts->PPE_IncludeDiffusionTerm,
-                                      opts->PPE_IncludeReynoldsTerm,
-                                      opts->readMuTFromFile,
-                                      opts->muTFile,
-                                      opts->smagorinskyCoeff);
-    }
-  }
-
-  // SAVE FILE FOR DISTANCE COMPUTATION
-  if(comm->currProc == 0){
-    if (opts->exportToDistance){
-      MyMRISequence->ExportForDistancing(opts->distanceFileName,opts->thresholdCriteria);
-    }
-  }
-
-  // EXPORT FILE
-  if(comm->currProc == 0){
-    if(opts->outputFormatType == itFILEVTK){
-      // READ FROM FILE
-      MyMRISequence->ExportToVTK(opts->outputFileName,opts->thresholdCriteria);
-    }else if (opts->outputFormatType == itFILETECPLOT){
-      // READ FROM FILE
-      MyMRISequence->ExportToTECPLOT(opts->outputFileName);
-    }else{
-      throw MRIException("ERROR: Invalid output file format.\n");
-    }
-  }
-
-  // Free Memory
-  delete MyMRISequence;
+  // FREE MEMORY
+  delete seq;
 }
 
 // ============
@@ -674,7 +320,7 @@ int main(int argc, char **argv){
 
   // WRITE PROGRAM HEADER - ONLY MASTER NODE
   if(comm->currProc == 0){
-    WriteHeader();
+    writeHeader();
 
     // Create Options
     options = new MRIOptions();
@@ -731,7 +377,7 @@ int main(int argc, char **argv){
       case rmHELP:
         if(comm->currProc == 0){
           // Write Program Help
-          MRIUtils::WriteProgramHelp();
+          MRIUtils::writeProgramHelp();
         }
         break;
       // PREFERRED RUNNING MODE
@@ -743,15 +389,15 @@ int main(int argc, char **argv){
       default:
         // Invalid Switch
         std::string currMsgs("Error: Invalid Switch. Terminate.\n");
-        WriteSchMessage(currMsgs);
+        writeSchMessage(currMsgs);
         return (1);
         break;
     }
   }catch (std::exception& ex){
     if(comm->currProc == 0){
-      WriteSchMessage(std::string(ex.what()));
-      WriteSchMessage(std::string("\n"));
-      WriteSchMessage(std::string("Program Terminated.\n"));
+      writeSchMessage(std::string(ex.what()));
+      writeSchMessage(std::string("\n"));
+      writeSchMessage(std::string("Program Terminated.\n"));
     }
     // Finalize MPI
     delete options;
@@ -759,8 +405,8 @@ int main(int argc, char **argv){
     return -1;
   }
   if(comm->currProc == 0){
-    WriteSchMessage(string("\n"));
-    WriteSchMessage(string("Program Completed.\n"));
+    writeSchMessage(string("\n"));
+    writeSchMessage(string("Program Completed.\n"));
   }
   // Finalize MPI
   //delete comm;
