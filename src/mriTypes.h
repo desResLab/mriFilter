@@ -37,7 +37,7 @@ enum pltFileTypes{
   pltSTRUCTURED
 };
 
-struct PLTOptionRecord{
+struct pltOptionRecord{
   int i;
   int j;
   int k;

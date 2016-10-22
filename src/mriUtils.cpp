@@ -97,9 +97,8 @@ MRIStringVec extractSubStringFromBufferMS(std::string Buffer){
 // =======================
 // EVAL TWO-NORM OF VECTOR
 // =======================
-template<typename Type>
-Type do3DEucNorm(std::vector<Type> v){
-  Type norm2 = 0.0;
+double do3DEucNorm(const MRIDoubleVec& v){
+  double norm2 = 0.0;
   for(int i = 0;i<kNumberOfDimensions;i++){
     norm2 += v[i]*v[i];
   }
@@ -110,11 +109,10 @@ Type do3DEucNorm(std::vector<Type> v){
 // ===================
 // NORMALIZE 3D VECTOR
 // ===================
-void normalize3DVector(std::vector<double> &v){
-  double norm = Do3DEucNorm(v);
+void normalize3DVector(MRIDoubleVec& v){
+  double norm = do3DEucNorm(v);
   if(norm>kMathZero){
-    for(int LoopA=0;LoopA<kNumberOfDimensions;LoopA++)
-    {
+    for(int LoopA=0;LoopA<kNumberOfDimensions;LoopA++){
       v[LoopA] = v[LoopA]/norm;
     }
   }
@@ -124,7 +122,7 @@ void normalize3DVector(std::vector<double> &v){
 template<typename Type> void insertInList(Type value, vector<Type>& coords){
   double distance;	  
   for(int LoopA=0;LoopA<coords.size();LoopA++){
-    distance = fabs(Coords[LoopA] - value);
+    distance = fabs(coords[LoopA] - value);
     if (distance<kMathZero) return;
   }
   // Insert New value
@@ -180,7 +178,7 @@ void do3DExternalProduct(std::vector<double> v1, std::vector<double> v2, std::ve
 // ============================
 // CHECK IF POINT IS INSIDE BOX
 // ============================
-bool isPointInsideBox(double xCoord, double yCoord, double zCoord, double* limitBox){
+bool isPointInsideBox(double xCoord, double yCoord, double zCoord, const MRIDoubleVec& limitBox){
     return ((xCoord>=limitBox[0])&&(xCoord<=limitBox[1]))&&
            ((yCoord>=limitBox[2])&&(yCoord<=limitBox[3]))&&
            ((zCoord>=limitBox[4])&&(zCoord<=limitBox[5]));
@@ -402,7 +400,8 @@ void sortIntArray(std::vector<int> &faceIds){
 // ===================================
 // CHECK THAT TWO VECTORS ARE THE SAME
 // ===================================
-bool isSameIntVector(std::vector<int> first, std::vector<int> second){
+bool isSameIntVector(const MRIIntVec& first, const MRIIntVec& second){
+  
   // SORT THE TWO VECTORS FIRST
   std::sort(first.begin(),first.end());
   std::sort(second.begin(),second.end());
@@ -664,5 +663,56 @@ void printDoubleArrayToFile(string fileName, int size, double* vec){
   fclose(f);
 }
 
+// ==============
+// NORMALIZE BINS
+// ==============
+void normalizeBinArray(MRIDoubleVec& binArray,double currInterval){
+  double sum = 0.0;
+  // Compute Summation
+  for(int loopA=0;loopA<binArray.size();loopA++){
+    sum += binArray[loopA];
+  }
+  // Exit if zero sum
+  if (fabs(sum)<kMathZero){
+    return;
+  }
+  // Normalize
+  for(int loopA=0;loopA<binArray.size();loopA++){
+    binArray[loopA] /= (sum*currInterval);
+  }  
 }
-#endif //MRIUTILS_H
+
+// =============
+// ASSIGN TO BIN
+// =============
+void assignToBin(double currValue, int numberOfBins, const MRIDoubleVec& binMin, const MRIDoubleVec& binMax, MRIDoubleVec& binArray){
+  bool found = false;
+  int count = 0;
+  bool isMoreThanMin = false;
+  bool isLessThanMax = false;
+  while ((!found)&&(count<numberOfBins)){
+    if (fabs(currValue-binMin[0])<kMathZero){
+      isMoreThanMin = (currValue >= binMin[count] - kMathZero);
+    }else{
+      isMoreThanMin = (currValue > binMin[count]);
+    }
+    if (fabs(currValue-binMin[numberOfBins-1])<kMathZero){
+      isLessThanMax = (currValue <= binMax[count]);
+    }else{
+      isLessThanMax = (currValue <= binMax[count] + kMathZero);
+    }
+    found = (isMoreThanMin)&&(isLessThanMax);
+    // Update
+    if (!found){
+      count++;
+    }
+  }
+  if (found){
+    // Increase Bin Count
+    binArray[count] = binArray[count] + 1.0;
+  }else{
+    throw MRIException("Error: Value Cannot fit in Bin.\n");
+  } 
+}
+
+}

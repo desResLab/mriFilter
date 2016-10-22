@@ -18,41 +18,41 @@ void MRIScan::getCartesianNeighbourCells(int CurrentCell,MRIIntVec& cellNeighbor
     cellNeighbors.push_back(CurrentCell);
   }
   //Get The Coordinates of the Current Cell
-  mapIndexToCoords(CurrentCell,coords);
+  topology->mapIndexToCoords(CurrentCell,coords);
   // Get Neighbor
   // coords[0]
   if ((coords[0]-1)>=0){
-    cellNeighbors.push_back(mapCoordsToIndex(coords[0]-1,coords[1],coords[2]));
+    cellNeighbors.push_back(topology->mapCoordsToIndex(coords[0]-1,coords[1],coords[2]));
   }else{
     cellNeighbors.push_back(-1);
   }
   // coords[1]
   if((coords[0]+1)<topology->cellTotals[0]){
-    cellNeighbors.push_back(mapCoordsToIndex(coords[0]+1,coords[1],coords[2]));
+    cellNeighbors.push_back(topology->mapCoordsToIndex(coords[0]+1,coords[1],coords[2]));
   }else{
     cellNeighbors.push_back(-1);
   }
   // coords[2]
   if((coords[1]-1)>=0){
-    cellNeighbors.push_back(mapCoordsToIndex(coords[0],coords[1]-1,coords[2]));
+    cellNeighbors.push_back(topology->mapCoordsToIndex(coords[0],coords[1]-1,coords[2]));
   }else{
     cellNeighbors.push_back(-1);
   }
   // coords[3]
   if((coords[1]+1)<topology->cellTotals[1]){
-    cellNeighbors.push_back(mapCoordsToIndex(coords[0],coords[1]+1,coords[2]));
+    cellNeighbors.push_back(topology->mapCoordsToIndex(coords[0],coords[1]+1,coords[2]));
   }else{
     cellNeighbors.push_back(-1);
   }
   // coords[4]
   if((coords[2]-1)>=0){
-    cellNeighbors.push_back(mapCoordsToIndex(coords[0],coords[1],coords[2]-1));
+    cellNeighbors.push_back(topology->mapCoordsToIndex(coords[0],coords[1],coords[2]-1));
   }else{
     cellNeighbors.push_back(-1);
   }
     // coords[5]
   if((coords[2]+1)<topology->cellTotals[2]){
-    cellNeighbors.push_back(mapCoordsToIndex(coords[0],coords[1],coords[2]+1));
+    cellNeighbors.push_back(topology->mapCoordsToIndex(coords[0],coords[1],coords[2]+1));
   }else{
     cellNeighbors.push_back(-1);
   }
@@ -119,13 +119,6 @@ void MRISequence::getGlobalCoords(int DimNumber, int SliceNumber, double FaceCoo
   }
 }
 
-
-// Map From Cells Coords
-int MRISequence::mapCoordsToIndex(int i, int j, int k){
-	// C++ INDEXES ZERO BASED
-  return k*(topology->cellTotals[0]*topology->cellTotals[1])+j*(topology->cellTotals[0])+i;
-}
-
 // Map Cell Number
 int MRISequence::getCellNumber(const MRIDoubleVec& coords){
   // Check Indexes
@@ -153,7 +146,7 @@ int MRISequence::getCellNumber(const MRIDoubleVec& coords){
     k = 0;
   }
   // Return
-  int index = mapCoordsToIndex(i,j,k);
+  int index = topology->mapCoordsToIndex(i,j,k);
   return index;
 }
 
@@ -187,110 +180,6 @@ void MRISequence::getGlobalPermutation(MRIIntVec& GlobalPerm){
       NumberOfZeroNorms++;
     }else{
       GlobalPerm.push_back(getCellNumber(topology->cellLocations[loopA]));
-    }
-  }
-}
-
-// Get Local Adjacent Plane
-int getLocalAdjacentFace(int localNodeNumber, int totalX, int AdjType){
-  switch(AdjType){
-    case kfacePlusX:  
-		  return (((int)localNodeNumber)/((int)totalX)) * (2 * totalX + 1) + (localNodeNumber % totalX) + totalX + 1;
-			break;
-    case kfaceMinusX: 
-		  return ((int)localNodeNumber/(int)totalX) * (2*totalX+1) + (localNodeNumber % totalX) + totalX;
-    case kfacePlusY : 
-		  return (((int)localNodeNumber/(int)totalX)+1) * (2*totalX+1) + (localNodeNumber % totalX);
-    case kfaceMinusY: 
-		  return ((int)localNodeNumber/(int)totalX) * (2*totalX+1) + (localNodeNumber % totalX);
-    case kfacePlusZ:  
-		  return localNodeNumber;
-    case kfaceMinusZ: 
-		  return localNodeNumber;
-	}
-  return -1;
-}
-
-// Get Global Adjacent Plane
-int MRISequence::getAdjacentFace(int globalNodeNumber /*Already Ordered Globally x-y-z*/, int AdjType){
-  // Get The Z Coord
-  double currentZCoord = topology->cellLocations[globalNodeNumber][2] - topology->domainSizeMin[2];
-  
-	// Find The Node Number in The Current Plane
-  int ZCompleteLevels = MRIUtils::findHowMany(currentZCoord,topology->cellLengths[2]);
-  int localNodeNumber = globalNodeNumber - ZCompleteLevels * topology->cellTotals[0] * topology->cellTotals[1];
-
-  // Find The Adjacent face in the Current Plane
-  int localFaceNumber = getLocalAdjacentFace(localNodeNumber, topology->cellTotals[0], AdjType);
-
-  // Map to Global Face Numbering: Differentiate if in Z
-  if(AdjType == kfacePlusZ){
-    return localFaceNumber+(ZCompleteLevels+1)*topology->cellTotals[0]*topology->cellTotals[1]+
-                           (ZCompleteLevels+1)*(topology->cellTotals[0]*(topology->cellTotals[1]+1)+
-                           (topology->cellTotals[0]+1)*topology->cellTotals[1]);
-		
-	}else if(AdjType == kfaceMinusZ){
-    return localFaceNumber+(ZCompleteLevels)*topology->cellTotals[0]*topology->cellTotals[1]+
-                           (ZCompleteLevels)*(topology->cellTotals[0]*(topology->cellTotals[1]+1)+
-                           (topology->cellTotals[0]+1)*topology->cellTotals[1]);
-		
-	}else{
-    return localFaceNumber+(ZCompleteLevels+1)*topology->cellTotals[0]*topology->cellTotals[1]+
-                           (ZCompleteLevels)*(topology->cellTotals[0]*(topology->cellTotals[1]+1)+
-                           (topology->cellTotals[0]+1)*topology->cellTotals[1]);
-  }
-}
-
-// ================================
-// GET VORTEXES ASSOCIATED TO CELLS
-// ================================
-void MRISequence::getNeighborVortexes(int cellNumber,int dim,MRIIntVec& idx){
-  // Loop through the edges
-  MRIIntVec ElEdgeList;
-  double currEdgeDirVector[3];
-  int currFace = 0;
-  int currEdge = 0;
-  for(int loopA=0;loopA<topology->cellFaces[cellNumber].size();loopA++){
-    currFace = topology->cellFaces[cellNumber][loopA];
-    for(int loopB=0;loopB<topology->faceEdges[currFace].size();loopB++){
-      currEdge = topology->faceEdges[currFace][loopB];
-      MRIUtils::insertInList(currEdge,ElEdgeList);
-    }
-  }
-  // Find the Edges Aligned with the Selected Dimension
-  idx.clear();
-  int currDir = 0;
-  for(int loopA=0;loopA<ElEdgeList.size();loopA++){
-    getEdgeDirection(ElEdgeList[loopA],currEdgeDirVector);
-    if((fabs(currEdgeDirVector[1])<kMathZero)&&(fabs(currEdgeDirVector[2])<kMathZero)){
-      currDir = 0;
-    }else if((fabs(currEdgeDirVector[0])<kMathZero)&&(fabs(currEdgeDirVector[2])<kMathZero)){
-      currDir = 1;
-    }else if((fabs(currEdgeDirVector[0])<kMathZero)&&(fabs(currEdgeDirVector[1])<kMathZero)){
-      currDir = 2;
-    }else{
-      throw MRIException("ERROR: Invalid Edge Direction in getNeighborVortexes.\n");
-    }
-    if(currDir == dim){
-      idx.push_back(ElEdgeList[loopA]);
-    }
-  }
-}
-
-// ==============================
-// MAP INTEGER COORDS TO POSITION
-// ==============================
-void MRISequence::mapCoordsToPosition(const MRIIntVec& coords, bool addMeshMinima, MRIDoubleVec& pos){
-  // Loop on the three dimensions
-  for(int loopA=0;loopA<3;loopA++){
-    pos[loopA] = 0.0;
-    for(int loopB=1;loopB<(coords[loopA]+1);loopB++){
-      pos[loopA] += 0.5*(topology->cellLengths[loopA][loopB-1] + topology->cellLengths[loopA][loopB]);
-    }
-  }
-  if(addMeshMinima){
-    for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
-      pos[loopA] += topology->domainSizeMin[loopA];
     }
   }
 }

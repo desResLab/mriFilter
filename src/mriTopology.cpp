@@ -1,9 +1,175 @@
 # include "mriTopology.h"
 
+using namespace std;
+
+// Get Local Adjacent Plane
+int getLocalAdjacentFace(int localNodeNumber, int totalX, int AdjType){
+  switch(AdjType){
+    case kfacePlusX:  
+      return (((int)localNodeNumber)/((int)totalX)) * (2 * totalX + 1) + (localNodeNumber % totalX) + totalX + 1;
+      break;
+    case kfaceMinusX: 
+      return ((int)localNodeNumber/(int)totalX) * (2*totalX+1) + (localNodeNumber % totalX) + totalX;
+    case kfacePlusY : 
+      return (((int)localNodeNumber/(int)totalX)+1) * (2*totalX+1) + (localNodeNumber % totalX);
+    case kfaceMinusY: 
+      return ((int)localNodeNumber/(int)totalX) * (2*totalX+1) + (localNodeNumber % totalX);
+    case kfacePlusZ:  
+      return localNodeNumber;
+    case kfaceMinusZ: 
+      return localNodeNumber;
+  }
+  return -1;
+}
+
+// ============================
+// READ CELL DATA FROM PLT FILE
+// ============================
+void readCellsFromPLTFile(string pltFileName, 
+                          MRIDoubleVec& domainSizeMin, MRIDoubleVec& domainSizeMax, 
+                          double& maxVelModule, 
+                          MRIDoubleVec& XCoords,
+                          MRIDoubleVec& YCoords,
+                          MRIDoubleVec& ZCoords,
+                          MRIDoubleMat& gridData){
+
+  ifstream pltFile;
+  pltFile.open(pltFileName.c_str());
+
+  // Init Domain Limits
+  domainSizeMin[0] =  std::numeric_limits<double>::max();
+  domainSizeMin[1] =  std::numeric_limits<double>::max();
+  domainSizeMin[2] =  std::numeric_limits<double>::max();
+  domainSizeMax[0] = -std::numeric_limits<double>::max();
+  domainSizeMax[1] = -std::numeric_limits<double>::max();
+  domainSizeMax[2] = -std::numeric_limits<double>::max();  
+
+  // Read Lines
+  string Buffer;
+  int lineCount = 0;
+  MRIStringVec resultArray;
+  bool Continue;
+  int valueCounter = 0;
+  int neededValues = 7;
+  MRIDoubleVec LocalVal(7);
+  MRIDoubleVec TempVal(7);
+  double LocalXCoord = 0.0;
+  double LocalYCoord = 0.0;
+  double LocalZCoord = 0.0;
+  double LocalConc = 0.0;
+  double LocalXVel = 0.0;
+  double LocalYVel = 0.0;
+  double LocalZVel = 0.0;
+  double CurrentModule = 0.0;
+  MRIDoubleVec tmp;
+  while (getline(pltFile,Buffer)){
+    // Read Line
+    lineCount++;
+
+    // Tokenize Line
+    resultArray = MRIUtils::extractSubStringFromBufferMS(Buffer);
+    
+    // Store Local Structure
+    try{
+      // Set Continue
+      Continue = true;
+      // Check Ratio between ResultArray.size, valueCounter, neededValues
+      if((int)resultArray.size()+valueCounter < neededValues){
+        // Read the whole Result Array
+        for(size_t loopA=0;loopA<resultArray.size();loopA++){
+          LocalVal[loopA] = atof(resultArray[loopA].c_str());
+        }
+        Continue = false;
+      }else{
+        // Read part of the result array
+        for(int loopA=0;loopA<neededValues-valueCounter;loopA++){
+          LocalVal[loopA] = atof(resultArray[loopA].c_str());
+        }
+        // Put the rest in temporary array
+        for(size_t loopA=0;loopA<resultArray.size()-(neededValues-valueCounter);loopA++){
+          TempVal[loopA] = atof(resultArray[loopA].c_str());
+        }
+        Continue = true;
+        // Coords
+        LocalXCoord = LocalVal[0];
+        LocalYCoord = LocalVal[1];
+        LocalZCoord = LocalVal[2];
+        // Concentration
+        LocalConc = LocalVal[3];
+        // Velocity
+        LocalXVel = LocalVal[4];
+        LocalYVel = LocalVal[5];
+        LocalZVel = LocalVal[6];
+      }
+      Continue = true;
+      // Coords
+      LocalXCoord = LocalVal[0];
+      LocalYCoord = LocalVal[1];
+      LocalZCoord = LocalVal[2];
+      // Concentration
+      LocalConc = LocalVal[3];
+      // Velocity
+      LocalXVel = LocalVal[4];
+      LocalYVel = LocalVal[5];
+      LocalZVel = LocalVal[6];
+      // Update valueCounter
+      valueCounter = ((resultArray.size() + valueCounter) % neededValues);
+      // Check Module
+      CurrentModule = sqrt((LocalXVel * LocalXVel) + (LocalYVel * LocalYVel) + (LocalZVel * LocalZVel));
+      if (CurrentModule>1000.0){
+        throw 20;
+      }
+    }catch (...){
+      //Set Continue
+      Continue = false;
+      std::string outString = "WARNING[*] Error Reading Line: "+MRIUtils::intToStr(lineCount)+"; Line Skipped.\n";
+      printf("%s",outString.c_str());
+    }
+    if(Continue){
+
+      // Update Limits
+      // Min
+      if (LocalXCoord<domainSizeMin[0]) domainSizeMin[0] = LocalXCoord;
+      if (LocalYCoord<domainSizeMin[1]) domainSizeMin[1] = LocalYCoord;
+      if (LocalZCoord<domainSizeMin[2]) domainSizeMin[2] = LocalZCoord;
+      // Max
+      if (LocalXCoord>domainSizeMax[0]) domainSizeMax[0] = LocalXCoord;
+      if (LocalYCoord>domainSizeMax[1]) domainSizeMax[1] = LocalYCoord;
+      if (LocalZCoord>domainSizeMax[2]) domainSizeMax[2] = LocalZCoord;
+
+      // Update Max Speeds
+      if (CurrentModule>maxVelModule) {
+        maxVelModule = CurrentModule;
+      }
+
+      // Store Node Coords To Find Grid Size
+      MRIUtils::insertInList<double>(LocalXCoord,XCoords);
+      MRIUtils::insertInList<double>(LocalYCoord,YCoords);
+      MRIUtils::insertInList<double>(LocalZCoord,ZCoords);    
+
+      // Store Velocity/Concentrations
+      tmp.clear();
+      tmp.push_back(LocalXCoord);
+      tmp.push_back(LocalYCoord);
+      tmp.push_back(LocalZCoord);
+      tmp.push_back(LocalConc);
+      tmp.push_back(LocalXVel);
+      tmp.push_back(LocalYVel);
+      tmp.push_back(LocalZVel);
+    
+      // Add to Vector
+      gridData.push_back(tmp);
+
+      // Set Continue
+      Continue = true;
+    }
+  }
+}
+
 // ==========================
 // GET LOCAL FACE CONNECTIONS
 // ==========================
-void getFaceConnections(int faceID, std::vector<int> cellConnections, std::vector<int> &faceIds){
+void getFaceConnections(int faceID, vector<int> cellConnections, vector<int> &faceIds){
   faceIds.clear();
   switch(faceID){
     case 0:
@@ -77,8 +243,63 @@ MRITopology::MRITopology(){
   cellLengths.resize(3);
 }
 
-MRITopology::~MRITopology(){
+// CONSTRUCTOR
+MRITopology::MRITopology(const MRIIntVec& totals,
+                         const MRIDoubleVec& lengthX,
+                         const MRIDoubleVec& lengthY,
+                         const MRIDoubleVec& lengthZ,
+                         const MRIDoubleVec& minlimits,
+                         const MRIDoubleVec& maxlimits){
 
+  // SET UP SCAN QUANTITIES
+  // CELL TOTALS
+  cellTotals.resize(3);
+  cellTotals[0] = totals[0];
+  cellTotals[1] = totals[1];
+  cellTotals[2] = totals[2];
+
+  // CELL LENGTHS
+  cellLengths.resize(kNumberOfDimensions);
+  // X
+  for(size_t loopA=0;loopA<lengthX.size();loopA++){
+    cellLengths[0].push_back(lengthX[loopA]);
+  }
+  // Y
+  for(size_t loopA=0;loopA<lengthY.size();loopA++){
+    cellLengths[1].push_back(lengthY[loopA]);
+  }
+  // Z
+  for(size_t loopA=0;loopA<lengthZ.size();loopA++){
+    cellLengths[2].push_back(lengthZ[loopA]);
+  }
+
+  // DIMENSIONS
+  // MIN
+  domainSizeMin[0] = minlimits[0];
+  domainSizeMin[1] = minlimits[1];
+  domainSizeMin[2] = minlimits[2];
+  // MAX
+  domainSizeMax[0] = maxlimits[0];
+  domainSizeMax[1] = maxlimits[1];
+  domainSizeMax[2] = maxlimits[2];
+
+  // INITIALIZE SCAN
+  totalCells = cellTotals[0]*cellTotals[1]*cellTotals[2];
+
+  // INITIALIZE POSITIONS
+  MRIIntVec intCoords(3,0);
+  MRIDoubleVec Pos(3,0.0);
+  for(int loopA=0;loopA<totalCells;loopA++){
+    mapIndexToCoords(loopA,intCoords);
+    mapCoordsToPosition(intCoords,true,Pos);
+    cellLocations[loopA][0] = domainSizeMin[0] + Pos[0];
+    cellLocations[loopA][1] = domainSizeMin[1] + Pos[1];
+    cellLocations[loopA][2] = domainSizeMin[2] + Pos[2];
+  }
+}
+
+// DISTRUCTOR
+MRITopology::~MRITopology(){
 }
 
 // Map To Cells Coords
@@ -89,6 +310,12 @@ void MRITopology::mapIndexToCoords(int index, MRIIntVec& intCoords){
   intCoords[1] = (int)(CurrentIndex / cellTotals[0]);
   CurrentIndex = CurrentIndex-intCoords[1] * cellTotals[0];
   intCoords[0] = CurrentIndex;
+}
+
+// Map From Cells Coords
+int MRITopology::mapCoordsToIndex(int i, int j, int k){
+  // C++ INDEXES ZERO BASED
+  return k*(cellTotals[0]*cellTotals[1])+j*(cellTotals[0])+i;
 }
 
 // ===================
@@ -811,4 +1038,210 @@ bool MRITopology::isCompatibleTopology(MRITopology* topo){
   result = result && (fabs(domainSizeMax[2]-topo->domainSizeMax[2]) > kMathZero);
 
   return result;
+}
+
+// ==============================
+// MAP INTEGER COORDS TO POSITION
+// ==============================
+void MRITopology::mapCoordsToPosition(const MRIIntVec& coords, bool addMeshMinima, MRIDoubleVec& pos){
+  // Loop on the three dimensions
+  for(int loopA=0;loopA<3;loopA++){
+    pos[loopA] = 0.0;
+    for(int loopB=1;loopB<(coords[loopA]+1);loopB++){
+      pos[loopA] += 0.5*(cellLengths[loopA][loopB-1] + cellLengths[loopA][loopB]);
+    }
+  }
+  if(addMeshMinima){
+    for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+      pos[loopA] += domainSizeMin[loopA];
+    }
+  }
+}
+
+// ============================
+// READ TOPOLOGY FROM ASCII VTK
+// ============================
+void MRITopology::readFromVTK_ASCII(string vtkFileName, vtkStructuredPointsOptionRecord& vtkOptions){
+  // Write Progress
+  writeSchMessage(string("Reading Topology From: ") + vtkFileName + string("\n"));
+
+  // Assign File
+  ifstream vtkFile;
+  vtkFile.open(vtkFileName.c_str());
+
+  // Create and initialize vtkOption Vector
+  initVTKStructuredPointsOptions(vtkOptions);
+
+  // Read Through and look for options
+  MRIStringVec tokenizedString;
+  int totalLinesInFile = 0;
+  string Buffer;
+  while (getline(vtkFile,Buffer)){
+    boost::split(tokenizedString, Buffer, boost::is_any_of(" ,"), boost::token_compress_on);
+    // Check if you find options
+    assignVTKOptions(totalLinesInFile,tokenizedString, vtkOptions);
+    // Increase line number
+    totalLinesInFile++;
+  }
+  vtkOptions.dataBlockStart.push_back(totalLinesInFile);
+  vtkOptions.dataBlockType.push_back(0);
+  vtkOptions.dataBlockRead.push_back(false);
+
+  // CHECK IF ALL PROPERTIES WERE DEFINED
+  bool fileOK = true;
+  for(int loopA=0;loopA<vtkOptions.numDefined;loopA++){
+    fileOK = fileOK && vtkOptions.isDefined[loopA];
+    if(!fileOK){
+      printf("ERROR: DEFINITION %d\n",loopA);
+    }
+  }
+  if(!fileOK){
+    writeSchMessage(string("ERROR: Invalid VTK File format.\n"));
+    writeSchMessage(string("\n"));
+    exit(1);
+  }
+
+  // Creating Grid Geometry from Options
+  createGridFromVTKStructuredPoints(vtkOptions);
+}
+
+// ================================
+// READ TOPOLOGY FROM ASCII TECPLOT
+// ================================
+void MRITopology::readFromPLT_ASCII(string pltFileName, pltOptionRecord& pltOptions){
+  
+  // Write Progress
+  writeSchMessage(std::string("Reading topology from : ") + pltFileName + std::string("\n"));
+
+  // Init Line Count
+  int lineCount = 0;
+  totalCells = 0;
+
+  // READ PLT FILE HEADER
+  ifstream pltFile;
+  pltFile.open(pltFileName.c_str());
+  MRIStringVec tokenizedString;
+  bool foundheader = false;
+  bool areAllFloats = false;
+  int headerCount = 0;
+  int totalLinesInFile = 0;
+  std::string Buffer;
+  while (getline(pltFile,Buffer)){
+    if(!foundheader){
+      boost::trim(Buffer);
+      boost::split(tokenizedString, Buffer, boost::is_any_of("= ,"), boost::token_compress_on);
+      areAllFloats = true;
+      assignPLTOptions(tokenizedString, pltOptions);
+      for(size_t loopA=0;loopA<tokenizedString.size();loopA++){
+        areAllFloats = (areAllFloats && (MRIUtils::isFloat(tokenizedString[loopA])));
+      }
+      foundheader = areAllFloats;
+      headerCount++;
+    }
+    // Increase cell and line number
+    totalLinesInFile++;
+  }
+
+  cellTotals.resize(3);
+  cellTotals[0] = pltOptions.i;
+  cellTotals[1] = pltOptions.j;
+  cellTotals[2] = pltOptions.k;
+
+  // Read Cells From PLT File
+  double maxVelModule;
+  MRIDoubleVec XCoords;
+  MRIDoubleVec YCoords;
+  MRIDoubleVec ZCoords;
+  MRIDoubleMat gridData;  
+  readCellsFromPLTFile(pltFileName, 
+                       domainSizeMin,domainSizeMax,
+                       maxVelModule, 
+                       XCoords,YCoords,ZCoords,
+                       gridData);
+
+  
+  // Resize CellLenghts: UNIFORM CASE
+  cellLengths.resize(3);
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    cellLengths[loopA].resize(cellTotals[loopA]);
+    if(cellTotals[loopA] == 1){
+      cellLengths[loopA][0] = 1.0;
+    }else{
+      for(int loopB=0;loopB<cellTotals[loopA];loopB++){
+        cellLengths[loopA][loopB] = fabs(domainSizeMax[loopA]-domainSizeMin[loopA])/(cellTotals[loopA]-1);
+      }
+    }
+  }
+
+  // Close File
+  pltFile.close();
+}
+
+// =========================
+// Get Global Adjacent Plane
+// =========================
+int MRITopology::getAdjacentFace(int globalNodeNumber /*Already Ordered Globally x-y-z*/, int AdjType){
+  
+  // Get The Z Coord
+  double currentZCoord = cellLocations[globalNodeNumber][2] - domainSizeMin[2];
+  
+  // Find The Node Number in The Current Plane
+  int ZCompleteLevels = MRIUtils::findHowMany(currentZCoord,cellLengths[2]);
+  int localNodeNumber = globalNodeNumber - ZCompleteLevels * cellTotals[0] * cellTotals[1];
+
+  // Find The Adjacent face in the Current Plane
+  int localFaceNumber = getLocalAdjacentFace(localNodeNumber, cellTotals[0], AdjType);
+
+  // Map to Global Face Numbering: Differentiate if in Z
+  if(AdjType == kfacePlusZ){
+    return localFaceNumber+(ZCompleteLevels+1)*cellTotals[0]*cellTotals[1]+
+                           (ZCompleteLevels+1)*(cellTotals[0]*(cellTotals[1]+1)+
+                           (cellTotals[0]+1)*cellTotals[1]);
+    
+  }else if(AdjType == kfaceMinusZ){
+    return localFaceNumber+(ZCompleteLevels)*cellTotals[0]*cellTotals[1]+
+                           (ZCompleteLevels)*(cellTotals[0]*(cellTotals[1]+1)+
+                           (cellTotals[0]+1)*cellTotals[1]);
+    
+  }else{
+    return localFaceNumber+(ZCompleteLevels+1)*cellTotals[0]*cellTotals[1]+
+                           (ZCompleteLevels)*(cellTotals[0]*(cellTotals[1]+1)+
+                           (cellTotals[0]+1)*cellTotals[1]);
+  }
+}
+
+// ================================
+// GET VORTEXES ASSOCIATED TO CELLS
+// ================================
+void MRITopology::getNeighborVortexes(int cellNumber,int dim,MRIIntVec& idx){
+  // Loop through the edges
+  MRIIntVec ElEdgeList;
+  MRIDoubleVec currEdgeDirVector(3);
+  int currFace = 0;
+  int currEdge = 0;
+  for(int loopA=0;loopA<cellFaces[cellNumber].size();loopA++){
+    currFace = cellFaces[cellNumber][loopA];
+    for(int loopB=0;loopB<faceEdges[currFace].size();loopB++){
+      currEdge = faceEdges[currFace][loopB];
+      MRIUtils::insertInList<int>(currEdge,ElEdgeList);
+    }
+  }
+  // Find the Edges Aligned with the Selected Dimension
+  idx.clear();
+  int currDir = 0;
+  for(int loopA=0;loopA<ElEdgeList.size();loopA++){
+    getEdgeDirection(ElEdgeList[loopA],currEdgeDirVector);
+    if((fabs(currEdgeDirVector[1])<kMathZero)&&(fabs(currEdgeDirVector[2])<kMathZero)){
+      currDir = 0;
+    }else if((fabs(currEdgeDirVector[0])<kMathZero)&&(fabs(currEdgeDirVector[2])<kMathZero)){
+      currDir = 1;
+    }else if((fabs(currEdgeDirVector[0])<kMathZero)&&(fabs(currEdgeDirVector[1])<kMathZero)){
+      currDir = 2;
+    }else{
+      throw MRIException("ERROR: Invalid Edge Direction in getNeighborVortexes.\n");
+    }
+    if(currDir == dim){
+      idx.push_back(ElEdgeList[loopA]);
+    }
+  }
 }

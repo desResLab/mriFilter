@@ -13,6 +13,7 @@
 # include "mpi.h"
 
 # include "mriConstants.h"
+# include "mriException.h"
 # include "mriThresholdCriteria.h"
 # include "mriTypes.h"
 
@@ -42,10 +43,8 @@ namespace MRIUtils{
   // Own String Split Method
   MRIStringVec extractSubStringFromBufferMS(string Buffer);
 
-  // Compute Euclidean Norm
-  template<typename Type> Type do3DEucNorm(vector<Type> v);
+  double do3DEucNorm(const MRIDoubleVec& v);
 
-  // Normalize 3-component vector
   void normalize3DVector(MRIDoubleVec& v);
 
   // Insert Value in String 
@@ -82,10 +81,10 @@ namespace MRIUtils{
   void readMatrixFromFile(string inFileName, int& nrow, int& ncol, MRIDoubleMat& inMat);
 
   // Get Median of Double Vector
-  double GetMedian(const MRIDoubleVec& v);
+  double getMedian(const MRIDoubleVec& v);
 
   // Get Mean of Double Vector
-  double GetMean(const MRIDoubleVec& v);
+  double getMean(const MRIDoubleVec& v);
 
   // Get Eigenvalues of 3x3 Matrix
   void compute3x3MatrixEigenvals(double A[3][3], double root[3]);
@@ -131,6 +130,12 @@ namespace MRIUtils{
 
   // PRINT DOUBLE MATRIX
   void printDoubleArrayToFile(string fileName, int size, double* vec);
+
+  // NORMALIZE BIN ARRAY
+  void normalizeBinArray(MRIDoubleVec& binArray,double currInterval);
+
+  // ASSIGN TO BIN ARRAY
+  void assignToBin(double currValue, int numberOfBins, const MRIDoubleVec& binMin, const MRIDoubleVec& binMax, MRIDoubleVec& binArray);
 
 }
 #endif //MRIUTILS_H

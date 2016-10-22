@@ -87,6 +87,10 @@
   const int kMeanFilter     = 1;
   const int kGaussianFilter = 2;
 
+  // Types of inputs
+  const int kInputVTK = 0;
+  const int kInputPLT = 1;
+
   // Aternative Typedefs
   typedef const int MRIDirection;
   typedef const int MRISamples;

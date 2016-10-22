@@ -1,6 +1,10 @@
 #ifndef MRITHRESHOLDCRITERIA_H
 #define MRITHRESHOLDCRITERIA_H
 
+# include <math.h>
+
+# include "mriConstants.h"
+
 // Threshold Criteria
 const int kCriterionLessThen = 0;
 const int kCriterionGreaterThen = 1;
@@ -17,7 +21,7 @@ public:
   MRIThresholdCriteria(int type, int qty, double value);
   ~MRIThresholdCriteria();
   // Data Members
-  bool MeetsCriteria(double currentValue);
+  bool meetsCriteria(double currentValue);
 };
 
 #endif // MRITHRESHOLDCRITERIA_H

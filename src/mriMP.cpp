@@ -133,7 +133,7 @@ void MRIScan::assembleConstantPatternMPI(int currentDim, int& totalConstantFaces
 // ====================
 void MRIScan::assembleStarMatrix(int &totalFaces, int &totalBasis, MRIDoubleMat& starMatrix){
   // Init Rows and Columns
-  totalFaces = getTotalFaces();
+  totalFaces = topology->getTotalFaces();
   totalBasis = getTotalBasisNumber();
   // Init Count
   int totalStarFaces = 0;
@@ -232,7 +232,7 @@ double MRIScan::evalMaxDivergence(const MRIDoubleVec& filteredVec){
   double maxDivergence = 0.0;
   double currentDiv = 0.0;
   int currFace = 0;
-  double extNormal[3] = {0.0};
+  MRIDoubleVec extNormal(3,0.0);
   double normalSign = 0.0;
   // Loop on cells
   for(int loopA=0;loopA<topology->totalCells;loopA++){
@@ -242,7 +242,7 @@ double MRIScan::evalMaxDivergence(const MRIDoubleVec& filteredVec){
       // Get Current Face
       currFace = topology->cellFaces[loopA][loopB];
       // Get External Normal
-      getExternalFaceNormal(loopA,loopB,extNormal);
+      topology->getExternalFaceNormal(loopA,loopB,extNormal);
       // Get Sign
       normalSign = 0.0;
       for(int loopC=0;loopC<kNumberOfDimensions;loopC++){
@@ -266,7 +266,7 @@ double MRIScan::evalMaxDivergence(const MRIDoubleVec& filteredVec){
 void MRIScan::evalCellDivergences(const MRIDoubleVec& faceVec, MRIDoubleVec& cellDivs){
   double currentDiv = 0.0;
   int currFace = 0;
-  double extNormal[3] = {0.0};
+  MRIDoubleVec extNormal(3,0.0);
   double normalSign = 0.0;
 
   // Loop on cells
@@ -277,7 +277,7 @@ void MRIScan::evalCellDivergences(const MRIDoubleVec& faceVec, MRIDoubleVec& cel
       // Get Current Face
       currFace = topology->cellFaces[loopA][loopB];
       // Get External Normal
-      getExternalFaceNormal(loopA,loopB,extNormal);
+      topology->getExternalFaceNormal(loopA,loopB,extNormal);
       // Get Sign
       normalSign = 0.0;
       for(int loopC=0;loopC<kNumberOfDimensions;loopC++){
@@ -292,59 +292,10 @@ void MRIScan::evalCellDivergences(const MRIDoubleVec& faceVec, MRIDoubleVec& cel
   }
 }
 
-
-// =============
-// REORDER CELLS
-// =============
-void MRIScan::reorderCells(const MRIIntVec& Perm){
-  // Allocate a copy of the Scan: Check if necessary!!!
-  vector<MRICell> tempCellPoints;
-  tempCellPoints.resize(topology->totalCells);
-  // Initialize
-  for(int loopA=0;loopA<topology->totalCells;loopA++){
-    // Conc
-    tempCellPoints[loopA].concentration = 0.0;
-    // Vel
-    tempCellPoints[loopA].velocity[0] = 0.0;
-    tempCellPoints[loopA].velocity[1] = 0.0;
-    tempCellPoints[loopA].velocity[2] = 0.0;
-  }
-  // Transfer
-  for(int loopA=0;loopA<topology->totalCells;loopA++){
-    if(Perm[loopA]>-1){
-      // Conc
-      tempCellPoints[Perm[loopA]].concentration = cells[loopA].concentration;
-      // Vel
-      tempCellPoints[Perm[loopA]].velocity[0] = cells[loopA].velocity[0];
-      tempCellPoints[Perm[loopA]].velocity[1] = cells[loopA].velocity[1];
-      tempCellPoints[Perm[loopA]].velocity[2] = cells[loopA].velocity[2];
-    }
-  }
-  // Copy Back
-  double PosNorm;
-  double VelNorm;
-  int invalidCount = 0;
-  int intCoords[3] = {0};
-  double Pos[3] = {0.0};
-  for(int loopA=0;loopA<topology->totalCells;loopA++){
-    // Conc
-    cells[loopA].concentration = tempCellPoints[loopA].concentration;
-    // Vel
-    cells[loopA].velocity[0] = tempCellPoints[loopA].velocity[0];
-    cells[loopA].velocity[1] = tempCellPoints[loopA].velocity[1];
-    cells[loopA].velocity[2] = tempCellPoints[loopA].velocity[2];
-    // Norms
-    VelNorm = MRIUtils::do3DEucNorm<double>(tempCellPoints[loopA].velocity);
-    if(PosNorm<kMathZero){
-      invalidCount++;
-    }
-  }
-}
-
 // ===================================
 // RECOVER VELOCITIES FROM FACE FLUXES
 // ===================================
-void MRIScan::recoverCellVelocitiesRT0(bool useBCFilter, double* filteredVec){
+void MRIScan::recoverCellVelocitiesRT0(bool useBCFilter, MRIDoubleVec& filteredVec){
   // Variables
   int locFace1 = 0;
   int locFace2 = 0;
@@ -634,7 +585,7 @@ void MRIScan::assembleResidualVector(bool useBCFilter, MRIThresholdCriteria* thr
     // Check for BC
     if(useBCFilter){
       currentValue = cells[loopA].getQuantity(thresholdCriteria->thresholdQty);
-      continueToProcess = thresholdCriteria->MeetsCriteria(currentValue);
+      continueToProcess = thresholdCriteria->meetsCriteria(currentValue);
     }else{
       continueToProcess = true;
     }
@@ -730,50 +681,55 @@ void MRIScan::formVortexList(MRICommunicator* comm,
 // =========================================
 // COMMUNICATE RESIDUAL AND FILTERED VECTORS
 // =========================================
-void communicateResFilt2(int totalFaces,double* resVec,double* filteredVels,MRICommunicator* comm,int* minFaceGlob,int* maxFaceGlob,double& resNorm){
+void communicateResFilt2(MRICommunicator* comm,
+                         int totalFaces,
+                         const MRIIntVec& minFaceGlob,
+                         const MRIIntVec& maxFaceGlob,
+                         MRIDoubleVec& resVec,
+                         MRIDoubleVec& filteredVels,
+                         double& resNorm){
+  
   int size = maxFaceGlob[comm->currProc] - minFaceGlob[comm->currProc];
-  int* recvcounts = new int[comm->totProc];
-  int* displs = new int[comm->totProc];
-  double* storeVec = new double[size];
+  MRIIntVec recvcounts(comm->totProc);
+  MRIIntVec displs(comm->totProc);
+  MRIDoubleVec storeVec(size);
+  
   for(int loopA=0;loopA<comm->totProc;loopA++){
     displs[loopA] = minFaceGlob[loopA];
     recvcounts[loopA] = maxFaceGlob[loopA] - minFaceGlob[loopA];
   }
+  
   // Residual Vector
   for(int loopA=minFaceGlob[comm->currProc];loopA<maxFaceGlob[comm->currProc];loopA++){
     storeVec[loopA-minFaceGlob[comm->currProc]] = resVec[loopA];
   }
-  MPI_Allgatherv(&storeVec[0],size,MPI_DOUBLE,&resVec[0],recvcounts,displs,MPI_DOUBLE,comm->mpiComm);
+  MPI_Allgatherv(&storeVec[0],size,MPI_DOUBLE,&resVec[0],&recvcounts[0],&displs[0],MPI_DOUBLE,comm->mpiComm);
+  
   // Filter Vector
   for(int loopA=minFaceGlob[comm->currProc];loopA<maxFaceGlob[comm->currProc];loopA++){
     storeVec[loopA-minFaceGlob[comm->currProc]] = filteredVels[loopA];
   }
-  MPI_Allgatherv(&storeVec[0],size,MPI_DOUBLE,&filteredVels[0],recvcounts,displs,MPI_DOUBLE,comm->mpiComm);
+  MPI_Allgatherv(&storeVec[0],size,MPI_DOUBLE,&filteredVels[0],&recvcounts[0],&displs[0],MPI_DOUBLE,comm->mpiComm);
   // Update Norm
   resNorm = 0.0;
   for(int loopA=0;loopA<totalFaces;loopA++){
     resNorm += resVec[loopA] * resVec[loopA];
   }
   resNorm = sqrt(resNorm);
-  delete [] recvcounts;
-  delete [] displs;
-  delete [] storeVec;
 }
 
 // =========================================
 // SYNC TEMPORARY EXPANSION AMONG PROCESSORS
 // =========================================
-void syncExpansion(int totalVortexes, double* currentExp, MRICommunicator* comm){
-  double* target = new double[totalVortexes];
+void syncExpansion(int totalVortexes, MRIDoubleVec& currentExp, MRICommunicator* comm){
+  MRIDoubleVec target(totalVortexes);
   MPI_Reduce(&currentExp[0],&target[0],totalVortexes,MPI_DOUBLE,MPI_SUM,0,comm->mpiComm);
   if(comm->currProc == 0){
     for(int loopA=0;loopA<totalVortexes;loopA++){
       currentExp[loopA] = target[loopA];
     }
   }
-  delete [] target;
 }
-
 
 // =================
 // PHYSICS FILTERING
@@ -1016,7 +972,9 @@ void MRIScan::applySMPFilter(MRICommunicator* comm, bool isBC,
     // IF MPI then Communicate Residual Vector
     if(comm->totProc > 1){
       // Communicate Residual, FilteredVels and Update Norm
-      communicateResFilt2(totalFaces,resVec,filteredVec,comm,minFaceGlob,maxFaceGlob,resNorm);
+      communicateResFilt2(comm,totalFaces,
+                          minFaceGlob,maxFaceGlob,
+                          resVec,filteredVec,resNorm);
     }
 
     for(int loopB=0;loopB<boundaryVortexList.size();loopB++){
@@ -1057,9 +1015,9 @@ void MRIScan::applySMPFilter(MRICommunicator* comm, bool isBC,
     // Eval Two-Norm of the Coefficient Vector
     if(comm->currProc == 0){
       if(!isBC){
-        twoNorm = expansion->Get2Norm(false);
+        twoNorm = expansion->get2Norm(false);
       }else{
-        twoNorm = bcExpansion->Get2Norm(false);
+        twoNorm = bcExpansion->get2Norm(false);
       }
     }
     // Broadcase Two Norm
@@ -1081,8 +1039,8 @@ void MRIScan::applySMPFilter(MRICommunicator* comm, bool isBC,
 
     // WRITE MESSAGE AT EVERY INTERATION
     if(comm->currProc == 0){
-      writeSchMessage("[" + MRIUtils::IntToStr(comm->currProc) + "] It: " + MRIUtils::IntToStr(itCount) + "; ABS Res: "+MRIUtils::FloatToStr(resNorm)+"; Rel: " + MRIUtils::FloatToStr(relResNorm) +
-                      "; Coeff 2-Norm: "+MRIUtils::FloatToStr(twoNorm)+"; Rel 2-Norm: " + MRIUtils::FloatToStr(relTwoNorm)+"\n");
+      writeSchMessage("[" + MRIUtils::intToStr(comm->currProc) + "] It: " + MRIUtils::intToStr(itCount) + "; ABS Res: "+MRIUtils::floatToStr(resNorm)+"; Rel: " + MRIUtils::floatToStr(relResNorm) +
+                      "; Coeff 2-Norm: "+MRIUtils::floatToStr(twoNorm)+"; Rel 2-Norm: " + MRIUtils::floatToStr(relTwoNorm)+"\n");
     }
 
     // Check Convergence
@@ -1162,11 +1120,11 @@ void MRIScan::rebuildFromExpansion(MRIExpansion* expansion, bool useConstantFlux
   int totalStarFaces = 0;
   int currFaceID = 0;
   double currFaceCoeff = 0.0;
-  std::vector<int> facesID;
-  std::vector<double> facesCoeffs;
+  MRIIntVec facesID;
+  MRIDoubleVec facesCoeffs;
   
   // Get total number of vortexes
-  int totalVortex = EvalTotalVortex();
+  int totalVortex = evalTotalVortex();
   MRIDoubleVec faceFluxVec(totalVortex + 3);
 
   // INITIALIZE
@@ -1178,7 +1136,7 @@ void MRIScan::rebuildFromExpansion(MRIExpansion* expansion, bool useConstantFlux
   if(useConstantFlux){
     for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
       // Find Star Shape
-      AssembleConstantPattern(loopB/*Current Dimension*/,totalStarFaces,facesID,facesCoeffs);
+      assembleConstantPattern(loopB/*Current Dimension*/,totalStarFaces,facesID,facesCoeffs);
       // Add to faces
       for(int loopC=0;loopC<totalStarFaces;loopC++){
         currFaceID = facesID[loopC];
@@ -1202,7 +1160,7 @@ void MRIScan::rebuildFromExpansion(MRIExpansion* expansion, bool useConstantFlux
     // Increment the current component
     componentCount++;
     // Find Star Shape
-    AssembleStarShape(loopB,totalStarFaces,facesID,facesCoeffs);
+    assembleStarShape(loopB,totalStarFaces,facesID,facesCoeffs);
     // Find Correlation
     for(int loopE=0;loopE<totalStarFaces;loopE++){
       currFaceID = facesID[loopE];
@@ -1212,8 +1170,8 @@ void MRIScan::rebuildFromExpansion(MRIExpansion* expansion, bool useConstantFlux
   }
 
   // Recover Velocities from Face Fluxes
-  RecoverCellVelocitiesRT0(false,faceFluxVec);
+  recoverCellVelocitiesRT0(false,faceFluxVec);
 
   // Update Velocities
-  UpdateVelocities();
+  updateVelocities();
 }

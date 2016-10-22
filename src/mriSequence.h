@@ -4,11 +4,13 @@
 #include "mriScan.h"
 #include "mriCommunicator.h"
 #include "mriThresholdCriteria.h"
+#include "mriTopology.h"
 #include "mriIO.h"
 
 using namespace std;
 
 class MRIScan;
+class MRITopology;
 class MRICommunicator;
 
 // Generic Sequence Containing General 
@@ -16,10 +18,10 @@ class MRICommunicator;
 
 class MRISequence{
   public:
-    int                   totalScans;
-    std::vector<MRIScan*> sequence;
-    std::string*          fileNames;
-    bool                  isCyclic;
+    int              totalScans;
+    vector<MRIScan*> sequence;
+    string*          fileNames;
+    bool             isCyclic;
 
     // TOPOLOGY COMMON TO EVERY SCAN
     MRITopology* topology;
@@ -30,6 +32,9 @@ class MRISequence{
     MRISequence(MRISequence* copySequence);
     // Destructor
     ~MRISequence();
+
+    // WRITE STATS
+    string writeStatistics();
     
     // ADD AND GET FROM SEQUENCE
     void addScan(MRIScan* scan);
@@ -38,20 +43,24 @@ class MRISequence{
     MRIScan* getScan(int scanNumber);
 
     // READ SEQUENCE FROM FILE
-    void readVTKStructuredPoints(std::string vtkFileName, bool DoReorderCells);
-    void readPLTFile(const MRIStringVec& pltFileNames, const MRIDoubleVec& scanTimes , bool DoReorderCells);
-    void readFromVolSequence(string outfileName);
-    void readFromExpansionFile(string fileName,bool applyThreshold, int thresholdType,double thresholdRatio);
+    void readFromASCIISequence(int asciiInputType, 
+                               const MRIStringVec& vtkFileNames, 
+                               const MRIDoubleVec& times);    
+    void readFromExpansionFiles(const MRIStringVec& fileNames, 
+                                const MRIDoubleVec& Times, 
+                                bool applyThreshold, 
+                                int thresholdType,
+                                double thresholdRatio);
     
     // EXPORT SEQUENCE TO FILE
     void exportToTECPLOT(string outfileName);
     void exportToVOL(string outfileName);
-    void exportToVTK(string outfileName,MRIThresholdCriteria* thresholdCriteria);
-    void writeExpansionFile(string fileName);
+    void exportToVTK(string outfileName,MRIThresholdCriteria* thresholdCriteria);    
     void exportForDistancing(string inputFileName, MRIThresholdCriteria* threshold);
     void exportForPoisson(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold,
                           bool PPE_IncludeAccelerationTerm,bool PPE_IncludeAdvectionTerm,bool PPE_IncludeDiffusionTerm,bool PPE_IncludeReynoldsTerm,
                           bool readMuTFromFile, string muTFile, double smagorinskyCoeff);
+    void writeExpansionFile(string fileName);    
 
     // SAVE QUANTITIES TO OUTPUTS
     void   saveVelocity();
@@ -116,13 +125,20 @@ class MRISequence{
     void makeScanDifference(int firstScanID, int secondScanID);
     void makeScanAverage(int numberOfMeasures, int firstScanID, int secondScanID);
     // Eval Time Derivatives
-    void evalTimeDerivs(int currentScan, int currentCell,double* timeDeriv);
+    void evalTimeDerivs(int currentScan, int currentCell, MRIDoubleVec& timeDeriv);
     void evalScanTimeDerivs(int currentScan,MRIDoubleMat& timeDeriv);
   
     // STATISTICS
     void evalScanDifferencePDF(int otherScan, int refScan, const int pdfQuantity, int numberOfBins, bool useBox, MRIDoubleVec& limitBox, MRIDoubleVec& binCenters, MRIDoubleVec& binArray);
     void extractSinglePointTimeCurve(int cellNumber, int exportQty, string fileName);
-
+    void formDifferenceBinLimits(int otherScan, int refScan, 
+                                 int pdfQuantity, double& currInterval,
+                                 const MRIDoubleVec& limitBox, 
+                                 int numberOfBins, 
+                                 MRIDoubleVec& binMin, 
+                                 MRIDoubleVec& binMax, 
+                                 MRIDoubleVec& binCenter);
+    
     // TRANFORMATION
     void crop(const MRIDoubleVec& limitBox);
     void scaleVelocities(double factor);

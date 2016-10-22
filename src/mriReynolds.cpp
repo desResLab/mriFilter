@@ -246,7 +246,7 @@ void MRIScan::evalReynoldsStressGradient(int currentCell, MRIDoubleMat& Reynolds
   // DRXZ/DZ DRYZ/DZ DRZZ/DZ
   // Map Index To Coords
   MRIIntVec currentCellCoords(kNumberOfDimensions);
-  mapIndexToCoords(currentCell,currentCellCoords);
+  topology->mapIndexToCoords(currentCell,currentCellCoords);
   int firstCell,secondCell;
   // Assemble Terms
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
@@ -256,12 +256,12 @@ void MRIScan::evalReynoldsStressGradient(int currentCell, MRIDoubleMat& Reynolds
         if((currentCellCoords[0]-1)<0){
           firstCell = -1;
         }else{
-          firstCell = mapCoordsToIndex(currentCellCoords[0]-1,currentCellCoords[1],currentCellCoords[2]);
+          firstCell = topology->mapCoordsToIndex(currentCellCoords[0]-1,currentCellCoords[1],currentCellCoords[2]);
         }
         if((currentCellCoords[0]+1)>(topology->cellTotals[0]-1)){
           secondCell = -1;
         }else{
-          secondCell = mapCoordsToIndex(currentCellCoords[0]+1,currentCellCoords[1],currentCellCoords[2]);
+          secondCell = topology->mapCoordsToIndex(currentCellCoords[0]+1,currentCellCoords[1],currentCellCoords[2]);
         }
         break;
       case 1:
@@ -269,12 +269,12 @@ void MRIScan::evalReynoldsStressGradient(int currentCell, MRIDoubleMat& Reynolds
         if((currentCellCoords[1]-1)<0){
           firstCell = -1;
         }else{
-          firstCell = mapCoordsToIndex(currentCellCoords[0],currentCellCoords[1]-1,currentCellCoords[2]);
+          firstCell = topology->mapCoordsToIndex(currentCellCoords[0],currentCellCoords[1]-1,currentCellCoords[2]);
         }
         if((currentCellCoords[1]+1)>(topology->cellTotals[1]-1)){
           secondCell = -1;
         }else{
-          secondCell = mapCoordsToIndex(currentCellCoords[0],currentCellCoords[1]+1,currentCellCoords[2]);
+          secondCell = topology->mapCoordsToIndex(currentCellCoords[0],currentCellCoords[1]+1,currentCellCoords[2]);
         }
         break;
       case 2:
@@ -282,12 +282,12 @@ void MRIScan::evalReynoldsStressGradient(int currentCell, MRIDoubleMat& Reynolds
         if((currentCellCoords[2]-1)<0){
           firstCell = -1;
         }else{
-          firstCell = mapCoordsToIndex(currentCellCoords[0],currentCellCoords[1],currentCellCoords[2]-1);
+          firstCell = topology->mapCoordsToIndex(currentCellCoords[0],currentCellCoords[1],currentCellCoords[2]-1);
         }
         if((currentCellCoords[2]+1)>(topology->cellTotals[2]-1)){
           secondCell = -1;
         }else{
-          secondCell = mapCoordsToIndex(currentCellCoords[0],currentCellCoords[1],currentCellCoords[2]+1);
+          secondCell = topology->mapCoordsToIndex(currentCellCoords[0],currentCellCoords[1],currentCellCoords[2]+1);
         }
         break;
     }

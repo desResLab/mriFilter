@@ -21,6 +21,7 @@
 # include "mriSamplingOptions.h"
 # include "mriOutput.h"
 # include "mriTopology.h"
+# include "mriIO.h"
 
 # include "mriOptions.h"
 # include "mriCommunicator.h"
@@ -46,6 +47,7 @@ class MRIScan{
     
     // Utility Functions
     MRIDoubleMat reynoldsStress;
+    MRIDoubleMat pressureGradient;
     double scanTime;
     double maxVelModule;
     
@@ -54,6 +56,10 @@ class MRIScan{
 
     // Pointer to the Common Topology of the Sequence
     MRITopology* topology;
+
+    // Material Properties
+    double density;
+    double viscosity;
 
     // ================
     // MEMBER FUNCTIONS
@@ -71,9 +77,8 @@ class MRIScan{
     // ==============
     // READ FUNCTIONS
     // ==============
-    void createGridFromVTKStructuredPoints(vtkStructuredPointsOptionRecord opts);
-    void readVTKStructuredPoints(std::string vtkFileName, bool DoReorderCells);
-    void readPLTFile(std::string PltFileName, bool DoReorderCells);
+    void readFromVTK_ASCII(string vtkFileName, const vtkStructuredPointsOptionRecord& vtkOptions);
+    void readFromPLT_ASCII(std::string PltFileName, const pltOptionRecord& pltOptions);
     void readFromExpansionFile(std::string fileName,bool applyThreshold,int thresholdType,double thresholdValue);
 
     // ==================
@@ -108,7 +113,6 @@ class MRIScan{
     // VORTEX COEFFICIENTS
     double getEdgeFaceVortexCoeff(int edgeID, int faceID);
     // AUXILIARY GEOMETRY
-    void   getEdgeDirection(int edgeID, double* edgeDirVector);
     void   getEdgeCenter(int edgeID, double* ec);
     void   getFaceCenter(int faceID, double* fc);
     void   getEdgeToFaceDirection(int edgeID, int faceID, double* edgeFaceVector);
@@ -118,7 +122,6 @@ class MRIScan{
     int  getCellFaceID(int CellId,int FaceId);
     bool hasUniformSpacing();
     // NORMALS
-    void getExternalFaceNormal(int cellID, int localFaceID, double* extNormal);
     bool isInnerCell(int cell);
 
     // =============================
@@ -143,13 +146,6 @@ class MRIScan{
     // ============
     void applyThresholding(MRIThresholdCriteria* thresholdCriteria);
 
-    // Reorder Cells    
-    void reorderCells(const MRIIntVec& Perm);
-    // Get Global Permutation
-    void getGlobalPermutation(std::vector<int> &GlobalPerm);
-    // REORDER GLOBAL SCAN
-    void reorderScan();
-
     // SAVE VELOCITIES
     void saveVelocity();
 
@@ -161,20 +157,11 @@ class MRIScan{
     bool isCompatibleWith(MRIScan* secondScan);
     // Get Face from Cell Vector
     int  getFacewithCellVector(int CurrentCell, double *UnitVector);
-    // Get Adjacency Face
-    int  getAdjacentFace(int GlobalNodeNumber, int AdjType);
     // Get Unit Vector From Current Cell To Face Centre
     void getGlobalCoords(int DimNumber, int SliceNumber, double FaceCoord1, double FaceCoord2, MRIDoubleVec& globalCoords);
     int  faceLocaltoGlobal(int LocalFace, int DimNumber, int SliceNumber);
 
-    // Sequential Index to Integer Coords
-    void mapIndexToCoords(int index, MRIIntVec& intCoords);
-    void mapIndexToAuxNodeCoords(int index, MRIIntVec& intCoords);
-    int  mapCoordsToIndex(int i, int j, int k);
-
     // Map Integer Coords to Position
-    void mapCoordsToPosition(int* coords, bool addMeshMinima, double* pos);
-    void mapAuxCoordsToPosition(int* auxCoords, double* pos);
     void getLocalStarFaces(int StarNum, int CellsX, int CellsY, int &BottomFace, int &TopFace, int &LeftFace, int &RightFace);
     int  findFirstNotVisited(int cellTotal, bool* visitedCell, MRIIntVec cellStack);
     void formNotVisitedList(int cellTotal, const MRIBoolVec& visitedCell, MRIBoolVec& notVisitedList);
@@ -207,7 +194,7 @@ class MRIScan{
     double evalMaxDivergence(const MRIDoubleVec& filteredVec);
     void   recoverGlobalErrorEstimates(double& AvNormError, double& AvAngleError);
     void   expandStarShape(int totalStarFaces, int* facesID, double* facesCoeffs, double* &fullStarVector);
-    void   recoverCellVelocitiesRT0(bool useBCFilter, double* filteredVec);
+    void   recoverCellVelocitiesRT0(bool useBCFilter, MRIDoubleVec& filteredVec);
     void   reconstructFromExpansion();
     void   getDimensionSliceStarFromVortex(int vortexNumber,int &dimNumber,int &sliceNumber,int &starNumber);
     
@@ -221,9 +208,7 @@ class MRIScan{
     // ==============
     double evalAverageVelocityMod();
     void   evalCellAreas(int cellNumber,MRIDoubleVec& Areas);
-    int    getTotalAuxNodes();
     int    evalTotalVortex();
-    int    getTotalFaces();
 
     // CELL SAMPLING
     void sampleVelocities(MRISamplingOptions SamplingOptions, MRIIntVec& bins);
@@ -284,11 +269,10 @@ class MRIScan{
     void assignZeroVelocities();
 
     // VORTEX IDENTIFICATION
-    void   evalCellVelocityGradientDecomposition(int currentCell, double** deformation, double** rotation, double** firstDerivs);
-    double evalCellQCriterion(int currentCell, double** deformation, double** rotation);
-    double evalCellL2Criterion(int currentCell, double** deformation, double** rotation);
-    double evalCellDeltaCriterion(int currentCell, double** deformation, double** rotation, double** velGradient);
-    double evalCellVortexCriteria(int currentCell,int criteriaType, double** deformation, double** rotation, double** velGradient);
+    double evalCellQCriterion(int currentCell, const MRIDoubleMat& deformation, const MRIDoubleMat& rotation);
+    double evalCellL2Criterion(int currentCell, const MRIDoubleMat& deformation, const MRIDoubleMat& rotation);
+    double evalCellDeltaCriterion(int currentCell, const MRIDoubleMat& deformation, const MRIDoubleMat& rotation, const MRIDoubleMat& velGradient);
+    double evalCellVortexCriteria(int currentCell,int criteriaType, const MRIDoubleMat& velGradient, const MRIDoubleMat& deformation, const MRIDoubleMat& rotation);
     void   evalVortexCriteria(MRIThresholdCriteria* threshold);
     void   evalVorticity(MRIThresholdCriteria* threshold);
     void   evalEnstrophy(MRIThresholdCriteria* threshold);
@@ -296,7 +280,6 @@ class MRIScan{
 
     // SPATIAL REPRESENTATION OF VORTEX COEFFICIENTS
     double evalVortexCriteria(MRIExpansion* exp);
-    void   getNeighborVortexes(int cellNumber,int dim, MRIIntVec& idx);
     
     // ADD GAUSSIAN NOISE
     void applyGaussianNoise(double stDev);
@@ -332,6 +315,14 @@ class MRIScan{
    // STATISTICS
    void evalScanPDF(int pdfQuantity, int numberOfBins, bool useBox, MRIDoubleVec& limitBox,MRIDoubleVec& binCenter, MRIDoubleVec& binArray);
    void formBinLimits(int pdfQuantity, double& currInterval, const MRIDoubleVec& limitBox, int numberOfBins, MRIDoubleVec& binMin, MRIDoubleVec& binMax, MRIDoubleVec& binCenter);
+
+   // PRESSURE
+   void evalCellPressureGradients(int currentCell,
+                                  const MRIDoubleVec& timeDeriv, 
+                                  const MRIDoubleMat& firstDerivs, 
+                                  const MRIDoubleMat& secondDerivs,
+                                  const MRIDoubleMat& ReynoldsStressGrad,
+                                  MRIDoubleVec& pressureGrad);
 };
 
 #endif // MRISTRUCTUREDSCAN_H

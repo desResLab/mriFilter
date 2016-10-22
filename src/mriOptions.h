@@ -3,10 +3,17 @@
 
 # include <string>
 # include <vector>
+# include <stdlib.h>
+# include <getopt.h>
+# include <boost/algorithm/string.hpp>
+
 
 # include "mriThresholdCriteria.h"
 # include "mriOperation.h"
 # include "mriCommunicator.h"
+# include "mriConstants.h"
+# include "mriUtils.h"
+# include "mriException.h"
 
 using namespace std;
 
@@ -34,13 +41,16 @@ using namespace std;
 
   // INPUT TYPES
   const int itFILEVTK                       = 0;
-  const int itFILETECPLOT                   = 1;
+  const int itFILEPLT                       = 1;
   const int itTEMPLATE                      = 2;
   const int itEXPANSION                     = 3;
 
   // OUTPUT TYPES
   const int otFILEVTK                       = 0;
-  const int otFILETECPLOT                   = 1;
+  const int otFILEPLT                       = 1;
+
+
+class MRIOperation;
 
 // CLASS MRIPROGRAMOPTIONS
 class MRIOptions{
