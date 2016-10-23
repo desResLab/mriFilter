@@ -47,7 +47,7 @@ class MRIScan{
     
     // Utility Functions
     MRIDoubleMat reynoldsStress;
-    MRIDoubleMat pressureGradient;
+    MRIDoubleMat qtyGradient;
     double scanTime;
     double maxVelModule;
     
@@ -154,7 +154,6 @@ class MRIScan{
     int  getCellNumber(double* coords);
     void getCartesianNeighbourCells(int CurrentCell, std::vector<int> &coords, bool addself);
     void getStructuredNeighbourCells(int centreCell,int order, MRIThresholdCriteria* threshold, MRIIntVec& cellNeighbors);
-    bool isCompatibleWith(MRIScan* secondScan);
     // Get Face from Cell Vector
     int  getFacewithCellVector(int CurrentCell, double *UnitVector);
     // Get Unit Vector From Current Cell To Face Centre
@@ -215,16 +214,12 @@ class MRIScan{
 
     // GRADIENTS AND DERIVATIVES
     void evalSpaceDerivs(int currentCell, MRIThresholdCriteria* threshold, MRIDoubleMat& firstDerivs, MRIDoubleMat& secondDerivs);
-    void evalSpaceGradient(int currentCell,int qtyID, double* gradient);
+    void evalSpaceGradient(int currentCell,int qtyID, MRIDoubleVec& gradient);
     void computeQuantityGradient(int qtyID);
 
     // DIVERGENCE
     void evalCellDivergences(const MRIDoubleVec& faceVec,MRIDoubleVec& cellDivs);
   
-    // PRESSURE COMPUTATION
-    void evalRelativePressure(int startingCell, double refPressure);
-    void performPressureIterations();
-
     // OTHERS
     void evalPressureIterative(int currentCell, double currentValue, bool* visitedCell,int* otherCells, std::vector<int> &cellStack,int& cellCount);
     bool areThereNotVisitedNeighbor(int cell, bool* visitedCell);
@@ -253,7 +248,7 @@ class MRIScan{
     // ==============
     // TEMPLATE FLOWS
     // ==============
-    void createSampleCase(MRISamples sampleType, const MRIDoubleVec& params);
+    void createFromTemplate(MRISamples sampleType,const MRIDoubleVec& params);
     void assignVelocitySignature(MRIDirection dir, MRISamples sample, double currTime);
     void assignConstantSignature(MRIDirection dir);
     void assignStagnationFlowSignature(MRIDirection dir);

@@ -1,5 +1,10 @@
 # include "mriOperation.h"
 
+// CONSTRUCTOR
+MRIOperation::MRIOperation(){
+
+}
+
 // DATA MEMBER
 MRIOpApplySmoothing::MRIOpApplySmoothing(int filterNumIterations, int filterType, int filterOrder){
   this->numIterations = filterNumIterations;
@@ -229,8 +234,5 @@ void MRIOpEvalConcentrationGradient::processSequence(MRICommunicator* comm, MRIT
 
   // EVAL REYNOLDS STRESSES AND PRESSURE GRADIENTS
   seq->getScan(0)->computeQuantityGradient(kQtyConcentration);
-
-  // EVAL RELATIVE PRESSURE
-  seq->computeRelativePressure(doPressureSmoothing);
 
 }

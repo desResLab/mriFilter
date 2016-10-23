@@ -107,7 +107,6 @@ class MRISequence{
     
     // PRESSURE COMPUTATION
     void computePressureGradients(MRIThresholdCriteria* threshold);
-    void computeRelativePressure(bool doPressureSmoothing);
 
     // COMPUTING REYNOLDS STRESSES
     void evalReynoldsStresses(MRIThresholdCriteria* threshold);

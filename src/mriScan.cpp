@@ -2577,3 +2577,14 @@ void MRIScan::evalScanPDF(int pdfQuantity, int numberOfBins, bool useBox, MRIDou
   // Normalize
   MRIUtils::normalizeBinArray(binArray,currInterval);
 }
+
+// =========================
+// COMPUTE QUANTITY GRADIENT
+// =========================
+void MRIScan::computeQuantityGradient(int qtyID){
+  MRIDoubleVec gradient(3);
+  for(int loopA=0;loopA<topology->totalCells;loopA++){
+    evalSpaceGradient(loopA,qtyID,gradient);
+    qtyGradient.push_back(gradient);
+  }
+}

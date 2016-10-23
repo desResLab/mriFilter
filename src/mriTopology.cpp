@@ -143,9 +143,9 @@ void readCellsFromPLTFile(string pltFileName,
       }
 
       // Store Node Coords To Find Grid Size
-      MRIUtils::insertInList<double>(LocalXCoord,XCoords);
-      MRIUtils::insertInList<double>(LocalYCoord,YCoords);
-      MRIUtils::insertInList<double>(LocalZCoord,ZCoords);    
+      MRIUtils::insertInList(LocalXCoord,XCoords);
+      MRIUtils::insertInList(LocalYCoord,YCoords);
+      MRIUtils::insertInList(LocalZCoord,ZCoords);    
 
       // Store Velocity/Concentrations
       tmp.clear();
@@ -1223,7 +1223,7 @@ void MRITopology::getNeighborVortexes(int cellNumber,int dim,MRIIntVec& idx){
     currFace = cellFaces[cellNumber][loopA];
     for(int loopB=0;loopB<faceEdges[currFace].size();loopB++){
       currEdge = faceEdges[currFace][loopB];
-      MRIUtils::insertInList<int>(currEdge,ElEdgeList);
+      MRIUtils::insertInList(currEdge,ElEdgeList);
     }
   }
   // Find the Edges Aligned with the Selected Dimension
@@ -1243,5 +1243,83 @@ void MRITopology::getNeighborVortexes(int cellNumber,int dim,MRIIntVec& idx){
     if(currDir == dim){
       idx.push_back(ElEdgeList[loopA]);
     }
+  }
+}
+
+// ===================
+// CREATE SAMPLE FLOWS
+// ===================
+void MRITopology::createFromTemplate(MRISamples sampleType,const MRIDoubleVec& params){
+
+  // Store Parameter Values
+  int sizeX = int(params[0]);
+  int sizeY = int(params[1]);
+  int sizeZ = int(params[2]);
+  double distX = params[3];
+  double distY = params[4];
+  double distZ = params[5];
+  double currTime = params[6];
+
+  // Template Orientation
+  int dir = 0;
+  int direction = int(params[7]);
+  if(direction == 0){
+    dir = kdirX;
+  }else if(direction == 1){
+    dir = kdirY;
+  }else if(direction == 2){
+    dir = kdirZ;
+  }else{
+    throw MRIException("ERROR: Invalid template direction in CreateSampleCase.\n");
+  }
+
+  MRIIntVec currentCoords(kNumberOfDimensions);
+  // Set Cells Totals
+  cellTotals.resize(3);
+  cellTotals[0] = sizeX;
+  cellTotals[1] = sizeY;
+  cellTotals[2] = sizeZ;
+
+  cellLengths.resize(3);
+  cellLengths[0].resize(sizeX);
+  cellLengths[1].resize(sizeY);
+  cellLengths[2].resize(sizeZ);
+
+  // Set Cell Lengths
+  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
+    for(int loopB=0;loopB<cellTotals[loopA];loopB++){
+      switch(loopA){
+        case 0:
+          cellLengths[loopA][loopB] = distX;
+          break;
+        case 1:
+          cellLengths[loopA][loopB] = distY;
+          break;
+        case 2:
+          cellLengths[loopA][loopB] = distZ;
+          break;
+      }
+    }
+  }
+
+  // Set Global Dimensions
+  // Min
+  domainSizeMin.resize(3);
+  domainSizeMin[0] = 0.0;
+  domainSizeMin[1] = 0.0;
+  domainSizeMin[2] = 0.0;
+  // Max
+  domainSizeMax.resize(3);
+  domainSizeMax[0] = (sizeX-1) * distX;
+  domainSizeMax[1] = (sizeY-1) * distY;
+  domainSizeMax[2] = (sizeZ-1) * distZ;
+  // Set Total Cells
+  totalCells = sizeX * sizeY * sizeZ;
+  // Assign Coordinates
+  for(int loopA=0;loopA<totalCells;loopA++){
+    mapIndexToCoords(loopA,currentCoords);
+    cellLocations[loopA][0] = currentCoords[0] * distX;
+    cellLocations[loopA][1] = currentCoords[1] * distY;
+    cellLocations[loopA][2] = currentCoords[2] * distZ;
   }
 }

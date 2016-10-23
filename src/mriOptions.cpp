@@ -567,11 +567,11 @@ string getTrueFalseString(bool value){
   }
 }
 
-/*
+
 // Distribute Program Options
 void MRIOptions::DistributeProgramOptions(MRICommunicator* comm){
   // FORM INTEGER OPTIONS
-  int size = 0;
+/*  int size = 0;
   int mpiError = 0;
   int* intParams = NULL;
   double* doubleParams = NULL;
@@ -661,6 +661,6 @@ void MRIOptions::DistributeProgramOptions(MRICommunicator* comm){
 
   // PASS STRING LIST
   //vector<string> sequenceFileList;
-
-}
 */
+}
+

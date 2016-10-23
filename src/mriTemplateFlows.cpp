@@ -498,7 +498,7 @@ void MRIScan::assignVelocitySignature(MRIDirection dir, MRISamples sample, doubl
 }
 
 // CREATE SAMPLE FLOWS
-void MRIScan::createSampleCase(MRISamples sampleType,const MRIDoubleVec& params){
+void MRIScan::createFromTemplate(MRISamples sampleType,const MRIDoubleVec& params){
 
   // Store Parameter Values
   int sizeX = int(params[0]);
@@ -522,56 +522,9 @@ void MRIScan::createSampleCase(MRISamples sampleType,const MRIDoubleVec& params)
     throw MRIException("ERROR: Invalid template direction in CreateSampleCase.\n");
   }
 
-  MRIIntVec currentCoords(kNumberOfDimensions);
-  // Set Cells Totals
-  topology->cellTotals[0] = sizeX;
-  topology->cellTotals[1] = sizeY;
-  topology->cellTotals[2] = sizeZ;
-
-  topology->cellLengths.resize(3);
-  topology->cellLengths[0].resize(sizeX);
-  topology->cellLengths[1].resize(sizeY);
-  topology->cellLengths[2].resize(sizeZ);
-
-  // Set Cell Lengths
-  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
-    for(int loopB=0;loopB<topology->cellTotals[loopA];loopB++){
-      switch(loopA){
-        case 0:
-          topology->cellLengths[loopA][loopB] = distX;
-          break;
-        case 1:
-          topology->cellLengths[loopA][loopB] = distY;
-          break;
-        case 2:
-          topology->cellLengths[loopA][loopB] = distZ;
-          break;
-      }
-    }
-  }
-
-  // Set Global Dimensions
-  // Min
-  topology->domainSizeMin[0] = 0.0;
-  topology->domainSizeMin[1] = 0.0;
-  topology->domainSizeMin[2] = 0.0;
-  // Max
-  topology->domainSizeMax[0] = (sizeX-1) * distX;
-  topology->domainSizeMax[1] = (sizeY-1) * distY;
-  topology->domainSizeMax[2] = (sizeZ-1) * distZ;
-  // Set Total Cells
-  topology->totalCells = sizeX * sizeY * sizeZ;
-  // Allocate Cell Values
-  cells.resize(topology->totalCells);
-  // Assign Coordinates
-  for(int loopA=0;loopA<topology->totalCells;loopA++){
-    topology->mapIndexToCoords(loopA,currentCoords);
-    topology->cellLocations[loopA][0] = currentCoords[0] * distX;
-    topology->cellLocations[loopA][1] = currentCoords[1] * distY;
-    topology->cellLocations[loopA][2] = currentCoords[2] * distZ;
-  }
   // Assign Concentrations and Velocities
   assignVelocitySignature(dir,sampleType,currTime);
+
   // Find Velocity Modulus
   maxVelModule = 0.0;
   double currentMod = 0.0;
@@ -581,10 +534,6 @@ void MRIScan::createSampleCase(MRISamples sampleType,const MRIDoubleVec& params)
                       (cells[loopA].velocity[2])*(cells[loopA].velocity[2]));
     if(currentMod>maxVelModule) maxVelModule = currentMod;
   }
-
-  // WRITE STATISTICS
-  std::string Msgs = writeStatistics();
-  writeSchMessage(Msgs);
 }
 
 // ASSIGN TIME DEPENDENT FLOW

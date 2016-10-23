@@ -138,14 +138,6 @@ int main(int argc, char **argv){
       }
     }
 
-    // Generate Command File if needed
-    if(options->generateCommandFile){
-      int res = options->writeCommandFilePrototype(options->commandFileName);
-      if(res != 0){
-        return -1;
-      }
-      return 0;
-    }
   }else{
     options = new MRIOptions();
   }

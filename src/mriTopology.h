@@ -46,6 +46,7 @@ class MRITopology{
                 const MRIDoubleVec& lengthZ,
                 const MRIDoubleVec& minlimits,
                 const MRIDoubleVec& maxlimits);
+    
     virtual ~MRITopology();
 
     // MEMBER FUNCTIONS
@@ -53,6 +54,9 @@ class MRITopology{
     // BUILDING A TOPOLOGY
     void readFromVTK_ASCII(string vtkFileName, vtkStructuredPointsOptionRecord& vtkOptions);
     void readFromPLT_ASCII(string pltFileName, pltOptionRecord& pltOptions);
+    
+    // CREATE FROM TEMPLATE
+    void createFromTemplate(MRISamples sampleType, const MRIDoubleVec& params);
 
     // CREATION FROM STRUCTURED GRIDS
     void createGridFromVTKStructuredPoints(const vtkStructuredPointsOptionRecord& opts);

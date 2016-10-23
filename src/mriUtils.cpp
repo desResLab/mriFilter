@@ -118,16 +118,30 @@ void normalize3DVector(MRIDoubleVec& v){
   }
 }
 
-// INSERT IN GENERIC LIST LIST
-template<typename Type> void insertInList(Type value, vector<Type>& coords){
+// =============================
+// INSERT IN GENERIC DOUBLE LIST
+// =============================
+void insertInList(double value, MRIDoubleVec& list){
   double distance;	  
-  for(int LoopA=0;LoopA<coords.size();LoopA++){
-    distance = fabs(coords[LoopA] - value);
-    if (distance<kMathZero) return;
+  for(int LoopA=0;LoopA<list.size();LoopA++){
+    distance = fabs(list[LoopA] - value);
+    if (distance < kMathZero) return;
   }
   // Insert New value
-  coords.push_back(value);
+  list.push_back(value);
 }
+
+// ==============================
+// INSERT IN GENERIC INTEGER LIST
+// ==============================
+void insertInList(int value, MRIIntVec& list){
+  for(int LoopA=0;LoopA<list.size();LoopA++){
+    if (list[LoopA] == value) return;
+  }
+  // Insert New value
+  list.push_back(value);
+}
+
 
 // ==========================
 // GENERATE STANDARD GAUSSIAN
@@ -164,12 +178,7 @@ void writeGraphToFile(std::string fileName, int vecSize, std::vector<double> &ve
 // ========================
 // PERFORM EXTERNAL PRODUCT
 // ========================
-void do3DExternalProduct(double* v1, double* v2, double* resVec){
-  resVec[0] = v1[1] * v2[2] - v2[1] * v1[2];
-  resVec[1] = v1[2] * v2[0] - v2[2] * v1[0];
-  resVec[2] = v1[0] * v2[1] - v2[0] * v1[1];
-}
-void do3DExternalProduct(std::vector<double> v1, std::vector<double> v2, std::vector<double> &resVec){
+void do3DExternalProduct(const MRIDoubleVec& v1, const MRIDoubleVec& v2, MRIDoubleVec& resVec){
   resVec[0] = v1[1] * v2[2] - v2[1] * v1[2];
   resVec[1] = v1[2] * v2[0] - v2[2] * v1[0];
   resVec[2] = v1[0] * v2[1] - v2[0] * v1[1];
@@ -187,7 +196,7 @@ bool isPointInsideBox(double xCoord, double yCoord, double zCoord, const MRIDoub
 // =======================
 // PRINT BIN ARRAY TO FILE
 // =======================
-void printBinArrayToFile(std::string fileName, int numberOfBins, double* binCenter, double* binValues){
+void printBinArrayToFile(string fileName, int numberOfBins, const MRIDoubleVec& binCenter, const MRIDoubleVec& binValues){
   // Open Output File
 	FILE* outFile;
 	outFile = fopen(fileName.c_str(),"w");
@@ -202,7 +211,7 @@ void printBinArrayToFile(std::string fileName, int numberOfBins, double* binCent
 // ======================
 // APPLY LIMIT BOX FACTOR
 // ======================
-void applylimitBoxFactors(double xFactor, double yFactor, double zFactor,double* limitBox){
+void applyLimitBoxFactors(double xFactor, double yFactor, double zFactor, MRIDoubleVec& limitBox){
   double center[3] = {0.0};
   double domainSize[3] = {0.0};
   center[0] = 0.5 * (limitBox[0] + limitBox[1]);
@@ -310,7 +319,7 @@ void readMatrixFromFile(std::string inFileName,int& nrow,int& ncol,std::vector<s
 // ====================
 // GET MEDIAN OF VECTOR
 // ====================
-double getMedian(std::vector<double> &v){
+double getMedian(MRIDoubleVec& v){
   size_t n = v.size() / 2;
   nth_element(v.begin(), v.begin()+n, v.end());
   return v[n];
@@ -319,7 +328,7 @@ double getMedian(std::vector<double> &v){
 // ========
 // GET MEAN
 // ========
-double getMean(std::vector<double> &v){
+double getMean(const MRIDoubleVec& v){
   double av = 0.0;
   for(size_t loopA=0;loopA<v.size();loopA++){
     av = av + v[loopA];
@@ -400,8 +409,9 @@ void sortIntArray(std::vector<int> &faceIds){
 // ===================================
 // CHECK THAT TWO VECTORS ARE THE SAME
 // ===================================
-bool isSameIntVector(const MRIIntVec& first, const MRIIntVec& second){
-  
+bool isSameIntVector(const MRIIntVec& one, const MRIIntVec& two){
+  MRIIntVec first(one);
+  MRIIntVec second(two);
   // SORT THE TWO VECTORS FIRST
   std::sort(first.begin(),first.end());
   std::sort(second.begin(),second.end());
@@ -421,7 +431,7 @@ bool isSameIntVector(const MRIIntVec& first, const MRIIntVec& second){
 // =======================
 // FIND HOW MANY INTERVALS
 // =======================
-int findHowMany(double distance, std::vector<double> lengths){
+int findHowMany(double distance, const MRIDoubleVec& lengths){
   bool found = false;
   int count = 0;
   double currDist = 0.0;
@@ -469,49 +479,44 @@ void checkMpiError(int mpiError){
 // GET THRESHOLD QUANTITY STRING
 // =============================
 string getThresholdQtyString(int thresholdQty){
+  string res;
   switch(thresholdQty){
-    case kQtyPositionX:
-      return string("PositionX");
-      break;
-    case kQtyPositionY:
-      return string("PositionY");
-      break;
-    case kQtyPositionZ:
-      return string("PositionZ");
-      break;
     case kQtyConcentration:
-      return string("Concentration");
+      res = "Concentration";
       break;
     case kQtyVelocityX:
-      return string("VelocityX");
+      res = "VelocityX";
       break;
     case kQtyVelocityY:
-      return string("VelocityY");
+      res = "VelocityY";
       break;
     case kQtyVelocityZ:
-      return string("VelocityZ");
+      res = "VelocityZ";
       break;
   }
+  return res;
 }
 
 // =========================
 // GET THRESHOLD TYPE STRING
 // =========================
 string getThresholdTypeString(int thresholdType){
+  string res;
   switch(thresholdType){
     case kCriterionLessThen:
-      return string("Set to zero if less than threshold");
+      res = "Set to zero if less than threshold";
       break;
     case kCriterionGreaterThen:
-      return string("Set to zero if greater than threshold");
+      res = "Set to zero if greater than threshold";
       break;
     case kCriterionABSLessThen:
-      return string("Set to zero if ABS less than threshold");
+      res = "Set to zero if ABS less than threshold";
       break;
     case kCriterionABSGreaterThen:
-      return string("Set to zero if ABS greater than threshold");
+      res = "Set to zero if ABS greater than threshold";
       break;
   }
+  return res;
 }
 
 // =========================

@@ -567,7 +567,7 @@ void MRIScan::evalSpaceDerivs(int currentCell, MRIThresholdCriteria* threshold, 
 // ==========================================
 // EVAL FIRST AND SECOND DERIVATIVES IN SPACE
 // ==========================================
-void MRIScan::evalSpaceGradient(int currentCell,int qtyID, double* gradient){
+void MRIScan::evalSpaceGradient(int currentCell,int qtyID, MRIDoubleVec& gradient){
   // Map Index To Coords
   MRIIntVec currentCellCoords(kNumberOfDimensions);
   topology->mapIndexToCoords(currentCell,currentCellCoords);
@@ -737,7 +737,7 @@ void MRISequence::computePressureGradients(MRIThresholdCriteria* threshold){
       tmp.push_back(currentGradient[0]);
       tmp.push_back(currentGradient[1]);
       tmp.push_back(currentGradient[2]);
-      sequence[loopA]->pressureGradient.push_back(tmp);
+      sequence[loopA]->qtyGradient.push_back(tmp);
     }
     writeSchMessage(string("Done.\n"));
   }

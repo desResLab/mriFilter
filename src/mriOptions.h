@@ -49,7 +49,6 @@ using namespace std;
   const int otFILEVTK                       = 0;
   const int otFILEPLT                       = 1;
 
-
 class MRIOperation;
 
 // CLASS MRIPROGRAMOPTIONS
@@ -85,17 +84,19 @@ public:
 
   // CONSTRUCTOR
   MRIOptions();
+  
   // Distructor
   ~MRIOptions();
 
   // Get Command Options from input Arguments
   int getCommadLineOptions(int argc, char **argv);
+  
   // Get Options from Command File
   int getOptionsFromCommandFile(string commandFile);
-  // Write Command File Prototype
-  int writeCommandFilePrototype(string commandFile);  
+  
   // Write Options to file
   int writeOptionsToFile(string outFile);
+  
   // Read Sequence File List
   void readSequenceFileList(string fileName,MRIStringVec& sequenceFileList,MRIDoubleVec& sequenceFileTimes);
 

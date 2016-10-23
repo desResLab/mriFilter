@@ -187,26 +187,6 @@ void MRISequence::extractSinglePointTimeCurve(int cellNumber, int exportQty, std
 	fclose(outFile);				  
 }
 
-// Compute Relative Pressure
-void MRISequence::computeRelativePressure(bool doPressureSmoothing){
-  writeSchMessage(std::string("\n"));
-  writeSchMessage(std::string("REL PRESSURE COMPUTATION --------------------------\n"));
-  // Loop Through Scans
-  for(int loopA=0;loopA<totalScans;loopA++){
-    // Write Message
-    writeSchMessage(std::string("Computing Relative Pressure - Step "+MRIUtils::intToStr(loopA+1)+"/"+MRIUtils::intToStr(totalScans)+"..."));
-    // Get The Scan Back
-    MRIScan* resultScan = getScan(loopA);
-    int startingCell = resultScan->evalCentralCell();
-    resultScan->evalRelativePressure(startingCell,0.0);
-    if (doPressureSmoothing){
-      resultScan->performPressureIterations();
-    }
-    // Done
-    writeSchMessage(std::string("Relative Pressure Computed.\n"));
-  }
-}
-
 // Export to Poisson Solver
 void MRISequence::exportForPoisson(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold,
                                    bool PPE_IncludeAccelerationTerm,bool PPE_IncludeAdvectionTerm,bool PPE_IncludeDiffusionTerm,bool PPE_IncludeReynoldsTerm,
@@ -570,16 +550,11 @@ void MRISequence::makeScanDifference(int firstScanID, int secondScanID){
   if((secondScanID<0)||(secondScanID>sequence.size())){
     throw MRIException("Cannot Make Difference. Invalid ID for Second Scan.");
   }
-  MRIScan* firstScan = sequence[firstScanID];
-  MRIScan* secondScan = sequence[secondScanID];
+  MRIScan* firstScan = getScan(firstScanID);
+  MRIScan* secondScan = getScan(secondScanID);
   // set the Tolerance Value
   double DistTol = 1.0e-4;
-  // Check Compatibility
-  bool scansAreCompatible = firstScan->isCompatibleWith(secondScan);
-  if(!scansAreCompatible){
-    throw MRIException("Scans are not compatible.");
-  }
-  // Write Progress Message
+  // If they Belong to the same sequence they must be compatible
   writeSchMessage("Computing Scan Difference...");  
   // SubTract Velocity Data
   double diffX,diffY,diffZ;
@@ -604,12 +579,7 @@ void MRISequence::makeScanAverage(int numberOfMeasures, int firstScanID, int sec
   MRIScan* secondScan = sequence[secondScanID];
   // Get Distance Tolerance
   double DistTol = 1.0e-4;
-  // Check Compatibility
-  bool scansAreCompatible = firstScan->isCompatibleWith(secondScan);
-  if(!scansAreCompatible){
-    throw MRIException("Scans are not compatible.");
-  }
-  // Write Progress Message
+  // If they Belong to the same sequence they must be compatible
   writeSchMessage("Computing Scan Average...");
   // SubTract Velocity Data
   double diffX,diffY,diffZ;
@@ -657,6 +627,42 @@ string MRISequence::writeStatistics(){
   myresult += "\n";
   // Return String
   return myresult;
+}
+
+// ====================
+// CREATE TEMPLATE CASE
+// ====================
+void MRISequence::createSampleCase(int sampleType, const MRIDoubleVec& params){
+
+  // Loop over the file names
+  MRITopology* topo;
+  MRIScan* scan;
+
+  // Create New Topology from Sample
+  topo = new MRITopology();
+  topo->createFromTemplate(sampleType,params);  
+
+  // If topology does not exists then assign 
+  if(sequence.size() == 0){
+    // Assign Current Topology
+    topology = topo;
+    // Create and Assign Scan
+    scan->createFromTemplate(sampleType,params);
+    // Add to sequence
+    addScan(scan);
+  }else{
+    // Check Compatibility 
+    if(topology->isCompatibleTopology(topo)){
+      // Create and Assign Scan
+      scan->createFromTemplate(sampleType,params);
+      // Add to sequence
+      addScan(scan);
+    }
+  }
+
+  string CurrentStats = writeStatistics();
+  writeSchMessage(CurrentStats);
+
 }
 
 // ==========================
