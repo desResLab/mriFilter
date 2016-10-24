@@ -18,7 +18,6 @@ class MRICommunicator;
 
 class MRISequence{
   public:
-    int              totalScans;
     vector<MRIScan*> sequence;
     string*          fileNames;
     bool             isCyclic;
@@ -38,7 +37,7 @@ class MRISequence{
     
     // ADD AND GET FROM SEQUENCE
     void addScan(MRIScan* scan);
-    int  getTotalScans(){return totalScans;}
+    int  getTotalScans(){return sequence.size();}
     bool getIsCyclic(){return isCyclic;}
     MRIScan* getScan(int scanNumber);
 

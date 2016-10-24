@@ -3,6 +3,7 @@
 using namespace std;
 
 MRIScan::MRIScan(double currentTime){
+  topology = NULL;
   scanTime = currentTime;
 }
 
@@ -74,16 +75,14 @@ void MRIScan::fillPLTHeader(std::vector<std::string> &pltHeader, bool isFirstFil
 }
 
 // returns file size in bytes or -1 if not found.
-std::ifstream::pos_type GetFileSize(const char* filename)
-{
+std::ifstream::pos_type GetFileSize(const char* filename){
     std::ifstream in(filename, std::ifstream::in | std::ifstream::binary);
     in.seekg(0, std::ifstream::end);
     return in.tellg(); 
 }
 
 // Write IO Log
-void WriteIOLog(std::string LogFileName, std::string MsgsString)
-{
+void WriteIOLog(std::string LogFileName, std::string MsgsString){
   // Open Output File
 	FILE* outFile;
 	outFile = fopen(LogFileName.c_str(),"a");
@@ -1180,16 +1179,16 @@ void readVTKScalar(ifstream& vtkFile, int& lineCount,int linesToRead,MRIDoubleVe
   vtkScalar.clear();
   string buffer;
   double value;
-  vector<string> tokenizedString;
+  MRIStringVec tokenizedString;
   // Skip first two lines
-  std::getline(vtkFile,buffer);
+  getline(vtkFile,buffer);
   //printf("Skipping; %s\n",buffer.c_str());
   lineCount++;
-  std::getline(vtkFile,buffer);
+  getline(vtkFile,buffer);
   //printf("Skipping; %s\n",buffer.c_str());
   lineCount++;
   for(int loopA=0;loopA<linesToRead;loopA++){
-    std::getline(vtkFile,buffer);
+    getline(vtkFile,buffer);
     //printf("Reading: %s\n",buffer.c_str());
     boost::trim(buffer);
     lineCount++;
@@ -1210,15 +1209,15 @@ void readVTKScalar(ifstream& vtkFile, int& lineCount,int linesToRead,MRIDoubleVe
 }
 
 // Read Vectors From VTK Legacy
-void readVTKVector(ifstream& vtkFile, int& lineCount,int linesToRead,MRIDoubleMat& vtkVector){
+void readVTKVector(ifstream& vtkFile, int& lineCount, int linesToRead, MRIDoubleMat& vtkVector){
   vtkVector.clear();
   MRIDoubleVec temp;
   MRIDoubleVec store;
   string buffer;
   double value;
-  vector<string> tokenizedString;
+  MRIStringVec tokenizedString;
   // Skip first line
-  std::getline(vtkFile,buffer);
+  getline(vtkFile,buffer);
   lineCount++;
   for(int loopA=0;loopA<linesToRead;loopA++){
     std::getline(vtkFile,buffer);
@@ -1244,6 +1243,7 @@ void readVTKVector(ifstream& vtkFile, int& lineCount,int linesToRead,MRIDoubleMa
   for(int loopA=0;loopA<temp.size()/3;loopA++){
     store.clear();
     for(int loopB=0;loopB<3;loopB++){
+      store.push_back(temp[loopA*3 + loopB]);
     }
     vtkVector.push_back(store);
   }
@@ -1255,7 +1255,7 @@ void readVTKVector(ifstream& vtkFile, int& lineCount,int linesToRead,MRIDoubleMa
 void MRIScan::readFromVTK_ASCII(string vtkFileName, const vtkStructuredPointsOptionRecord& vtkOptions){
 
   // Print Progress
-  writeSchMessage(string("Reading Data From: %s\n" + vtkFileName));
+  printf("Reading Scan Data From: %s\n",vtkFileName.c_str());
 
   // Reset File
   ifstream vtkFile;
@@ -1281,33 +1281,35 @@ void MRIScan::readFromVTK_ASCII(string vtkFileName, const vtkStructuredPointsOpt
         vtkScalar.clear();
         linesToRead = vtkOptions.dataBlockStart[loopA + 1] - vtkOptions.dataBlockStart[loopA] - 2;
         readVTKScalar(vtkFile,totalLinesInFile,linesToRead,vtkScalar);
-        if(vtkScalar.size() != topology->totalCells){
-          printf("Scalar Size %d, Total Cells %d\n",(int)vtkScalar.size(), topology->totalCells);
-          throw MRIException("ERROR: Total number of scalars differ from number of cells.\n");
-        }
       }else{
         // Read Vectors
         writeSchMessage(std::string("Reading Vectors...\n"));
         vtkVector.clear();
         linesToRead = vtkOptions.dataBlockStart[loopA + 1] - vtkOptions.dataBlockStart[loopA];
         readVTKVector(vtkFile,totalLinesInFile,linesToRead,vtkVector);
-        if(vtkVector.size() != topology->totalCells){
-          printf("Vector Size %d, Total Cells %d\n",(int)vtkVector.size(), topology->totalCells);
-          throw MRIException("ERROR: Total number of vectors differs from number of cells.\n");
-        }
       }
     }
   }
 
-  // Transfer Scalars and Vectors to Cells
-  // Scalars
-  for(int loopA=0;loopA<topology->totalCells;loopA++){
-    cells[loopA].concentration = vtkScalar[loopA];
+  // Check Consistence between scalar and vector
+  if(vtkScalar.size() != vtkVector.size()){
+    throw MRIException("ERROR: Incompatible Scalar and Vector in readFromVTK_ASCII.\n");
   }
+
+  // Get Total Cells
+  int totCells = vtkScalar.size();
+  // Transfer Scalars and Vectors to Cells
+  cells.clear();
+  MRICell cell;
+  for(int loopA=0;loopA<totCells;loopA++){
+    cell.concentration = vtkScalar[loopA];
+    cells.push_back(cell);
+  }
+
   // Vectors
   maxVelModule = 0.0;
   double currModulus = 0.0;
-  for(int loopA=0;loopA<topology->totalCells;loopA++){
+  for(int loopA=0;loopA<totCells;loopA++){
       cells[loopA].velocity[0] = vtkVector[loopA][0];
       cells[loopA].velocity[1] = vtkVector[loopA][1];
       cells[loopA].velocity[2] = vtkVector[loopA][2];
@@ -1318,6 +1320,8 @@ void MRIScan::readFromVTK_ASCII(string vtkFileName, const vtkStructuredPointsOpt
         maxVelModule = currModulus;
       }
   }
+
+  printf("Finito CELLS FIRST SCAN\n");
 
   // Close File
   vtkFile.close();

@@ -899,6 +899,7 @@ void MRITopology::crop(const MRIDoubleVec& limitBox, MRIBoolVec& indexes){
 // ============================================
 void MRITopology::createGridFromVTKStructuredPoints(const vtkStructuredPointsOptionRecord& opts){
   // Assign cell totals
+  cellTotals.resize(3);
   cellTotals[0] = opts.dimensions[0];
   cellTotals[1] = opts.dimensions[1];
   cellTotals[2] = opts.dimensions[2];
@@ -906,7 +907,7 @@ void MRITopology::createGridFromVTKStructuredPoints(const vtkStructuredPointsOpt
   totalCells = cellTotals[0] * cellTotals[1] * cellTotals[2];
   cellLocations.resize(totalCells);
   for(int loopA=0;loopA<totalCells;loopA++){
-    cellLocations[loopA].resize(totalCells);
+    cellLocations[loopA].resize(3);
   }
   // Assign Cell spacing
   cellLengths.resize(3);
@@ -924,10 +925,12 @@ void MRITopology::createGridFromVTKStructuredPoints(const vtkStructuredPointsOpt
   }
   // Set domain size
   // Min
+  domainSizeMin.resize(3);
   domainSizeMin[0] = opts.origin[0];
   domainSizeMin[1] = opts.origin[1];
   domainSizeMin[2] = opts.origin[2];
   // Max
+  domainSizeMax.resize(3);
   domainSizeMax[0] = opts.origin[0] + (opts.dimensions[0]-1) * opts.spacing[0];
   domainSizeMax[1] = opts.origin[1] + (opts.dimensions[1]-1) * opts.spacing[1];
   domainSizeMax[2] = opts.origin[2] + (opts.dimensions[2]-1) * opts.spacing[2];
@@ -1007,35 +1010,37 @@ void MRITopology::getExternalFaceNormal(int cellID, int localFaceID, MRIDoubleVe
   }
 }
 
+// =========================
 // CHECK COMPATIBLE TOPOLOGY
+// =========================
 bool MRITopology::isCompatibleTopology(MRITopology* topo){
   bool result = true;
 
-  result = result && (totalCells != topo->totalCells);
+  result = result && (totalCells == topo->totalCells);
 
-  result = result && (cellTotals[0] != topo->cellTotals[0]);
-  result = result && (cellTotals[1] != topo->cellTotals[1]);
-  result = result && (cellTotals[2] != topo->cellTotals[2]);
+  result = result && (cellTotals[0] == topo->cellTotals[0]);
+  result = result && (cellTotals[1] == topo->cellTotals[1]);
+  result = result && (cellTotals[2] == topo->cellTotals[2]);
 
   for(int loopA=0;loopA<cellTotals[0];loopA++){
-    result = result && (fabs(cellLengths[0][loopA]-topo->cellLengths[0][loopA]) > kMathZero);
+    result = result && (fabs(cellLengths[0][loopA]-topo->cellLengths[0][loopA]) < kMathZero);
   }
 
   for(int loopA=0;loopA<cellTotals[1];loopA++){
-    result = result && (fabs(cellLengths[1][loopA]-topo->cellLengths[1][loopA]) > kMathZero);
+    result = result && (fabs(cellLengths[1][loopA]-topo->cellLengths[1][loopA]) < kMathZero);
   }
 
   for(int loopA=0;loopA<cellTotals[2];loopA++){
-    result = result && (fabs(cellLengths[2][loopA]-topo->cellLengths[2][loopA]) > kMathZero);
+    result = result && (fabs(cellLengths[2][loopA]-topo->cellLengths[2][loopA]) < kMathZero);
   }
 
-  result = result && (fabs(domainSizeMin[0]-topo->domainSizeMin[0]) > kMathZero);
-  result = result && (fabs(domainSizeMin[1]-topo->domainSizeMin[1]) > kMathZero);
-  result = result && (fabs(domainSizeMin[2]-topo->domainSizeMin[2]) > kMathZero);
+  result = result && (fabs(domainSizeMin[0]-topo->domainSizeMin[0]) < kMathZero);
+  result = result && (fabs(domainSizeMin[1]-topo->domainSizeMin[1]) < kMathZero);
+  result = result && (fabs(domainSizeMin[2]-topo->domainSizeMin[2]) < kMathZero);
 
-  result = result && (fabs(domainSizeMax[0]-topo->domainSizeMax[0]) > kMathZero);
-  result = result && (fabs(domainSizeMax[1]-topo->domainSizeMax[1]) > kMathZero);
-  result = result && (fabs(domainSizeMax[2]-topo->domainSizeMax[2]) > kMathZero);
+  result = result && (fabs(domainSizeMax[0]-topo->domainSizeMax[0]) < kMathZero);
+  result = result && (fabs(domainSizeMax[1]-topo->domainSizeMax[1]) < kMathZero);
+  result = result && (fabs(domainSizeMax[2]-topo->domainSizeMax[2]) < kMathZero);
 
   return result;
 }
@@ -1076,13 +1081,14 @@ void MRITopology::readFromVTK_ASCII(string vtkFileName, vtkStructuredPointsOptio
   MRIStringVec tokenizedString;
   int totalLinesInFile = 0;
   string Buffer;
-  while (getline(vtkFile,Buffer)){
+  while(getline(vtkFile,Buffer)){
     boost::split(tokenizedString, Buffer, boost::is_any_of(" ,"), boost::token_compress_on);
     // Check if you find options
     assignVTKOptions(totalLinesInFile,tokenizedString, vtkOptions);
     // Increase line number
     totalLinesInFile++;
   }
+
   vtkOptions.dataBlockStart.push_back(totalLinesInFile);
   vtkOptions.dataBlockType.push_back(0);
   vtkOptions.dataBlockRead.push_back(false);

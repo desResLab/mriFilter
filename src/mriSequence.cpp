@@ -52,8 +52,6 @@ void MRISequence::formDifferenceBinLimits(int otherScan, int refScan,
 
 // Constructor
 MRISequence::MRISequence(bool cyclic){
-  // Initizalize
-  totalScans = 0;
   // Set If Cyclic
   isCyclic = cyclic;
   // Initialize Topology
@@ -62,8 +60,6 @@ MRISequence::MRISequence(bool cyclic){
 
 // Copy Constructor
 MRISequence::MRISequence(MRISequence* copySequence){
-  // Copy Scans
-  totalScans = copySequence->totalScans;
   // Copy Cyclic Property
   isCyclic = copySequence->isCyclic;
   // Copy cells totals
@@ -97,7 +93,7 @@ MRISequence::MRISequence(MRISequence* copySequence){
   }
 
   // Fill with Zero Scans
-  for(int loopB=0;loopB<totalScans;loopB++){
+  for(int loopB=0;loopB<sequence.size();loopB++){
     MRIScan* newScan = new MRIScan(*copySequence->getScan(loopB));
     sequence.push_back(newScan);
   }
@@ -113,7 +109,7 @@ void MRISequence::printSequenceFiles(std::string outFIleName){
 	outFile = fopen(outFIleName.c_str(),"w");
   // Write List
   fprintf(outFile,"List of Files in Sequence\n");
-  for(int loopA=0;loopA<totalScans;loopA++){
+  for(int loopA=0;loopA<sequence.size();loopA++){
     fprintf(outFile,"File %d: %s\n",loopA+1,fileNames[loopA].c_str());
   }
   // Close Output file
@@ -122,8 +118,10 @@ void MRISequence::printSequenceFiles(std::string outFIleName){
 
 // Add a Scan to the Sequence
 void MRISequence::addScan(MRIScan* scan){
+  // Add the Scan
   sequence.push_back(scan);
-  totalScans++;
+  // Assign the Topology Pointer
+  getScan(sequence.size()-1)->topology = this->topology;
 }
 
 // Get a Scan Pointer From the Sequence
@@ -135,7 +133,7 @@ MRIScan* MRISequence::getScan(int scanNumber){
 void MRISequence::exportToTECPLOT(std::string outfileName){
   writeSchMessage(std::string("\n"));
   writeSchMessage(std::string("EXPORTING -------------------------------------\n"));
-  for(int loopA=0;loopA<totalScans;loopA++){
+  for(int loopA=0;loopA<sequence.size();loopA++){
       sequence[loopA]->exportToTECPLOT(outfileName,(loopA == 0));
   }
 }
@@ -157,7 +155,7 @@ void MRISequence::extractSinglePointTimeCurve(int cellNumber, int exportQty, std
   centrePoint[2] = 0.5 * (topology->domainSizeMax[2] + topology->domainSizeMin[2]);
   // Write List
   fprintf(outFile,"List of Files in Sequence\n");
-  for(int loopA=0;loopA<totalScans;loopA++){
+  for(int loopA=0;loopA<sequence.size();loopA++){
     // Get Time
     currTime = sequence[loopA]->scanTime;
     // Get Local Coordinates
@@ -194,7 +192,7 @@ void MRISequence::exportForPoisson(string inputFileName,double density,double vi
   string name;
   MRIDoubleMat timeDeriv;
   // MRIDoubleMat reynoldsDeriv;
-  for(int loopA=0;loopA<totalScans;loopA++){
+  for(int loopA=0;loopA<sequence.size();loopA++){
     name = inputFileName + "_" + MRIUtils::floatToStr(loopA);
     if(PPE_IncludeAccelerationTerm){
       printf("Computing Time Derivatives for Scan %d...",loopA);
@@ -210,7 +208,7 @@ void MRISequence::exportForPoisson(string inputFileName,double density,double vi
 // EXPORT TO WALL DISTANCE SOLVER
 void MRISequence::exportForDistancing(string inputFileName, MRIThresholdCriteria* threshold){
   string name;
-  for(int loopA=0;loopA<totalScans;loopA++){
+  for(int loopA=0;loopA<sequence.size();loopA++){
     name = inputFileName + "_" + MRIUtils::floatToStr(loopA);
     sequence[loopA]->exportForDistancing(name,threshold);
   }
@@ -220,7 +218,7 @@ void MRISequence::exportForDistancing(string inputFileName, MRIThresholdCriteria
 void MRISequence::exportToVTK(std::string outfileName,MRIThresholdCriteria* thresholdCriteria){
   // Export All Data
   writeSchMessage("\n");
-  for(int loopA=0;loopA<totalScans;loopA++){
+  for(int loopA=0;loopA<sequence.size();loopA++){
     sequence[loopA]->exportToVTK(outfileName,thresholdCriteria);
   }
 }
@@ -233,7 +231,7 @@ void MRISequence::applySMPFilter(MRICommunicator* comm, bool isBC,
                                  bool useConstantPatterns){
   // Export All Data
   writeSchMessage("\n");
-  for(int loopA=0;loopA<totalScans;loopA++){
+  for(int loopA=0;loopA<sequence.size();loopA++){
     // Perform Filter
     sequence[loopA]->applySMPFilter(comm,isBC,thresholdCriteria,itTol,maxIt,useConstantPatterns);
     // Update Velocities
@@ -245,7 +243,7 @@ void MRISequence::applySMPFilter(MRICommunicator* comm, bool isBC,
 void MRISequence::saveVelocity(){
   // Export All Data
   writeSchMessage("\n");
-  for(int loopA=0;loopA<totalScans;loopA++){
+  for(int loopA=0;loopA<sequence.size();loopA++){
     // Perform Filter
     sequence[loopA]->saveVelocity();
   }
@@ -256,7 +254,7 @@ void MRISequence::saveVelocity(){
 void MRISequence::applyThresholding(MRIThresholdCriteria* thresholdCriteria){
   // Export All Data
   writeSchMessage("\n");
-  for(int loopA=0;loopA<totalScans;loopA++){
+  for(int loopA=0;loopA<sequence.size();loopA++){
     sequence[loopA]->applyThresholding(thresholdCriteria);
   }
 }
@@ -265,7 +263,7 @@ void MRISequence::applyThresholding(MRIThresholdCriteria* thresholdCriteria){
 void MRISequence::evalVortexCriteria(MRIThresholdCriteria* thresholdCriteria){
   // Export All Data
   writeSchMessage("\n");
-  for(int loopA=0;loopA<totalScans;loopA++){
+  for(int loopA=0;loopA<sequence.size();loopA++){
     sequence[loopA]->evalVortexCriteria(thresholdCriteria);
   }
 }
@@ -274,7 +272,7 @@ void MRISequence::evalVortexCriteria(MRIThresholdCriteria* thresholdCriteria){
 void MRISequence::evalVorticity(MRIThresholdCriteria* thresholdCriteria){
   // Export All Data
   writeSchMessage("\n");
-  for(int loopA=0;loopA<totalScans;loopA++){
+  for(int loopA=0;loopA<sequence.size();loopA++){
     sequence[loopA]->evalVorticity(thresholdCriteria);
   }
 }
@@ -283,7 +281,7 @@ void MRISequence::evalVorticity(MRIThresholdCriteria* thresholdCriteria){
 void MRISequence::evalEnstrophy(MRIThresholdCriteria* thresholdCriteria){
   // Export All Data
   writeSchMessage("\n");
-  for(int loopA=0;loopA<totalScans;loopA++){
+  for(int loopA=0;loopA<sequence.size();loopA++){
     sequence[loopA]->evalEnstrophy(thresholdCriteria);
   }
 }
@@ -292,7 +290,7 @@ void MRISequence::evalEnstrophy(MRIThresholdCriteria* thresholdCriteria){
 void MRISequence::evalSMPVortexCriteria(){
   // Export All Data
   writeSchMessage("\n");
-  for(int loopA=0;loopA<totalScans;loopA++){
+  for(int loopA=0;loopA<sequence.size();loopA++){
     sequence[loopA]->evalSMPVortexCriteria(sequence[loopA]->expansion);
   }
 }
@@ -301,7 +299,7 @@ void MRISequence::evalSMPVortexCriteria(){
 void MRISequence::writeExpansionFile(string fileName){
   // Export All Data
   writeSchMessage("\n");
-  for(int loopA=0;loopA<totalScans;loopA++){
+  for(int loopA=0;loopA<sequence.size();loopA++){
     sequence[loopA]->writeExpansionFile(fileName);
   }
 }
@@ -309,7 +307,7 @@ void MRISequence::writeExpansionFile(string fileName){
 // Scale velocities for all Scans
 void MRISequence::scaleVelocities(double factor){
   writeSchMessage(std::string("Scaling Velocities..."));
-  for(int loopA=0;loopA<totalScans;loopA++){
+  for(int loopA=0;loopA<sequence.size();loopA++){
     sequence[loopA]->scaleVelocities(factor);
   }
   writeSchMessage(std::string("Done.\n"));
@@ -325,7 +323,7 @@ void MRISequence::scalePositions(const MRIDoubleVec& origin, double factor){
 // Add noise to measurements
 void MRISequence::applyNoise(double noiseIntensity){
   writeSchMessage(std::string("Applying Noise..."));
-  for(int loopA=0;loopA<totalScans;loopA++){
+  for(int loopA=0;loopA<sequence.size();loopA++){
     sequence[loopA]->applyGaussianNoise(noiseIntensity);
   }
   writeSchMessage(std::string("Done.\n"));
@@ -336,7 +334,7 @@ void MRISequence::applyNoise(double noiseIntensity){
 // =============================
 void MRISequence::distributeSequenceData(MRICommunicator* comm){
   // Create New Sequence
-  for(int loopA=0;loopA<this->totalScans;loopA++){
+  for(int loopA=0;loopA<this->sequence.size();loopA++){
     sequence[loopA]->distributeScanData(comm);
   }
 }
@@ -346,7 +344,7 @@ void MRISequence::distributeSequenceData(MRICommunicator* comm){
 // =============================
 void MRISequence::applyMedianFilter(int qtyID,int maxIt,int order,int filterType,MRIThresholdCriteria* threshold){
   // Create New Sequence
-  for(int loopA=0;loopA<this->totalScans;loopA++){
+  for(int loopA=0;loopA<this->sequence.size();loopA++){
     sequence[loopA]->applyMedianFilter(qtyID,maxIt,order,filterType,threshold);
   }
 }
@@ -355,7 +353,7 @@ void MRISequence::applyMedianFilter(int qtyID,int maxIt,int order,int filterType
 // CLEAN COMPONENT ON BOUNDARY
 // ===========================
 void MRISequence::cleanNormalComponentOnBoundary(MRIThresholdCriteria* threshold){
-  for(int loopA=0;loopA<this->totalScans;loopA++){
+  for(int loopA=0;loopA<this->sequence.size();loopA++){
     sequence[loopA]->cleanNormalComponentOnBoundary(threshold);
   }
 }
@@ -365,7 +363,7 @@ void MRISequence::cleanNormalComponentOnBoundary(MRIThresholdCriteria* threshold
 // ===============================
 void MRISequence::interpolateBoundaryVelocities(MRIThresholdCriteria* threshold){
   printf("Interpolating Boundary Velocities...\n");
-  for(int loopA=0;loopA<this->totalScans;loopA++){
+  for(int loopA=0;loopA<this->sequence.size();loopA++){
     sequence[loopA]->interpolateBoundaryVelocities(threshold);
   }
 }
@@ -374,7 +372,7 @@ void MRISequence::interpolateBoundaryVelocities(MRIThresholdCriteria* threshold)
 // EVALUATE REYNOLDS STRESS TENSOR
 // ===============================
 void MRISequence::evalReynoldsStresses(MRIThresholdCriteria* threshold){
-  for(int loopA=0;loopA<totalScans;loopA++){
+  for(int loopA=0;loopA<sequence.size();loopA++){
     printf("Evaluating Reynolds Stress Tensor for Scan %d...",loopA);
     sequence[loopA]->evalReynoldsStress(threshold);
     printf("Done.");
@@ -441,7 +439,7 @@ void MRISequence::crop(const MRIDoubleVec& limitBox){
   topology->crop(limitBox,indexesToCrop);
 
   // Crop Scans
-  for(int loopA=0;loopA<totalScans;loopA++){
+  for(int loopA=0;loopA<sequence.size();loopA++){
     printf("Cropping Scan %d...",loopA);
     sequence[loopA]->crop(limitBox,indexesToCrop);
     printf("Done.\n");
@@ -665,6 +663,16 @@ void MRISequence::createSampleCase(int sampleType, const MRIDoubleVec& params){
 
 }
 
+// TO COMPLETE !!!
+void resetVTKOptions(){
+
+}
+
+// TO COMPLETE !!!
+void resetPLTOptions(){
+
+}
+
 // ==========================
 // READ VTK STRUCTURED POINTS
 // ==========================
@@ -680,14 +688,18 @@ void MRISequence::readFromASCIISequence(int asciiInputType,const MRIStringVec& a
     // Read Topology
     topo = new MRITopology();
     if(asciiInputType == kInputVTK){
+      resetVTKOptions(vtkOptions);
       topo->readFromVTK_ASCII(asciiFileNames[loopA],vtkOptions);  
     }else if(asciiInputType == kInputPLT){
+      resetPLTOptions(pltOptions);
       topo->readFromPLT_ASCII(asciiFileNames[loopA],pltOptions);  
     }
     
     if(loopA == 0){
+      
       // Assign as the full sequence topology
       topology = topo;
+      
       // Add Scan
       scan = new MRIScan(times[loopA]);
       if(asciiInputType == kInputVTK){
@@ -695,6 +707,8 @@ void MRISequence::readFromASCIISequence(int asciiInputType,const MRIStringVec& a
       }else if(asciiInputType == kInputPLT){
         scan->readFromPLT_ASCII(asciiFileNames[loopA],pltOptions);
       }    
+      
+      // Add scan to sequence
       addScan(scan);
     }else{
       // Check Compatibility
@@ -715,6 +729,9 @@ void MRISequence::readFromASCIISequence(int asciiInputType,const MRIStringVec& a
         printf("WARNING: Skipping Scan, topology is not compatible.\n");
 
       }
+      // Delete current topology
+      delete topo;
+      topo = NULL;
     }
   }
 

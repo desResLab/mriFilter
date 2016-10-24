@@ -70,10 +70,10 @@ double findParabolicDeriv(double y1, double y2, double y3, double h1, double h2,
 // Eval Time Derivatives: TODO: Complete for Transient Case
 void MRISequence::evalTimeDerivs(int currentScan, int currentCell, MRIDoubleVec& timeDeriv){
   // Eval Difference Formulae
-  if (totalScans>1){
+  if (sequence.size()>1){
     // multiple Scan
     bool isFirstScan = (currentScan == 0);
-    bool isLastScan = (currentScan == (totalScans-1));
+    bool isLastScan = (currentScan == (sequence.size()-1));
 
     MRIDoubleVec currVel(3);
     MRIDoubleVec prevVel(3);
@@ -93,9 +93,9 @@ void MRISequence::evalTimeDerivs(int currentScan, int currentCell, MRIDoubleVec&
         currVel[1] = sequence[currentScan]->cells[currentCell].velocity[1];
         currVel[2] = sequence[currentScan]->cells[currentCell].velocity[2];
         // 
-        prevVel[0] = sequence[totalScans-1]->cells[currentCell].velocity[0];
-        prevVel[1] = sequence[totalScans-1]->cells[currentCell].velocity[1];
-        prevVel[2] = sequence[totalScans-1]->cells[currentCell].velocity[2];
+        prevVel[0] = sequence[sequence.size()-1]->cells[currentCell].velocity[0];
+        prevVel[1] = sequence[sequence.size()-1]->cells[currentCell].velocity[1];
+        prevVel[2] = sequence[sequence.size()-1]->cells[currentCell].velocity[2];
         //
         nextVel[0] = sequence[currentScan+1]->cells[currentCell].velocity[0];
         nextVel[1] = sequence[currentScan+1]->cells[currentCell].velocity[1];
@@ -113,7 +113,7 @@ void MRISequence::evalTimeDerivs(int currentScan, int currentCell, MRIDoubleVec&
         timeDeriv[0] = firstPart[0] + secondPart[0];
         timeDeriv[1] = firstPart[1] + secondPart[1];
         timeDeriv[2] = firstPart[2] + secondPart[2];
-      }else if(totalScans>2){
+      }else if(sequence.size()>2){
         // Parabola Derivatives
         double deltaT1 = sequence[currentScan+1]->scanTime - sequence[currentScan]->scanTime;
         double deltaT2 = sequence[currentScan+2]->scanTime - sequence[currentScan+1]->scanTime;
@@ -175,7 +175,7 @@ void MRISequence::evalTimeDerivs(int currentScan, int currentCell, MRIDoubleVec&
         timeDeriv[0] = firstPart[0] + secondPart[0];
         timeDeriv[1] = firstPart[1] + secondPart[1];
         timeDeriv[2] = firstPart[2] + secondPart[2];        
-      }else if(totalScans>2){
+      }else if(sequence.size()>2){
         // Parabola Derivatives
         double deltaT2 = sequence[currentScan]->scanTime - sequence[currentScan-1]->scanTime;
         double deltaT1 = sequence[currentScan-1]->scanTime - sequence[currentScan-2]->scanTime;
@@ -707,10 +707,10 @@ void MRISequence::computePressureGradients(MRIThresholdCriteria* threshold){
   writeSchMessage(string("PRESS GRADIENT COMPUTATION ------------------------------------\n"));
   
   // Loop through the Sequences
-  for(int loopA=0;loopA<totalScans;loopA++){
+  for(int loopA=0;loopA<sequence.size();loopA++){
     
     // Write Message
-    writeSchMessage(string("Computing Pressure Gradient: Step "+MRIUtils::intToStr(loopA+1)+"/"+MRIUtils::intToStr(totalScans)+"..."));
+    writeSchMessage(string("Computing Pressure Gradient: Step "+MRIUtils::intToStr(loopA+1)+"/"+MRIUtils::intToStr(sequence.size())+"..."));
 
     // EVALUATE REYNOLDS STRESSES
     sequence[loopA]->evalReynoldsStress(threshold);

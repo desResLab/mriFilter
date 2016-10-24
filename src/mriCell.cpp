@@ -6,12 +6,8 @@
 MRICell::MRICell(){
   // Initialize Cell
   concentration = 0.0;
-  velocity.resize(3);
-  auxVector.resize(3);
-  for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
-    velocity[loopA] = 0.0;
-    auxVector[loopA] = 0.0;
-  }
+  velocity.resize(3,0.0);
+  auxVector.resize(3,0.0);
 }
 
 MRICell::~MRICell(){
