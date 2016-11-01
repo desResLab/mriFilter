@@ -507,7 +507,7 @@ void MRIScan::createFromTemplate(MRISamples sampleType,const MRIDoubleVec& param
   double distX = params[3];
   double distY = params[4];
   double distZ = params[5];
-  double currTime = params[6];
+  double currTime = params[6];  
 
   // Template Orientation
   int dir = 0;
@@ -522,8 +522,21 @@ void MRIScan::createFromTemplate(MRISamples sampleType,const MRIDoubleVec& param
     throw MRIException("ERROR: Invalid template direction in CreateSampleCase.\n");
   }
 
+  printf("Eccolo 3\n");
+
+  //Allocate Based on the Topology
+  cells.clear();
+
+  printf("Eccolo 4\n");
+  MRICell cell;
+  for(int loopA=0;loopA<topology->totalCells;loopA++){
+    cells.push_back(cell);
+  }
+
   // Assign Concentrations and Velocities
+  printf("Eccolo 1\n");
   assignVelocitySignature(dir,sampleType,currTime);
+  printf("Eccolo 2\n");
 
   // Find Velocity Modulus
   maxVelModule = 0.0;

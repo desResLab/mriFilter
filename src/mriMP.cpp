@@ -1059,7 +1059,7 @@ void MRIScan::applySMPFilter(MRICommunicator* comm, bool isBC,
     oldTwoNorm = twoNorm;
   }
 
-  // Check If the Flux Is Locally Conservative
+  // Check If the Flux Is Locally Conservative  
   maxDivergence = evalMaxDivergence(filteredVec);
 
   // Make Diffence between Coefficient Expansions
@@ -1076,6 +1076,7 @@ void MRIScan::applySMPFilter(MRICommunicator* comm, bool isBC,
 
   // Recover Velocities from Face Fluxes
   recoverCellVelocitiesRT0(isBC,filteredVec);
+  
 
   // WRITE CPU TIME AND NUMBER OF ITERATIONS
   float totalCPUTime = float( clock () - begin_time ) /  CLOCKS_PER_SEC;

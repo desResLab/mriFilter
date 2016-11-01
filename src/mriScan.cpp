@@ -301,7 +301,6 @@ void MRIScan::assembleEncodingMatrix(int &totalRows, int &totalColumns, MRIDoubl
   double faceZArea = 0.0;
   MRIDoubleVec Areas(3,0.0);
 
-  
   // Values For Internal and Edges
   double edgeFactor = 0.5;
   double intFactor = 0.5;
@@ -603,7 +602,7 @@ bool MRIScan::hasUniformSpacing(){
 // =================
 // Write to VTK File
 // =================
-void MRIScan::exportToVTK(std::string fileName, MRIThresholdCriteria* threshold){
+void MRIScan::exportToVTK(string fileName, MRIThresholdCriteria* threshold){
 
   // Declare
   bool printAux = true;
@@ -631,7 +630,6 @@ void MRIScan::exportToVTK(std::string fileName, MRIThresholdCriteria* threshold)
     // Write Data Set
     fprintf(outFile,"DATASET RECTILINEAR_GRID\n");
     fprintf(outFile,"DIMENSIONS %d %d %d\n",topology->cellTotals[0],topology->cellTotals[1],topology->cellTotals[2]);
-
     // Export X Coordinates
     fprintf(outFile,"X_COORDINATES %d double\n",(int)topology->cellLengths[0].size());
     currXCoord = topology->domainSizeMin[0];
@@ -664,10 +662,10 @@ void MRIScan::exportToVTK(std::string fileName, MRIThresholdCriteria* threshold)
   fprintf(outFile,"POINT_DATA %d\n",topology->totalCells);
 
   // Export Normal sign
-  double* normSignX = new double[topology->totalCells];
-  double* normSignY = new double[topology->totalCells];
-  double* normSignZ = new double[topology->totalCells];
-  int* counterVec = new int[topology->totalCells];
+  MRIDoubleVec normSignX(topology->totalCells);
+  MRIDoubleVec normSignY(topology->totalCells);
+  MRIDoubleVec normSignZ(topology->totalCells);
+  MRIIntVec counterVec(topology->totalCells);
   for (int loopA=0;loopA<topology->totalCells;loopA++){
     normSignX[loopA] = 0.0;
     normSignY[loopA] = 0.0;
@@ -698,10 +696,6 @@ void MRIScan::exportToVTK(std::string fileName, MRIThresholdCriteria* threshold)
   for (int loopA=0;loopA<topology->totalCells;loopA++){
     fprintf(outFile,"%e %e %e\n",normSignX[loopA],normSignY[loopA],normSignZ[loopA]);
   }
-  delete [] normSignX;
-  delete [] normSignY;
-  delete [] normSignZ;
-  delete [] counterVec;
 
   // Print Scalar Concentration
   fprintf(outFile,"SCALARS concentration double\n");
@@ -731,7 +725,7 @@ void MRIScan::exportToVTK(std::string fileName, MRIThresholdCriteria* threshold)
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
     firstDerivs[loopA].resize(kNumberOfDimensions);
     secondDerivs[loopA].resize(kNumberOfDimensions);
-  }
+  }  
 
   // Print the Velocity Gradient
   fprintf(outFile,"TENSORS VelocityGradient double\n");
@@ -743,6 +737,8 @@ void MRIScan::exportToVTK(std::string fileName, MRIThresholdCriteria* threshold)
     fprintf(outFile,"%e %e %e\n",firstDerivs[2][0],firstDerivs[2][1],firstDerivs[2][2]);
     fprintf(outFile,"\n");
   }
+
+  
 
   // Print the Velocity Gradient
   fprintf(outFile,"TENSORS VelocityCurvature double\n");
@@ -1321,11 +1317,8 @@ void MRIScan::readFromVTK_ASCII(string vtkFileName, const vtkStructuredPointsOpt
       }
   }
 
-  printf("Finito CELLS FIRST SCAN\n");
-
   // Close File
   vtkFile.close();
-
 }
 
 // ============================
@@ -1432,6 +1425,7 @@ void MRIScan::exportForPoisson(string inputFileName,double density,double viscos
   FILE* outFile;
   outFile = fopen(inputFileName.c_str(),"w");
   int totAuxNodes = topology->getTotalAuxNodes();
+
   double qty = 0.0;
 
   // WRITE THE TOTAL NUMBER OF DOFs FOR THIS PROBLEM
@@ -1483,6 +1477,7 @@ void MRIScan::exportForPoisson(string inputFileName,double density,double viscos
   // SAVE MESH TOPOLOGY
   // ==================
   // SAVE NODE COORDS ONLY FOR NODES NUMBERED IN USEDNODEMAP
+  printf("Eccolo: Total Cells: %d\n",topology->totalCells);
   if(topology->totalCells > 0){
     double pos[3];
     for(int loopA=0;loopA<totAuxNodes;loopA++){
@@ -1721,11 +1716,11 @@ void MRIScan::exportForPoisson(string inputFileName,double density,double viscos
   // ===================
   // FIND FACES ON WALLS
   // ===================
-  int* faceCount = new int[topology->faceConnections.size()];
+  MRIIntVec faceCount(topology->faceConnections.size());
   for(int loopA=0;loopA<topology->faceConnections.size();loopA++){
     faceCount[loopA] = 0;
   }
-  bool* isFaceOnWalls = new bool[topology->faceConnections.size()];
+  MRIBoolVec isFaceOnWalls(topology->faceConnections.size());
   for(int loopA=0;loopA<topology->totalCells;loopA++){
     // Only Cells with Reasonable Concentration
     qty = cells[loopA].getQuantity(threshold->thresholdQty);
@@ -1742,7 +1737,7 @@ void MRIScan::exportForPoisson(string inputFileName,double density,double viscos
       isFaceOnWalls[loopA] = false;
     }
   }
-  delete [] faceCount;
+  faceCount.clear();
 
   // Convert Cell Vector to Face Vector
   MRIDoubleVec poissonSourceFaceVec;
@@ -1783,7 +1778,7 @@ void MRIScan::exportForPoisson(string inputFileName,double density,double viscos
     // TEST
     //sourcesToApply.push_back(cellDivs[loopA]);
   }
-  printf("Min Volume: %f, Max Volume: %f\n",minVolume,maxVolume);
+  printf("Min Volume: %e, Max Volume: %e\n",minVolume,maxVolume);
   printf("Total Fluid Volume: %f\n",totalVolume);
   printf("Source term summation: %f\n",SourceSum);
 
@@ -1878,10 +1873,10 @@ void MRIScan::exportForPoisson(string inputFileName,double density,double viscos
   fclose(outFile);
 
   // Free Memory
-  delete [] isFaceOnWalls;
+  isFaceOnWalls.clear();
 
-  printf("\n");
   printf("Poisson Solver File Exported.\n");
+  printf("\n");
 }
 
 // ==========================

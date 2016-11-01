@@ -5,12 +5,55 @@ MRIOperation::MRIOperation(){
 
 }
 
+// DISTRUCTOR
+MRIOperation::~MRIOperation(){
+
+}
+
+// CONSTRUCTOR
+MRIOpExportForPoissonSolver::MRIOpExportForPoissonSolver(string fileName,
+                                                         double density,
+                                                         double viscosity,
+                                                         bool PPE_IncludeAccelerationTerm,
+                                                         bool PPE_IncludeAdvectionTerm,
+                                                         bool PPE_IncludeDiffusionTerm,
+                                                         bool PPE_IncludeReynoldsTerm,
+                                                         bool readMuTFromFile,
+                                                         string muTFile,
+                                                         double smagorinskyCoeff){
+  this->fileName = fileName;
+  this->density = density;
+  this->viscosity = viscosity;
+  this->PPE_IncludeAccelerationTerm = PPE_IncludeAccelerationTerm;
+  this->PPE_IncludeAdvectionTerm = PPE_IncludeAdvectionTerm;
+  this->PPE_IncludeDiffusionTerm = PPE_IncludeDiffusionTerm;
+  this->PPE_IncludeReynoldsTerm = PPE_IncludeReynoldsTerm;
+  this->readMuTFromFile = readMuTFromFile;
+  this->muTFile = muTFile;
+  this->smagorinskyCoeff = smagorinskyCoeff;
+}
+
 // DATA MEMBER
 MRIOpApplySmoothing::MRIOpApplySmoothing(int filterNumIterations, int filterType, int filterOrder){
   this->numIterations = filterNumIterations;
   this->filterType = filterType;
   this->filterOrder = filterOrder;
 }
+
+// INITIALIZE APPLY NOISE OPERATION
+MRIOpApplyNoise::MRIOpApplyNoise(double noiseIntensity){
+  this->noiseIntensity = noiseIntensity;
+}
+
+
+// CONSTRUCTOR FOR SOLENOIDAL FILTER OPERATION
+MRIOpApplySolenoidalFilter::MRIOpApplySolenoidalFilter(bool applyBCFilter,bool useConstantPatterns,double itTol,int maxIt){
+  this->applyBCFilter = applyBCFilter;
+  this->useConstantPatterns = useConstantPatterns;
+  this->itTol = itTol;
+  this->maxIt = maxIt;
+}
+
 
 // SCALE VELOCITIES
 void MRIOpScaleVelocities::processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq){
@@ -51,10 +94,16 @@ void MRIOpInterpolateVelocityOnBoundary::processSequence(MRICommunicator* comm, 
 
 // INTERPOLATE BOUNDARY VELOCITIES
 void MRIOpApplySolenoidalFilter::processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq){
-  seq->applySMPFilter(comm, applyBCFilter, 
+  seq->applySMPFilter(comm, false, 
                       thresholdCriteria,
                       itTol,maxIt,
                       useConstantPatterns);
+  if(applyBCFilter){
+    seq->applySMPFilter(comm, true, 
+                        thresholdCriteria,
+                        itTol,maxIt,
+                        useConstantPatterns);
+  }
 }
 
 // APPLY THRESHOLD

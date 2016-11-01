@@ -17,9 +17,6 @@ using namespace std;
 // =================================================
 void readAndDistribute(MRICommunicator* comm, MRIOptions* opts, MRISequence* seq){
 
-  // INIT SEQUENCE
-  seq = new MRISequence(true/*Cyclic Sequence*/);
-
   // CHOOSE INPUT FORMAT
   if(opts->inputFormatType == itTEMPLATE){
     
@@ -56,11 +53,12 @@ void readAndDistribute(MRICommunicator* comm, MRIOptions* opts, MRISequence* seq
 // ============
 // WRITE OUTPUT
 // ============
-void writeOutput(MRICommunicator* comm, MRIOptions* opts, MRISequence* seq){
+void writeOutput(MRICommunicator* comm, MRIOptions* opts, MRISequence* seq){  
+
   // EXPORT FILE FROM ALL PROECESSORS IN ORDER
   if(comm->currProc == 0){
     if(opts->outputFormatType == otFILEVTK){
-      // READ FROM FILE
+      // READ FROM FILE      
       seq->exportToVTK(opts->outputFileName,opts->thresholdCriteria);
     }else if (opts->outputFormatType == otFILEPLT){
       // READ FROM FILE
@@ -78,6 +76,9 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
 
   // CREATE NEW SEQUENCE
   MRISequence* seq;
+
+  // INIT SEQUENCE
+  seq = new MRISequence(true/*Cyclic Sequence*/);
 
   // READ AND DISTRIBUTED MEASUREMENT GRID
   readAndDistribute(comm,opts,seq);

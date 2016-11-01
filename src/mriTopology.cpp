@@ -1289,7 +1289,7 @@ void MRITopology::createFromTemplate(MRISamples sampleType,const MRIDoubleVec& p
   cellLengths.resize(3);
   cellLengths[0].resize(sizeX);
   cellLengths[1].resize(sizeY);
-  cellLengths[2].resize(sizeZ);
+  cellLengths[2].resize(sizeZ);  
 
   // Set Cell Lengths
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
@@ -1319,8 +1319,16 @@ void MRITopology::createFromTemplate(MRISamples sampleType,const MRIDoubleVec& p
   domainSizeMax[0] = (sizeX-1) * distX;
   domainSizeMax[1] = (sizeY-1) * distY;
   domainSizeMax[2] = (sizeZ-1) * distZ;
+  
   // Set Total Cells
   totalCells = sizeX * sizeY * sizeZ;
+
+  // Allocate CellLocations
+  cellLocations.resize(totalCells);
+  for(int loopA=0;loopA<totalCells;loopA++){
+    cellLocations[loopA].resize(totalCells);
+  }
+
   // Assign Coordinates
   for(int loopA=0;loopA<totalCells;loopA++){
     mapIndexToCoords(loopA,currentCoords);

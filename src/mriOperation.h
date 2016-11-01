@@ -11,7 +11,7 @@ class MRISequence;
 class MRIOperation{
   public:
     MRIOperation();
-    ~MRIOperation();
+    virtual ~MRIOperation();
 
     // DATA MEMBER
     virtual void processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq) = 0;
@@ -47,7 +47,8 @@ class MRIOpSaveState: public MRIOperation{
 class MRIOpApplyNoise: public MRIOperation{
   public:
     double noiseIntensity;
-
+    // CONSTRUCTOR
+    MRIOpApplyNoise(double noiseIntensity);
     // DATA MEMBER
     virtual void processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq);
 };
@@ -88,6 +89,8 @@ class MRIOpApplySolenoidalFilter: public MRIOperation{
     double itTol;
     int maxIt;
 
+    // CONSTRUCTOR
+    MRIOpApplySolenoidalFilter(bool applyBCFilter,bool useConstantPatterns,double itTol,int maxIt);
     // DATA MEMBER
     virtual void processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq);
 };
@@ -129,15 +132,29 @@ class MRIOpExportForPoissonSolver: public MRIOperation{
     string fileName;
     double density;
     double viscosity;
+    
     // Pressure Gradient Components to include
     bool PPE_IncludeAccelerationTerm;
     bool PPE_IncludeAdvectionTerm;
     bool PPE_IncludeDiffusionTerm;
     bool PPE_IncludeReynoldsTerm;
+    
     // Turbulent Viscosity
     bool readMuTFromFile;
     string muTFile;
     double smagorinskyCoeff;
+
+    // CONSTRUCTOR
+    MRIOpExportForPoissonSolver(string fileName,
+                                double density,
+                                double viscosity,
+                                bool PPE_IncludeAccelerationTerm,
+                                bool PPE_IncludeAdvectionTerm,
+                                bool PPE_IncludeDiffusionTerm,
+                                bool PPE_IncludeReynoldsTerm,
+                                bool readMuTFromFile,
+                                string muTFile,
+                                double smagorinskyCoeff);
 
     // DATA MEMBER
     virtual void processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq);

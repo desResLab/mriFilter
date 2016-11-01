@@ -78,7 +78,18 @@ public:
   double density;
   double viscosity;
   // threshold Criteria
+  int thresholdQty;
+  int thresholdType;
+  double thresholdValue;  
   MRIThresholdCriteria* thresholdCriteria;
+  // PPE Solver Options
+  bool PPE_IncludeAccelerationTerm;
+  bool PPE_IncludeAdvectionTerm;
+  bool PPE_IncludeDiffusionTerm;
+  bool PPE_IncludeReynoldsTerm;  
+  bool readMuTFromFile;
+  string muTFile;
+  double smagorinskyCoeff;
   // List of operations
   vector<MRIOperation*> operationList;
 

@@ -214,12 +214,22 @@ void MRISequence::exportForDistancing(string inputFileName, MRIThresholdCriteria
   }
 }
 
+// GET SEQUENCE OUTPUT FILE NAME
+string getSequenceOutputFileName(string outfileName, int loopA){
+  // Get Extension
+  string ext = outfileName.substr(outfileName.find_last_of('.'),outfileName.size()-1);
+  // Get File Name
+  string res = outfileName.substr(0,outfileName.find_last_of('.')) + "_" + to_string(loopA) + ext;
+  // Return
+  return res;
+}
+
 // EXPORT TO SEQUENCE OF VTK FILES
-void MRISequence::exportToVTK(std::string outfileName,MRIThresholdCriteria* thresholdCriteria){
+void MRISequence::exportToVTK(string outfileName,MRIThresholdCriteria* thresholdCriteria){
   // Export All Data
-  writeSchMessage("\n");
-  for(int loopA=0;loopA<sequence.size();loopA++){
-    sequence[loopA]->exportToVTK(outfileName,thresholdCriteria);
+  for(int loopA=0;loopA<sequence.size();loopA++){    
+    string outName = getSequenceOutputFileName(outfileName,loopA);
+    sequence[loopA]->exportToVTK(outName,thresholdCriteria);
   }
 }
 
@@ -645,13 +655,19 @@ void MRISequence::createSampleCase(int sampleType, const MRIDoubleVec& params){
     // Assign Current Topology
     topology = topo;
     // Create and Assign Scan
+    printf("Prima\n");
+    scan = new MRIScan(0.0);
+    scan->topology = topo;
     scan->createFromTemplate(sampleType,params);
+    printf("Dopo\n");
     // Add to sequence
     addScan(scan);
   }else{
     // Check Compatibility 
     if(topology->isCompatibleTopology(topo)){
       // Create and Assign Scan
+      scan = new MRIScan(0.0);
+      scan->topology = topo;
       scan->createFromTemplate(sampleType,params);
       // Add to sequence
       addScan(scan);
@@ -663,14 +679,25 @@ void MRISequence::createSampleCase(int sampleType, const MRIDoubleVec& params){
 
 }
 
-// TO COMPLETE !!!
-void resetVTKOptions(){
-
+// ======================
+// INITIALIZE VTK OPTIONS
+// ======================
+void resetVTKOptions(vtkStructuredPointsOptionRecord& vtkOptions){
+  vtkOptions.dataBlockStart.clear();
+  vtkOptions.dataBlockType.clear();
+  vtkOptions.dataBlockRead.clear();
 }
 
-// TO COMPLETE !!!
-void resetPLTOptions(){
-
+// ======================
+// INITIALIZE PLT OPTIONS
+// ======================
+void resetPLTOptions(pltOptionRecord& pltOptions){
+  pltOptions.i = 0;
+  pltOptions.j = 0;
+  pltOptions.k = 0;
+  pltOptions.N = 0;
+  pltOptions.E = 0;
+  pltOptions.type = pltUNIFORM;
 }
 
 // ==========================
