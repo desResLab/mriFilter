@@ -1,16 +1,17 @@
 #ifndef MRISAMPLINGOPTIONS_H
 #define MRISAMPLINGOPTIONS_H
 
-#include <string>
+# include <string>
 
-class MRISamplingOptions
-{
+# include <mriTypes.h>
+
+class MRISamplingOptions{
   public:
     int totalSamples;
     std::string outputFile;
     int numberOfBins;
     bool useBox;
-    double limitBox[6];
+    MRIDoubleVec limitBox;
     // Constructor and Destructor
     MRISamplingOptions();
     ~MRISamplingOptions();

@@ -4,15 +4,16 @@
 # include <vector>
 # include <string>
 
+# include "mriTypes.h"
+
 using namespace std;
 
-class MRIOutput
-{
-public:
+class MRIOutput{
+  public:
     // DATA MEMBERS
     string name;
     int totComponents;
-    vector<double> values;
+    MRIDoubleVec values;
 
     // CONSTRUCTOR
     MRIOutput(string locName, int comp);

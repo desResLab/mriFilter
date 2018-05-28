@@ -1,18 +1,13 @@
-#ifndef MIRCELL_H
-#define MIRCELL_H
+#ifndef MRICELL_H
+#define MRICELL_H
 
-typedef double MRIReal;
+# include "mriTypes.h"
 
-class MRICell
-{
-	public:
-    MRIReal concentration;
-    MRIReal velocity[3];
-    MRIReal position[3];
-    MRIReal auxVector[3];
-    MRIReal ReStress[6];
-    MRIReal pressGrad[3];
-    MRIReal relPressure;
+class MRICell{
+  public:
+    double concentration;
+    MRIDoubleVec velocity;
+    MRIDoubleVec auxVector;
     // Constructor and Destructor
     MRICell();
     ~MRICell();
@@ -21,4 +16,4 @@ class MRICell
     void setQuantity(int qtyID, double value);
 };
 
-#endif // MIRCELL_H
+#endif // MRICELL_H

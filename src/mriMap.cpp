@@ -1,21 +1,75 @@
 #include <math.h>
 #include <algorithm>
 
-#include "mriScan.h"
-#include "mriStructuredScan.h"
+#include "mriSequence.h"
 #include "mriConstants.h"
 #include "mriException.h"
 #include "mriUtils.h"
 
+using namespace std;
+
+// =================================
+// GET CARTESIAN NEIGHBORS OF A CELL
+// =================================
+void MRIScan::getCartesianNeighbourCells(int CurrentCell,MRIIntVec& cellNeighbors, bool addself){
+  MRIIntVec coords(3);
+  cellNeighbors.clear();
+  if(addself){
+    cellNeighbors.push_back(CurrentCell);
+  }
+  //Get The Coordinates of the Current Cell
+  topology->mapIndexToCoords(CurrentCell,coords);
+  // Get Neighbor
+  // coords[0]
+  if ((coords[0]-1)>=0){
+    cellNeighbors.push_back(topology->mapCoordsToIndex(coords[0]-1,coords[1],coords[2]));
+  }else{
+    cellNeighbors.push_back(-1);
+  }
+  // coords[1]
+  if((coords[0]+1)<topology->cellTotals[0]){
+    cellNeighbors.push_back(topology->mapCoordsToIndex(coords[0]+1,coords[1],coords[2]));
+  }else{
+    cellNeighbors.push_back(-1);
+  }
+  // coords[2]
+  if((coords[1]-1)>=0){
+    cellNeighbors.push_back(topology->mapCoordsToIndex(coords[0],coords[1]-1,coords[2]));
+  }else{
+    cellNeighbors.push_back(-1);
+  }
+  // coords[3]
+  if((coords[1]+1)<topology->cellTotals[1]){
+    cellNeighbors.push_back(topology->mapCoordsToIndex(coords[0],coords[1]+1,coords[2]));
+  }else{
+    cellNeighbors.push_back(-1);
+  }
+  // coords[4]
+  if((coords[2]-1)>=0){
+    cellNeighbors.push_back(topology->mapCoordsToIndex(coords[0],coords[1],coords[2]-1));
+  }else{
+    cellNeighbors.push_back(-1);
+  }
+    // coords[5]
+  if((coords[2]+1)<topology->cellTotals[2]){
+    cellNeighbors.push_back(topology->mapCoordsToIndex(coords[0],coords[1],coords[2]+1));
+  }else{
+    cellNeighbors.push_back(-1);
+  }
+  // SCRAMBLE VECTOR !!!
+  //std::random_shuffle(&cellNeighbors[0], &cellNeighbors[5]);
+}
+
+
 // =====================================
 // CHECK IF IS BOUNDARY OR INTERNAL CELL
 // =====================================
-bool MRIScan::IsInnerCell(int Cell){
+bool MRIScan::isInnerCell(int cell){
   // Init Result
   bool isInside = true; 
   std::vector<int> others;
 	// Get Neighbors
-  GetCartesianNeighbourCells(Cell,others,false);
+  getCartesianNeighbourCells(cell,others,false);
   // If There Are Zero then False
   for(int loopA=0;loopA<k3DNeighbors;loopA++){
     isInside = ((isInside)&&(others[loopA]>-1));
@@ -25,153 +79,61 @@ bool MRIScan::IsInnerCell(int Cell){
 }
 
 // Get Unit Vector From Current Cell To Face Centre
-void MRIScan::GetUnitVector(int CurrentCell, double* GlobalFaceCoords, double* &myVect){
+void MRISequence::getUnitVector(int CurrentCell, const MRIDoubleVec& GlobalFaceCoords, MRIDoubleVec& myVect){
   // Get Vector
-  myVect[0] = GlobalFaceCoords[0]-cellPoints[CurrentCell].position[0];
-  myVect[1] = GlobalFaceCoords[1]-cellPoints[CurrentCell].position[1];
-  myVect[2] = GlobalFaceCoords[2]-cellPoints[CurrentCell].position[2];
+  myVect[0] = GlobalFaceCoords[0] - topology->cellLocations[CurrentCell][0];
+  myVect[1] = GlobalFaceCoords[1] - topology->cellLocations[CurrentCell][1];
+  myVect[2] = GlobalFaceCoords[2] - topology->cellLocations[CurrentCell][2];
   // Normalize
-  MRIUtils::Normalize3DVector(myVect);
+  MRIUtils::normalize3DVector(myVect);
 }
 
 // ===================================
 // GET GLOBAL COORDS FROM LOCAL COORDS
 // ===================================
-void MRIStructuredScan::GetGlobalCoords(int DimNumber, int SliceNumber, double FaceCoord1, double FaceCoord2, double* &globalCoords){
+void MRISequence::getGlobalCoords(int DimNumber, int SliceNumber, double FaceCoord1, double FaceCoord2, MRIDoubleVec& globalCoords){
   // Sum up the slices
   double sliceValue = 0.0;
   for(int loopA=1;loopA<SliceNumber;loopA++){
-    sliceValue += 0.5*(cellLengths[DimNumber][loopA-1] + cellLengths[DimNumber][loopA]);
+    sliceValue += 0.5*(topology->cellLengths[DimNumber][loopA-1] + topology->cellLengths[DimNumber][loopA]);
   }
   switch(DimNumber){
     case 0:
       // X Direction
-      globalCoords[0] = domainSizeMin[0] + sliceValue;
-      globalCoords[1] = domainSizeMin[1] + FaceCoord1;
-      globalCoords[2] = domainSizeMin[2] + FaceCoord2;
+      globalCoords[0] = topology->domainSizeMin[0] + sliceValue;
+      globalCoords[1] = topology->domainSizeMin[1] + FaceCoord1;
+      globalCoords[2] = topology->domainSizeMin[2] + FaceCoord2;
       break;
     case 1:
       // Y Direction
-      globalCoords[0] = domainSizeMin[0] + FaceCoord1;
-      globalCoords[1] = domainSizeMin[1] + sliceValue;
-      globalCoords[2] = domainSizeMin[2] + FaceCoord2;
+      globalCoords[0] = topology->domainSizeMin[0] + FaceCoord1;
+      globalCoords[1] = topology->domainSizeMin[1] + sliceValue;
+      globalCoords[2] = topology->domainSizeMin[2] + FaceCoord2;
       break;
     case 2:
       // Z Direction
-      globalCoords[0] = domainSizeMin[0] + FaceCoord1;
-      globalCoords[1] = domainSizeMin[1] + FaceCoord2;
-      globalCoords[2] = domainSizeMin[2] + sliceValue;
+      globalCoords[0] = topology->domainSizeMin[0] + FaceCoord1;
+      globalCoords[1] = topology->domainSizeMin[1] + FaceCoord2;
+      globalCoords[2] = topology->domainSizeMin[2] + sliceValue;
       break;
   }
-}
-
-/*// ===========================
-// LOCAL TO GLOBAL FACE NUMBER
-// ===========================
-int MRIStructuredScan::FaceLocaltoGlobal(int LocalFace, int DimNumber, int SliceNumber){
-  int cells1 = 0;
-  double cellLength1 = 0.0;
-  double cellLength2 = 0.0;
-  // If Face is zero then return
-  if(LocalFace == -1){
-    return -1;
-  }
-  // Number Of Cells in Local 1
-  switch(DimNumber){
-    case 0:
-      // YZ
-      cells1 = cellTotals[1];
-      cellLength1 = cellLength[1];
-      cellLength2 = cellLength[2];
-      break;
-    case 1:
-      // XZ
-      cells1 = cellTotals[0];
-      cellLength1 = cellLength[0];
-      cellLength2 = cellLength[2];
-      break;
-    case 2:
-      // XY
-      cells1 = cellTotals[0];
-      cellLength1 = cellLength[0];
-      cellLength2 = cellLength[1];
-      break;
-  }
-  // Find The Coords
-  // CHECK IF IS OK!!!
-  int iCoord = ((int)(LocalFace) / (int)(2*cells1+1));
-  int jCoord = (     (LocalFace) %      (2*cells1+1));
-  double faceCoord1,faceCoord2;
-  if(jCoord>(cells1-1)){
-    jCoord = jCoord - cells1;
-    faceCoord1 = (jCoord)*cellLength1-0.5*cellLength1;
-    faceCoord2 = (iCoord)*cellLength2;
-  }else{
-    faceCoord1 = (jCoord)*cellLength1;
-    faceCoord2 = (iCoord)*cellLength2-0.5*cellLength2;
-  }
-  double* GlobalFaceCoords = new double[kNumberOfDimensions];
-  // Pass to Global Coords
-  GetGlobalCoords(DimNumber,SliceNumber,faceCoord1,faceCoord2,GlobalFaceCoords);
-  // Find Global Cell
-  int CurrentCell = GetCellNumber(GlobalFaceCoords);
-  // Allocate
-  double* UnitVector = new double[kNumberOfDimensions];
-  // Find the Vector
-  GetUnitVector(CurrentCell,GlobalFaceCoords,UnitVector);
-  // Get Face Number
-  int globalFace = GetFacewithCellVector(CurrentCell,UnitVector);
-  // Deallocate
-  delete [] UnitVector;
-  delete [] GlobalFaceCoords;
-  // Return Global Face Number
-  return globalFace;
-}*/
-
-// Map To Cells Coords
-void MRIStructuredScan::MapIndexToCoords(int index, int* intCoords){
-  int CurrentIndex = index;
-  intCoords[2] = (int)(CurrentIndex/(cellTotals[0]*cellTotals[1]));
-  CurrentIndex = (CurrentIndex-intCoords[2]*cellTotals[0]*cellTotals[1]);
-  intCoords[1] = (int)(CurrentIndex/cellTotals[0]);
-  CurrentIndex = CurrentIndex-intCoords[1]*cellTotals[0];
-  intCoords[0] = CurrentIndex;
-}
-
-// Map To Aux Cells Coords
-void MRIStructuredScan::MapIndexToAuxNodeCoords(int index, int* intCoords){
-  int CurrentIndex = index;
-  int totalX = cellTotals[0] + 1;
-  int totalY = cellTotals[1] + 1;
-  intCoords[2] = (int)(CurrentIndex/(totalX*totalY));
-  CurrentIndex = (CurrentIndex-intCoords[2]*totalX*totalY);
-  intCoords[1] = (int)(CurrentIndex/totalX);
-  CurrentIndex = CurrentIndex-intCoords[1]*totalX;
-  intCoords[0] = CurrentIndex;
-}
-
-
-// Map From Cells Coords
-int MRIStructuredScan::MapCoordsToIndex(int i, int j, int k){
-	// C++ INDEXES ZERO BASED
-  return k*(cellTotals[0]*cellTotals[1])+j*(cellTotals[0])+i;
 }
 
 // Map Cell Number
-int MRIStructuredScan::GetCellNumber(MRIReal* coords){
+int MRISequence::getCellNumber(const MRIDoubleVec& coords){
   // Check Indexes
-  int i = MRIUtils::FindHowMany(coords[0]-domainSizeMin[0],cellLengths[0]);
-  int j = MRIUtils::FindHowMany(coords[1]-domainSizeMin[1],cellLengths[1]);
-  int k = MRIUtils::FindHowMany(coords[2]-domainSizeMin[2],cellLengths[2]);
+  int i = MRIUtils::findHowMany(coords[0] - topology->domainSizeMin[0],topology->cellLengths[0]);
+  int j = MRIUtils::findHowMany(coords[1] - topology->domainSizeMin[1],topology->cellLengths[1]);
+  int k = MRIUtils::findHowMany(coords[2] - topology->domainSizeMin[2],topology->cellLengths[2]);
   // If OutSide Project To Max Index
-  if(i>(cellTotals[0]-1)){
-    i = (cellTotals[0]-1);
+  if(i>(topology->cellTotals[0]-1)){
+    i = (topology->cellTotals[0]-1);
   }
-  if(j>(cellTotals[1]-1)){
-    j = (cellTotals[1]-1);
+  if(j>(topology->cellTotals[1]-1)){
+    j = (topology->cellTotals[1]-1);
   }
-  if(k>(cellTotals[2]-1)){
-    k = (cellTotals[2]-1);
+  if(k>(topology->cellTotals[2]-1)){
+    k = (topology->cellTotals[2]-1);
   }
   // If OutSide Project to Min Index}
   if(i<0){
@@ -184,20 +146,32 @@ int MRIStructuredScan::GetCellNumber(MRIReal* coords){
     k = 0;
   }
   // Return
-  int index = MapCoordsToIndex(i,j,k);
+  int index = topology->mapCoordsToIndex(i,j,k);
   return index;
 }
 
+// Get Velocity Norm At Specific Cell for all scans: sort of Frobenius Norm
+double MRISequence::getVelocityNormAtCell(int cell){
+  double norm = 0.0;
+  for(int loopA=0;loopA<sequence.size();loopA++){
+    norm += sequence[loopA]->cells[loopA].velocity[0] * sequence[loopA]->cells[loopA].velocity[0];
+    norm += sequence[loopA]->cells[loopA].velocity[1] * sequence[loopA]->cells[loopA].velocity[1];
+    norm += sequence[loopA]->cells[loopA].velocity[2] * sequence[loopA]->cells[loopA].velocity[2];
+  }
+  return sqrt(norm);
+}
+
 // Compute Global Permutation
-void MRIStructuredScan::GetGlobalPermutation(std::vector<int> &GlobalPerm){
-  MRIReal Norm = 0.0;
-  MRIReal VelNorm = 0.0;
+void MRISequence::getGlobalPermutation(MRIIntVec& GlobalPerm){
+  double Norm = 0.0;
+  double VelNorm = 0.0;
   int invalidCount = 0;
   // Fill Permutation Vector
   int NumberOfZeroNorms = 0;
-  for(int loopA=0;loopA<totalCellPoints;loopA++){
-    Norm = MRIUtils::Do3DEucNorm(cellPoints[loopA].position);
-    VelNorm = MRIUtils::Do3DEucNorm(cellPoints[loopA].velocity);
+  for(int loopA=0;loopA<topology->totalCells;loopA++){
+    Norm = MRIUtils::do3DEucNorm(topology->cellLocations[loopA]);
+    // Get Velocity Norm Form One Cell In all Scans
+    VelNorm = getVelocityNormAtCell(loopA);
     if (Norm<kMathZero){
       invalidCount++;
     }
@@ -205,127 +179,7 @@ void MRIStructuredScan::GetGlobalPermutation(std::vector<int> &GlobalPerm){
       GlobalPerm.push_back(-1);
       NumberOfZeroNorms++;
     }else{
-      GlobalPerm.push_back(GetCellNumber(cellPoints[loopA].position));
+      GlobalPerm.push_back(getCellNumber(topology->cellLocations[loopA]));
     }
-  }
-}
-
-// Get Local Adjacent Plane
-int GetLocalAdjacentFace(int localNodeNumber, int totalX, int AdjType){
-  switch(AdjType){
-    case kfacePlusX:  
-		  return (((int)localNodeNumber)/((int)totalX)) * (2 * totalX + 1) + (localNodeNumber % totalX) + totalX + 1;
-			break;
-    case kfaceMinusX: 
-		  return ((int)localNodeNumber/(int)totalX) * (2*totalX+1) + (localNodeNumber % totalX) + totalX;
-    case kfacePlusY : 
-		  return (((int)localNodeNumber/(int)totalX)+1) * (2*totalX+1) + (localNodeNumber % totalX);
-    case kfaceMinusY: 
-		  return ((int)localNodeNumber/(int)totalX) * (2*totalX+1) + (localNodeNumber % totalX);
-    case kfacePlusZ:  
-		  return localNodeNumber;
-    case kfaceMinusZ: 
-		  return localNodeNumber;
-	}
-  return -1;
-}
-
-// Get Global Adjacent Plane
-int MRIStructuredScan::GetAdjacentFace(int globalNodeNumber /*Already Ordered Globally x-y-z*/, int AdjType){
-  // Get The Z Coord
-  double currentZCoord = cellPoints[globalNodeNumber].position[2]-domainSizeMin[2];
-  
-	// Find The Node Number in The Current Plane
-  int ZCompleteLevels = MRIUtils::FindHowMany(currentZCoord,cellLengths[2]);
-  int localNodeNumber = globalNodeNumber-ZCompleteLevels*cellTotals[0]*cellTotals[1];
-
-  // Find The Adjacent face in the Current Plane
-  int localFaceNumber = GetLocalAdjacentFace(localNodeNumber,cellTotals[0],AdjType);
-
-  // Map to Global Face Numbering: Differentiate if in Z
-  if(AdjType == kfacePlusZ){
-    return localFaceNumber+(ZCompleteLevels+1)*cellTotals[0]*cellTotals[1]+
-                           (ZCompleteLevels+1)*(cellTotals[0]*(cellTotals[1]+1)+
-                           (cellTotals[0]+1)*cellTotals[1]);
-		
-	}else if(AdjType == kfaceMinusZ){
-    return localFaceNumber+(ZCompleteLevels)*cellTotals[0]*cellTotals[1]+
-                           (ZCompleteLevels)*(cellTotals[0]*(cellTotals[1]+1)+
-                           (cellTotals[0]+1)*cellTotals[1]);
-		
-	}else{
-    return localFaceNumber+(ZCompleteLevels+1)*cellTotals[0]*cellTotals[1]+
-                           (ZCompleteLevels)*(cellTotals[0]*(cellTotals[1]+1)+
-                           (cellTotals[0]+1)*cellTotals[1]);
-  }
-}
-
-// ================================
-// GET VORTEXES ASSOCIATED TO CELLS
-// ================================
-void MRIStructuredScan::getNeighborVortexes(int cellNumber,int dim,MRIIntVec& idx){
-  // Loop through the edges
-  MRIIntVec ElEdgeList;
-  double currEdgeDirVector[3];
-  int currFace = 0;
-  int currEdge = 0;
-  for(int loopA=0;loopA<cellFaces[cellNumber].size();loopA++){
-    currFace = cellFaces[cellNumber][loopA];
-    for(int loopB=0;loopB<faceEdges[currFace].size();loopB++){
-      currEdge = faceEdges[currFace][loopB];
-      MRIUtils::InsertInIntList(currEdge,ElEdgeList);
-    }
-  }
-  // Find the Edges Aligned with the Selected Dimension
-  idx.clear();
-  int currDir = 0;
-  for(int loopA=0;loopA<ElEdgeList.size();loopA++){
-    getEdgeDirection(ElEdgeList[loopA],currEdgeDirVector);
-    if((fabs(currEdgeDirVector[1])<kMathZero)&&(fabs(currEdgeDirVector[2])<kMathZero)){
-      currDir = 0;
-    }else if((fabs(currEdgeDirVector[0])<kMathZero)&&(fabs(currEdgeDirVector[2])<kMathZero)){
-      currDir = 1;
-    }else if((fabs(currEdgeDirVector[0])<kMathZero)&&(fabs(currEdgeDirVector[1])<kMathZero)){
-      currDir = 2;
-    }else{
-      throw MRIException("ERROR: Invalid Edge Direction in getNeighborVortexes.\n");
-    }
-    if(currDir == dim){
-      idx.push_back(ElEdgeList[loopA]);
-    }
-  }
-}
-
-// ==============================
-// MAP INTEGER COORDS TO POSITION
-// ==============================
-void MRIStructuredScan::MapCoordsToPosition(int* coords, bool addMeshMinima, double* pos){
-  // Loop on the three dimensions
-  for(int loopA=0;loopA<3;loopA++){
-    pos[loopA] = 0.0;
-    for(int loopB=1;loopB<(coords[loopA]+1);loopB++){
-      pos[loopA] += 0.5*(cellLengths[loopA][loopB-1] + cellLengths[loopA][loopB]);
-    }
-  }
-  if(addMeshMinima){
-    for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
-      pos[loopA] += domainSizeMin[loopA];
-    }
-  }
-}
-
-// ========================================
-// MAP AUXILIARY INTEGER COORDS TO POSITION
-// ========================================
-void MRIStructuredScan::MapAuxCoordsToPosition(int* auxCoords, double* pos){
-  // Loop on the three dimensions
-  for(int loopA=0;loopA<3;loopA++){
-    pos[loopA] = 0.0;
-    for(int loopB=0;loopB<auxCoords[loopA];loopB++){
-      pos[loopA] += cellLengths[loopA][loopB];
-    }
-  }
-  for(int loopA=0;loopA<3;loopA++){
-    pos[loopA] = pos[loopA] + domainSizeMin[loopA] - 0.5*cellLengths[loopA][0];
   }
 }

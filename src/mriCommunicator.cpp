@@ -1,10 +1,4 @@
-#include <stddef.h>
-
-#include "mriCommunicator.h"
-#include "mriUtils.h"
-#include "mriTypes.h"
-#include "mriSequence.h"
-#include "mriStructuredScan.h"
+# include "mriCommunicator.h"
 
 MRICommunicator::MRICommunicator(){
 }
@@ -343,9 +337,6 @@ void MRICommunicator::passCellData(int& totalCellPoints,vector<MRICell>& cellPoi
       temp[1] = cellPoints[loopA].velocity[0];
       temp[2] = cellPoints[loopA].velocity[1];
       temp[3] = cellPoints[loopA].velocity[2];
-      temp[4] = cellPoints[loopA].position[0];
-      temp[5] = cellPoints[loopA].position[1];
-      temp[6] = cellPoints[loopA].position[2];
       //printf("BEFORE STORE_PUSH\n");
       storeMat.push_back(temp);
       //printf("AFTER STORE_PUSH\n");
@@ -366,9 +357,6 @@ void MRICommunicator::passCellData(int& totalCellPoints,vector<MRICell>& cellPoi
       cellPoints[loopA].velocity[0] = storeMat[loopA][1];
       cellPoints[loopA].velocity[1] = storeMat[loopA][2];
       cellPoints[loopA].velocity[2] = storeMat[loopA][3];
-      cellPoints[loopA].position[0] = storeMat[loopA][4];
-      cellPoints[loopA].position[1] = storeMat[loopA][5];
-      cellPoints[loopA].position[2] = storeMat[loopA][6];
     }
   }
 }
