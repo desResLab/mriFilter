@@ -70,8 +70,49 @@ namespace MRIUtils{
   // Print Binary Array To File
   void printBinArrayToFile(string fileName, int numberOfBins, const MRIDoubleVec& binCenter, const MRIDoubleVec& binValues);
 
-  // Apply Limit Box Factor
-  void applyLimitBoxFactors(double xFactor, double yFactor, double zFactor, MRIDoubleVec& limitBox);
+// ==================================================
+// Generate Uniform Integer (global Variable Defined)
+// ==================================================
+/*inline int GenerateUniformIntegers(int lowIdx, int upIdx) {
+    boost::random::uniform_int_distribution<> dist(lowIdx, upIdx);
+    //return dist(intGen);
+    return 0;
+}*/
+
+// ======================
+// GENERATE RANDOM VECTOR
+// ======================
+/*inline double* GenerateUniform01RandomVector(double& generator){
+  double* resVec = new double[3];
+  boost::random::uniform_real_distribution<> dist(0.0,1.0);
+  // Generate Numbers Uniformly
+  for(int loopA=0;loopA<3;loopA++){
+		//resVec[loopA] = dist(realGen);
+	}
+  // Normalize
+  MRIUtils::Normalize3DVector(resVec);
+	return resVec;
+}*/
+// ==========================
+// SET SEED FOR GAUSSIAN
+// =========================
+inline void SetSeed(double seed){
+  realGen.seed(static_cast<unsigned int>(seed));
+}
+
+// ==========================
+// GENERATE STANDARD GAUSSIAN
+// ==========================
+inline double GenerateStandardGaussian(double stDev){
+    
+  // Allocate Vector
+  boost::random::normal_distribution<> dist(0.0,stDev);
+  // Add Random Component
+  return dist(realGen);
+}
+
+// Apply Limit Box Factor
+void applyLimitBoxFactors(double xFactor, double yFactor, double zFactor, MRIDoubleVec& limitBox);
 
   // Print Matrix To File
   void printMatrixToFile(string fileName, const MRIDoubleMat& Mat);

@@ -331,10 +331,10 @@ void MRISequence::scalePositions(const MRIDoubleVec& origin, double factor){
 }
 
 // Add noise to measurements
-void MRISequence::applyNoise(double noiseIntensity){
+void MRISequence::applyNoise(double noiseIntensity, double seed){
   writeSchMessage(std::string("Applying Noise..."));
   for(int loopA=0;loopA<sequence.size();loopA++){
-    sequence[loopA]->applyGaussianNoise(noiseIntensity);
+    sequence[loopA]->applyGaussianNoise(noiseIntensity, seed);
   }
   writeSchMessage(std::string("Done.\n"));
 }

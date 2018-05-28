@@ -104,8 +104,8 @@ class MRIScan{
     // Export to Poisson Solver Only element with significant concentration
     void exportForDistancing(string inputFileName, MRIThresholdCriteria* threshold);
     void exportForPoisson(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold, const MRIDoubleMat& timeDerivs,
-                                  bool PPE_IncludeAccelerationTerm,bool PPE_IncludeAdvectionTerm,bool PPE_IncludeDiffusionTerm,bool PPE_IncludeReynoldsTerm,
-                                  bool readMuTFromFile, string muTFile, double smagorinskyCoeff);
+                          bool PPE_IncludeAccelerationTerm,bool PPE_IncludeAdvectionTerm,bool PPE_IncludeDiffusionTerm,bool PPE_IncludeReynoldsTerm,
+                          bool readMuTFromFile, string muTFile, double smagorinskyCoeff);
 
     // ========
     // TOPOLOGY

@@ -480,8 +480,15 @@ int MRIOptions::getOptionsFromCommandFile(string commandFile){
       }catch(...){
         throw MRIException("ERROR: Invalid Noise Intensity.\n");
       }
+      if(tokenizedString.size() > 2){
+	      try{
+	        noiseSeed = atof(tokenizedString[2].c_str());
+        }catch(...){
+	        throw MRIException("ERROR: Invalid Noise Seed.\n");
+        }
+      }
       // Create Operation
-      MRIOperation* op = new MRIOpApplyNoise(noiseIntensity);
+      MRIOperation* op = new MRIOpApplyNoise(noiseIntensity,noiseSeed);
       // Add to the operation list
       operationList.push_back(op);
     }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("TEMPLATETYPE")){

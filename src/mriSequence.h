@@ -112,7 +112,7 @@ class MRISequence{
     void evalScanReynoldsStressDerivs(int currentScan,MRIDoubleMat& reynoldsDeriv);
 
     // ADD NOISE
-    void applyNoise(double noiseIntensity);
+    void applyNoise(double noiseIntensity, double seed);
 
     // FILTER DATA
     void applyMedianFilter(int qtyID,int maxIt,int order,int filterType,MRIThresholdCriteria* threshold);

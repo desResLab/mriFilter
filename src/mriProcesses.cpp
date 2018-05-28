@@ -1,6 +1,5 @@
 #include <math.h>
 #include <boost/lexical_cast.hpp>
-
 #include "mriScan.h"
 #include "mriThresholdCriteria.h"
 #include "mriUtils.h"
@@ -294,9 +293,10 @@ void MRIScan::applySmoothingFilter(){
 // ====================
 // APPLY GAUSSIAN NOISE
 // ====================
-void MRIScan::applyGaussianNoise(double stDev){
+void MRIScan::ApplyGaussianNoise(double stDev, double seed){
   // Multiply by the velocity module
   stDev = stDev * maxVelModule / 100.0;
+  MRIUtils::SetSeed(seed);
   // Apply Gaussian Noise
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
     // Loop On Cells
