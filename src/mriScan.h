@@ -102,7 +102,7 @@ class MRIScan{
     virtual void ApplyMedianFilter(int qtyID,int maxIt,int order,int filterType,MRIThresholdCriteria* threshold){throw MRIException("Error: Not Implemented!");}
     void ApplyThresholding(MRIThresholdCriteria* thresholdCriteria);
     void ApplySmoothingFilter();
-    void ApplyGaussianNoise(double stDev);
+    void ApplyGaussianNoise(double stDev, double seed);
 
     // SMP FILTER
     virtual void applySMPFilter(MRIOptions* options, bool isBC, MRICommunicator* comm){}

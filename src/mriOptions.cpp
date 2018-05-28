@@ -62,6 +62,7 @@ MRIOptions::MRIOptions(){
   // Add Noise
   applyNoise = false;
   noiseIntensity = 0.0;
+  noiseSeed = 5489u;
   // Init with Water Density and Viscosity
   density = 1000.0;
   viscosity = 1.0e-3;
@@ -574,6 +575,12 @@ int MRIOptions::getOptionsFromCommandFile(string commandFile){
       }catch(...){
         throw MRIException("ERROR: Invalid Noise Intensity.\n");
       }
+      if(tokenizedString.size() > 2){
+	try{
+	  noiseSeed = atof(tokenizedString[2].c_str());
+      }catch(...){
+	throw MRIException("ERROR: Invalid Noise Seed.\n");
+      }}
     }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("TEMPLATETYPE")){
       if(boost::to_upper_copy(tokenizedString[1]) == std::string("ZEROVELOCITY")){
         templateType = kZeroVelocity;

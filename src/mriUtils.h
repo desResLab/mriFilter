@@ -230,11 +230,18 @@ inline void InsertInDoubleList(double Value,int &TotalCoords,std::vector<double>
   MRIUtils::Normalize3DVector(resVec);
 	return resVec;
 }*/
+// ==========================
+// SET SEED FOR GAUSSIAN
+// =========================
+inline void SetSeed(double seed){
+  realGen.seed(static_cast<unsigned int>(seed));
+}
 
 // ==========================
 // GENERATE STANDARD GAUSSIAN
 // ==========================
 inline double GenerateStandardGaussian(double stDev){
+    
   // Allocate Vector
   boost::random::normal_distribution<> dist(0.0,stDev);
   // Add Random Component

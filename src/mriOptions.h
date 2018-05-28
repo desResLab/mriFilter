@@ -65,6 +65,7 @@ public:
   // Noise to apply
   bool applyNoise;
   double noiseIntensity;
+  double noiseSeed;
   // Save Initial Velocities
   bool saveInitialVel;
   // Save Expansion Coefficients

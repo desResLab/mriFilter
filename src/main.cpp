@@ -979,7 +979,7 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
 
   // APPLY NOISE
   if (opts->applyNoise){
-    MyMRISequence->applyNoise(opts->noiseIntensity);
+    MyMRISequence->applyNoise(opts->noiseIntensity, opts->noiseSeed);
   }
 
   // FILTER DATA IF REQUIRED
