@@ -1,16 +1,4 @@
-#include <stdlib.h>
-#include <math.h>
-
-#include "mriScan.h"
-#include "mriTypes.h"
-#include "mriStructuredScan.h"
-#include "mriConstants.h"
-#include "mriUtils.h"
-#include "mriThresholdCriteria.h"
-#include "mriException.h"
-#include "mriExpansion.h"
-#include "schMessages.h"
-#include "mriUtils.h"
+# include "mriScan.h"
 
 void writeVectorToFile(string outFile, int size, double* vec){
   // Open Output File
@@ -26,7 +14,7 @@ void writeVectorToFile(string outFile, int size, double* vec){
 // ===================
 // PRINT FASE ID INDEX
 // ===================
-void PrintFaceIDIndexes(std::string fileName, int totalStarFaces, std::vector<int> facesID, std::vector<double> facesCoeffs){
+void printFaceIDIndexes(std::string fileName, int totalStarFaces, std::vector<int> facesID, std::vector<double> facesCoeffs){
 	// Open Output File
 	FILE* outFile;
 	outFile = fopen(fileName.c_str(),"w");
@@ -41,7 +29,7 @@ void PrintFaceIDIndexes(std::string fileName, int totalStarFaces, std::vector<in
 // =====================
 // PRINT RESIDUAL VECTOR
 // =====================
-void PrintResidualVector(std::string fileName, int totalFaces, double* resVec){
+void printResidualVector(std::string fileName, int totalFaces, double* resVec){
 	// Open Output File
 	FILE* outFile;
 	outFile = fopen(fileName.c_str(),"w");
@@ -56,21 +44,21 @@ void PrintResidualVector(std::string fileName, int totalFaces, double* resVec){
 // =======================
 // ASSEMBLE CONSTANT SHAPE
 // =======================
-void MRIStructuredScan::AssembleConstantPattern(int currentDim, int &totalConstantFaces,
-                                                std::vector<int> &facesID, std::vector<double> &facesCoeffs){
+void MRIScan::assembleConstantPattern(int currentDim, int& totalConstantFaces,
+                                      MRIIntVec& facesID, MRIDoubleVec& facesCoeffs){
 
   // Clear Vectors
   totalConstantFaces = 0;
   facesID.clear();
   facesCoeffs.clear();
-  std::vector<int> orientation;
+  MRIIntVec orientation;
 
   // Loop Over Faces
   int totNegFaces = 0;
-  for(size_t loopA=0;loopA<faceConnections.size();loopA++){
-    if(fabs(faceNormal[loopA][currentDim])>kMathZero){
+  for(size_t loopA=0;loopA<topology->faceConnections.size();loopA++){
+    if(fabs(topology->faceNormal[loopA][currentDim])>kMathZero){
       facesID.push_back(loopA);
-      if(faceNormal[loopA][currentDim]>kMathZero){
+      if(topology->faceNormal[loopA][currentDim]>kMathZero){
         orientation.push_back(1);
       }else{
         orientation.push_back(-1);
@@ -79,14 +67,10 @@ void MRIStructuredScan::AssembleConstantPattern(int currentDim, int &totalConsta
     }
   }
 
-  //printf("NEGATIVE FACES: %d\n",totNegFaces);
-
   // Fill Coefficients
   for(size_t loopA=0;loopA<facesID.size();loopA++){
     facesCoeffs.push_back((orientation[loopA]/sqrt((double)facesID.size())));
   }
-
-  //printf("TOTAL FACES: %d\n",facesID.size());
 
   // Update Counter
   totalConstantFaces = facesID.size();
@@ -96,9 +80,9 @@ void MRIStructuredScan::AssembleConstantPattern(int currentDim, int &totalConsta
 // =======================
 // ASSEMBLE CONSTANT SHAPE
 // =======================
-void MRIStructuredScan::AssembleConstantPatternMPI(int currentDim, int &totalConstantFacesOnProc,
-                                                   std::vector<int> &facesIDOnProc, std::vector<double> &facesCoeffsOnProc,
-                                                   int minFaceOnProc, int maxFaceOnProc, MRICommunicator* comm){
+void MRIScan::assembleConstantPatternMPI(int currentDim, int& totalConstantFacesOnProc,
+                                         MRIIntVec& facesIDOnProc, MRIDoubleVec& facesCoeffsOnProc,
+                                         int minFaceOnProc, int maxFaceOnProc, MRICommunicator* comm){
 
   // Clear Vectors
   totalConstantFacesOnProc = 0;
@@ -110,22 +94,22 @@ void MRIStructuredScan::AssembleConstantPatternMPI(int currentDim, int &totalCon
   int totFacesThisDir = 0;
   switch(currentDim){
     case 0:
-      totFacesThisDir = cellTotals[1] * cellTotals[2] * (cellTotals[0] + 1);
+      totFacesThisDir = topology->cellTotals[1] * topology->cellTotals[2] * (topology->cellTotals[0] + 1);
       break;
     case 1:
-      totFacesThisDir = cellTotals[0] * cellTotals[2] * (cellTotals[1] + 1);
+      totFacesThisDir = topology->cellTotals[0] * topology->cellTotals[2] * (topology->cellTotals[1] + 1);
       break;
     case 2:
-      totFacesThisDir = cellTotals[0] * cellTotals[1] * (cellTotals[2] + 1);
+      totFacesThisDir = topology->cellTotals[0] * topology->cellTotals[1] * (topology->cellTotals[2] + 1);
       break;
   }
 
   // Decide Orientations
   int totNegative = 0;
   for(int loopA=minFaceOnProc;loopA<maxFaceOnProc;loopA++){
-    if(fabs(faceNormal[loopA][currentDim])>kMathZero){
+    if(fabs(topology->faceNormal[loopA][currentDim])>kMathZero){
       facesIDOnProc.push_back(loopA);
-      if(faceNormal[loopA][currentDim]>kMathZero){
+      if(topology->faceNormal[loopA][currentDim]>kMathZero){
         orientation.push_back(1.0);
       }else{
         orientation.push_back(-1.0);
@@ -134,8 +118,6 @@ void MRIStructuredScan::AssembleConstantPatternMPI(int currentDim, int &totalCon
     }
   }
 
-  //printf("[%d] NEGATIVE FACES: %d\n",comm->currProc,totNegative);
-
   // Fill Coefficients
   for(size_t loopA=0;loopA<facesIDOnProc.size();loopA++){
     facesCoeffsOnProc.push_back((orientation[loopA]/sqrt((double)totFacesThisDir)));
@@ -143,17 +125,16 @@ void MRIStructuredScan::AssembleConstantPatternMPI(int currentDim, int &totalCon
 
   // Update Counter
   totalConstantFacesOnProc = facesIDOnProc.size();
-
 }
 
 
 // ====================
 // ASSEMBLE STAR MATRIX
 // ====================
-void MRIStructuredScan::AssembleStarMatrix(int &totalFaces, int &totalBasis, double** &starMatrix){
+void MRIScan::assembleStarMatrix(int &totalFaces, int &totalBasis, MRIDoubleMat& starMatrix){
   // Init Rows and Columns
-  totalFaces = GetTotalFaces();
-  totalBasis = GetTotalBasisNumber();
+  totalFaces = topology->getTotalFaces();
+  totalBasis = getTotalBasisNumber();
   // Init Count
   int totalStarFaces = 0;
   std::vector<int> facesID;
@@ -161,16 +142,18 @@ void MRIStructuredScan::AssembleStarMatrix(int &totalFaces, int &totalBasis, dou
   int currentRow = 0;
   int currentCount = 0;
   // Get total Number of Vortexes
-  int totalVortices = EvalTotalVortex();
+  int totalVortices = evalTotalVortex();
   // Allocate and Initialize
-  starMatrix = new double*[totalFaces];
-  for(int loopA=0;loopA<totalFaces;loopA++) starMatrix[loopA] = new double[totalBasis];
+  starMatrix.resize(totalFaces);
+  for(int loopA=0;loopA<totalFaces;loopA++){
+    starMatrix[loopA].resize(totalBasis); 
+  }
   // Loop On The Three Directions
 	int totalSlices = 0;
 	int totalStars = 0;
   for(int loopB=0;loopB<totalVortices;loopB++){
     // Find Star Shape
-    AssembleStarShape(loopB,totalStarFaces,facesID,facesCoeffs);
+    assembleStarShape(loopB,totalStarFaces,facesID,facesCoeffs);
     // Fill Matrix
     for(int loopE=0;loopE<totalStarFaces;loopE++){
       currentRow = facesID[loopE];
@@ -184,7 +167,7 @@ void MRIStructuredScan::AssembleStarMatrix(int &totalFaces, int &totalBasis, dou
 // =========================
 // GET TOTAL NUMBER OF BASIS
 // =========================
-int MRIStructuredScan::GetTotalBasisNumber(){
+int MRIScan::getTotalBasisNumber(){
   int totBasis = 0;
   int totalSlices = 0;
   int totalStars = 0;
@@ -192,18 +175,18 @@ int MRIStructuredScan::GetTotalBasisNumber(){
     switch(loopA){
       case 0:
         // YZ Planes
-        totalSlices = cellTotals[0];
-        totalStars = (cellTotals[1]+1)*(cellTotals[2]+1);
+        totalSlices = topology->cellTotals[0];
+        totalStars = (topology->cellTotals[1] + 1)*(topology->cellTotals[2] + 1);
         break;
       case 1:
         // XZ Planes
-        totalSlices = cellTotals[1];
-        totalStars = (cellTotals[0]+1)*(cellTotals[2]+1);
+        totalSlices = topology->cellTotals[1];
+        totalStars = (topology->cellTotals[0] + 1)*(topology->cellTotals[2] + 1);
         break;
       case 2:
         // XY Planes
-        totalSlices = cellTotals[2];
-        totalStars = (cellTotals[0]+1)*(cellTotals[1]+1);
+        totalSlices = topology->cellTotals[2];
+        totalStars = (topology->cellTotals[0] + 1)*(topology->cellTotals[1] + 1);
         break;
     }
     totBasis = totBasis + totalSlices * totalStars;
@@ -214,7 +197,7 @@ int MRIStructuredScan::GetTotalBasisNumber(){
 // =================
 // CHECK PERMUTATION
 // =================
-bool CheckPermutation(int size, int* perm){
+bool checkPermutation(int size, int* perm){
   bool checkPerm[size];
   for(int loopA=0;loopA<size;loopA++) checkPerm[size] = false;
   // Sort Permutation
@@ -226,11 +209,11 @@ bool CheckPermutation(int size, int* perm){
 }
 
 // EXPAND STAR SHAPE TO FULL VECTOR
-void MRIStructuredScan::ExpandStarShape(int totalStarFaces, int* facesID, double* facesCoeffs, double* &fullStarVector){
+void MRIScan::expandStarShape(int totalStarFaces, int* facesID, double* facesCoeffs, double* &fullStarVector){
   // Get Total Number Of Faces
-  int totalFaces = cellTotals[0]*cellTotals[1]*(cellTotals[2]+1)+
-                   cellTotals[1]*cellTotals[2]*(cellTotals[0]+1)+
-                   cellTotals[2]*cellTotals[0]*(cellTotals[1]+1);
+  int totalFaces = topology->cellTotals[0] * topology->cellTotals[1] * (topology->cellTotals[2] + 1)+
+                   topology->cellTotals[1] * topology->cellTotals[2] * (topology->cellTotals[0] + 1)+
+                   topology->cellTotals[2] * topology->cellTotals[0] * (topology->cellTotals[1] + 1);
   // Allocate
   fullStarVector = new double[totalFaces];
   for(int loopA=0;loopA<totalFaces;loopA++) fullStarVector[loopA] = 0.0;
@@ -245,29 +228,29 @@ void MRIStructuredScan::ExpandStarShape(int totalStarFaces, int* facesID, double
 // ==============================
 // EVAL DIVERGENCE FOR EVERY CELL
 // ==============================
-double MRIStructuredScan::EvalMaxDivergence(double* filteredVec){
+double MRIScan::evalMaxDivergence(const MRIDoubleVec& filteredVec){
   double maxDivergence = 0.0;
   double currentDiv = 0.0;
   int currFace = 0;
-  double extNormal[3] = {0.0};
+  MRIDoubleVec extNormal(3,0.0);
   double normalSign = 0.0;
   // Loop on cells
-  for(int loopA=0;loopA<totalCellPoints;loopA++){
+  for(int loopA=0;loopA<topology->totalCells;loopA++){
     currentDiv = 0.0;
     // Loop on faces
-    for(size_t loopB=0;loopB<cellFaces[loopA].size();loopB++){
+    for(size_t loopB=0;loopB<topology->cellFaces[loopA].size();loopB++){
       // Get Current Face
-      currFace = cellFaces[loopA][loopB];
+      currFace = topology->cellFaces[loopA][loopB];
       // Get External Normal
-      getExternalFaceNormal(loopA,loopB,extNormal);
+      topology->getExternalFaceNormal(loopA,loopB,extNormal);
       // Get Sign
       normalSign = 0.0;
       for(int loopC=0;loopC<kNumberOfDimensions;loopC++){
-        normalSign += extNormal[loopC] * faceNormal[currFace][loopC];
+        normalSign += extNormal[loopC] * topology->faceNormal[currFace][loopC];
       }
-      round(normalSign);
+      MRIUtils::round(normalSign);
       // Get Sign
-      currentDiv += filteredVec[cellFaces[loopA][loopB]] * normalSign;
+      currentDiv += filteredVec[topology->cellFaces[loopA][loopB]] * normalSign;
     }
     // Store Max Absolute Value
     if (fabs(currentDiv)>maxDivergence){
@@ -280,113 +263,39 @@ double MRIStructuredScan::EvalMaxDivergence(double* filteredVec){
 // ====================================
 // EVAL CELL DIVERGENCE FOR A GIVEN QTY
 // ====================================
-MRIDoubleVec MRIStructuredScan::evalCellDivergences(MRIDoubleVec faceVec){
-  MRIDoubleVec cellDivs;
+void MRIScan::evalCellDivergences(const MRIDoubleVec& faceVec, MRIDoubleVec& cellDivs){
   double currentDiv = 0.0;
   int currFace = 0;
-  double extNormal[3] = {0.0};
+  MRIDoubleVec extNormal(3,0.0);
   double normalSign = 0.0;
 
   // Loop on cells
-  for(int loopA=0;loopA<totalCellPoints;loopA++){
+  for(int loopA=0;loopA<topology->totalCells;loopA++){
     currentDiv = 0.0;
     // Loop on faces
-    for(size_t loopB=0;loopB<cellFaces[loopA].size();loopB++){
+    for(size_t loopB=0;loopB<topology->cellFaces[loopA].size();loopB++){
       // Get Current Face
-      currFace = cellFaces[loopA][loopB];
+      currFace = topology->cellFaces[loopA][loopB];
       // Get External Normal
-      getExternalFaceNormal(loopA,loopB,extNormal);
+      topology->getExternalFaceNormal(loopA,loopB,extNormal);
       // Get Sign
       normalSign = 0.0;
       for(int loopC=0;loopC<kNumberOfDimensions;loopC++){
-        normalSign += extNormal[loopC] * faceNormal[currFace][loopC];
+        normalSign += extNormal[loopC] * topology->faceNormal[currFace][loopC];
       }
-      round(normalSign);
+      MRIUtils::round(normalSign);
       // Get Sign
-      currentDiv += faceVec[cellFaces[loopA][loopB]] * normalSign;
+      currentDiv += faceVec[topology->cellFaces[loopA][loopB]] * normalSign;
     }
     // Store Divergence
     cellDivs.push_back(currentDiv);
-  }
-  return cellDivs;
-}
-
-
-// =============
-// REORDER CELLS
-// =============
-void MRIStructuredScan::ReorderCells(std::vector<int> Perm){
-  // Allocate a copy of the Scan: Check if necessary!!!
-  std::vector<MRICell> tempCellPoints;
-  tempCellPoints.resize(totalCellPoints);
-  // Initialize
-  for(int loopA=0;loopA<totalCellPoints;loopA++){
-    // Conc
-    tempCellPoints[loopA].concentration = 0.0;
-    // Vel
-    tempCellPoints[loopA].velocity[0] = 0.0;
-    tempCellPoints[loopA].velocity[1] = 0.0;
-    tempCellPoints[loopA].velocity[2] = 0.0;
-    // Pos
-    tempCellPoints[loopA].position[0] = 0.0;
-    tempCellPoints[loopA].position[1] = 0.0;
-    tempCellPoints[loopA].position[2] = 0.0;
-  }
-  // Transfer
-  for(int loopA=0;loopA<totalCellPoints;loopA++){
-    if(Perm[loopA]>-1){
-      // Conc
-      tempCellPoints[Perm[loopA]].concentration = cellPoints[loopA].concentration;
-      // Vel
-      tempCellPoints[Perm[loopA]].velocity[0] = cellPoints[loopA].velocity[0];
-      tempCellPoints[Perm[loopA]].velocity[1] = cellPoints[loopA].velocity[1];
-      tempCellPoints[Perm[loopA]].velocity[2] = cellPoints[loopA].velocity[2];
-      // Pos
-      tempCellPoints[Perm[loopA]].position[0] = cellPoints[loopA].position[0];
-      tempCellPoints[Perm[loopA]].position[1] = cellPoints[loopA].position[1];
-      tempCellPoints[Perm[loopA]].position[2] = cellPoints[loopA].position[2];
-    }
-  }
-  // Copy Back
-  double PosNorm;
-  double VelNorm;
-  int invalidCount = 0;
-  int intCoords[3] = {0};
-  double Pos[3] = {0.0};
-  for(int loopA=0;loopA<totalCellPoints;loopA++){
-    // Conc
-    cellPoints[loopA].concentration = tempCellPoints[loopA].concentration;
-    // Vel
-    cellPoints[loopA].velocity[0] = tempCellPoints[loopA].velocity[0];
-    cellPoints[loopA].velocity[1] = tempCellPoints[loopA].velocity[1];
-    cellPoints[loopA].velocity[2] = tempCellPoints[loopA].velocity[2];
-    // Pos
-    PosNorm = MRIUtils::Do3DEucNorm(tempCellPoints[loopA].position);
-    VelNorm = MRIUtils::Do3DEucNorm(tempCellPoints[loopA].velocity);
-    if(PosNorm<kMathZero){
-      invalidCount++;
-    }
-    if((PosNorm<kMathZero)&&(VelNorm<kMathZero)&&(invalidCount>1)){
-      // Get Coords
-      MapIndexToCoords(loopA,intCoords);
-      // Get Position
-      MapCoordsToPosition(intCoords,true,Pos);
-      // Assign
-      cellPoints[loopA].position[0] = Pos[0];
-      cellPoints[loopA].position[1] = Pos[1];
-      cellPoints[loopA].position[2] = Pos[2];
-    }else{
-      cellPoints[loopA].position[0] = tempCellPoints[loopA].position[0];
-      cellPoints[loopA].position[1] = tempCellPoints[loopA].position[1];
-      cellPoints[loopA].position[2] = tempCellPoints[loopA].position[2];
-    }
   }
 }
 
 // ===================================
 // RECOVER VELOCITIES FROM FACE FLUXES
 // ===================================
-void MRIStructuredScan::RecoverCellVelocitiesRT0(bool useBCFilter, double* filteredVec){
+void MRIScan::recoverCellVelocitiesRT0(bool useBCFilter, MRIDoubleVec& filteredVec){
   // Variables
   int locFace1 = 0;
   int locFace2 = 0;
@@ -395,7 +304,7 @@ void MRIStructuredScan::RecoverCellVelocitiesRT0(bool useBCFilter, double* filte
   double firstAvVelocity = 0.0;
   double secondAvVelocity = 0.0;
   // Loop To Assemble Residual Vector
-  for(int loopA=0;loopA<totalCellPoints;loopA++){
+  for(int loopA=0;loopA<topology->totalCells;loopA++){
     for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
       // Get Local Face Numbers
       switch(loopB){
@@ -412,16 +321,16 @@ void MRIStructuredScan::RecoverCellVelocitiesRT0(bool useBCFilter, double* filte
           locFace2 = 1;
           break;
       }
-      firstFaceID = cellFaces[loopA][locFace1];
-      secondFaceID = cellFaces[loopA][locFace2];
+      firstFaceID = topology->cellFaces[loopA][locFace1];
+      secondFaceID = topology->cellFaces[loopA][locFace2];
       // Eval Average Velocity
-      firstAvVelocity = (filteredVec[firstFaceID] * faceNormal[firstFaceID][loopB]/faceArea[firstFaceID]);
-      secondAvVelocity = (filteredVec[secondFaceID]* faceNormal[secondFaceID][loopB]/faceArea[secondFaceID]);
+      firstAvVelocity = (filteredVec[firstFaceID] * topology->faceNormal[firstFaceID][loopB]/topology->faceArea[firstFaceID]);
+      secondAvVelocity = (filteredVec[secondFaceID]* topology->faceNormal[secondFaceID][loopB]/topology->faceArea[secondFaceID]);
       // Set Correction
       if(useBCFilter){
-        cellPoints[loopA].auxVector[loopB] = cellPoints[loopA].velocity[loopB]-0.5*(firstAvVelocity + secondAvVelocity);
+        cells[loopA].auxVector[loopB] = cells[loopA].velocity[loopB]-0.5*(firstAvVelocity + secondAvVelocity);
       }else{
-        cellPoints[loopA].auxVector[loopB] = 0.5*(firstAvVelocity + secondAvVelocity);
+        cells[loopA].auxVector[loopB] = 0.5*(firstAvVelocity + secondAvVelocity);
       }
     }
   }
@@ -430,7 +339,7 @@ void MRIStructuredScan::RecoverCellVelocitiesRT0(bool useBCFilter, double* filte
 // =======================================================
 // GET DIMENSION, SLICE AND STAR NUMBER FROM VORTEX NUMBER
 // =======================================================
-void MRIStructuredScan::getDimensionSliceStarFromVortex(int vortexNumber,int &dimNumber,int &sliceNumber,int &starNumber){
+void MRIScan::getDimensionSliceStarFromVortex(int vortexNumber,int &dimNumber,int &sliceNumber,int &starNumber){
   // Declare
   int totalSlices[3] = {0};
   int totalStars[3] = {0};
@@ -438,19 +347,19 @@ void MRIStructuredScan::getDimensionSliceStarFromVortex(int vortexNumber,int &di
   
   // Get Dimension,Slice and Star from the cardinality
   // X Direction
-  totalSlices[0] = cellTotals[0];
-  totalStars[0] = (cellTotals[1]+1)*(cellTotals[2]+1);
+  totalSlices[0] = topology->cellTotals[0];
+  totalStars[0] = (topology->cellTotals[1]+1)*(topology->cellTotals[2]+1);
   // Y Direction
-  totalSlices[1] = cellTotals[1];
-  totalStars[1] = (cellTotals[0]+1)*(cellTotals[2]+1);
+  totalSlices[1] = topology->cellTotals[1];
+  totalStars[1] = (topology->cellTotals[0]+1)*(topology->cellTotals[2]+1);
   // Z Direction
-  totalSlices[2] = cellTotals[2];
-  totalStars[2] = (cellTotals[0]+1)*(cellTotals[1]+1);
+  totalSlices[2] = topology->cellTotals[2];
+  totalStars[2] = (topology->cellTotals[0]+1)*(topology->cellTotals[1]+1);
 
   // Get the total Vortexes for every dimension
-  double totalVortexDim1 = totalSlices[0]*totalStars[0];
-  double totalVortexDim2 = totalVortexDim1 + totalSlices[1]*totalStars[1];
-  double totalVortexDim3 = totalVortexDim2 + totalSlices[2]*totalStars[2];
+  double totalVortexDim1 = totalSlices[0] * totalStars[0];
+  double totalVortexDim2 = totalVortexDim1 + totalSlices[1] * totalStars[1];
+  double totalVortexDim3 = totalVortexDim2 + totalSlices[2] * totalStars[2];
 
   // Check the dimension
   if(vortexNumber<totalVortexDim1){
@@ -476,7 +385,7 @@ void MRIStructuredScan::getDimensionSliceStarFromVortex(int vortexNumber,int &di
 // ====================
 // ASSEMBLE STAR SHAPES
 // ====================
-void MRIStructuredScan::AssembleStarShape(int vortexNumber, int &totalFaces, std::vector<int> &facesID, std::vector<double> &facesCoeffs){
+void MRIScan::assembleStarShape(int vortexNumber, int &totalFaces, std::vector<int> &facesID, std::vector<double> &facesCoeffs){
   // Declare
   int currFace = 0;
   double currCoeff = 0.0;
@@ -488,9 +397,9 @@ void MRIStructuredScan::AssembleStarShape(int vortexNumber, int &totalFaces, std
 
   // Loop Over All Faces
   double norm = 0.0;
-  for(size_t loopB=0;loopB<edgeFaces[vortexNumber].size();loopB++){
-    currFace = abs(edgeFaces[vortexNumber][loopB])-1;
-    currCoeff = (double)edgeFaces[vortexNumber][loopB]/(double)fabs(edgeFaces[vortexNumber][loopB]);
+  for(size_t loopB=0;loopB<topology->edgeFaces[vortexNumber].size();loopB++){
+    currFace = abs(topology->edgeFaces[vortexNumber][loopB])-1;
+    currCoeff = (double)topology->edgeFaces[vortexNumber][loopB]/(double)fabs(topology->edgeFaces[vortexNumber][loopB]);
 
     // New Code
     totalFaces++;
@@ -511,8 +420,16 @@ void MRIStructuredScan::AssembleStarShape(int vortexNumber, int &totalFaces, std
 // ===========================================
 // UPDATE THE RESIDUAL AND RESIDUAL NORM - MPI
 // ===========================================
-void UpdateResidualAndFilterMPI(int globTotFaces, double corrCoeff, int totalFaces, std::vector<int> facesID, std::vector<double> facesCoeffs,
-                             double* resVec, double* filteredVels, double &resNorm,int* minFaceGlob,int* maxFaceGlob,MRICommunicator* comm){
+void updateResidualAndFilterMPI(MRICommunicator* comm,
+                                int globTotFaces, double corrCoeff, 
+                                int totalFaces, 
+                                const MRIIntVec& facesID, 
+                                const MRIDoubleVec& facesCoeffs,                                
+                                const MRIIntVec& minFaceGlob,
+                                const MRIIntVec& maxFaceGlob,
+                                double &resNorm,
+                                MRIDoubleVec& resVec, 
+                                MRIDoubleVec& filteredVels){
 
   double normSqrIncr = 0.0;
   double normSqrTot = 0.0;
@@ -570,8 +487,13 @@ void UpdateResidualAndFilterMPI(int globTotFaces, double corrCoeff, int totalFac
 // =====================================
 // UPDATE THE RESIDUAL AND RESIDUAL NORM
 // =====================================
-void UpdateResidualAndFilter(double corrCoeff, int totalFaces, std::vector<int> facesID, std::vector<double> facesCoeffs,
-                             double* resVec, double* filteredVels, double &resNorm){
+void updateResidualAndFilter(double corrCoeff, 
+                             int totalFaces, 
+                             const MRIIntVec& facesID, 
+                             const MRIDoubleVec& facesCoeffs,
+                             double &resNorm,
+                             MRIDoubleVec& resVec, 
+                             MRIDoubleVec& filteredVels){
 
   double normSqrIncr = 0.0;
   int currentFaceID = 0;
@@ -596,7 +518,7 @@ void UpdateResidualAndFilter(double corrCoeff, int totalFaces, std::vector<int> 
 
 
 // EVAL CORRELATION COEFFICIENT
-double EvalCorrelationCoefficient(double* resVec, int totalFaces, const std::vector<int> &facesID, const std::vector<double> &facesCoeffs){
+double evalCorrelationCoefficient(const MRIDoubleVec& resVec, int totalFaces, const MRIIntVec& facesID, const MRIDoubleVec& facesCoeffs){
   double corrCoeff = 0.0;
   int currentFaceID = 0;
   double currentCoeff = 0.0;
@@ -609,7 +531,7 @@ double EvalCorrelationCoefficient(double* resVec, int totalFaces, const std::vec
 }
 
 // GET A STRING ASSOCIATED TO THE FACE LOCATION
-std::string GetFaceLocationString(int faceLocation){
+std::string getFaceLocationString(int faceLocation){
   switch(faceLocation){
     case kfacePlusX:  
       return std::string("PlusX");
@@ -634,8 +556,8 @@ std::string GetFaceLocationString(int faceLocation){
 }
 
 // Assemble Face Flux Vectors
-void MRIStructuredScan::AssembleResidualVector(bool useBCFilter, MRIThresholdCriteria* thresholdCriteria,
-                                                 int &totalFaces, double* &resVec, double* &filteredVec, double &resNorm){
+void MRIScan::assembleResidualVector(bool useBCFilter, MRIThresholdCriteria* thresholdCriteria,
+                                     int& totalFaces, MRIDoubleVec& resVec, MRIDoubleVec& filteredVec, double& resNorm){
   bool   continueToProcess = false;
   double currentValue = 0.0;
   double faceComponent = 0.0;
@@ -644,12 +566,12 @@ void MRIStructuredScan::AssembleResidualVector(bool useBCFilter, MRIThresholdCri
   bool   checkPassed = false;
 
   // Get Total Number Of Faces
-  totalFaces = faceConnections.size();
+  totalFaces = topology->faceConnections.size();
 
   // Allocate
-  resVec = new double[totalFaces];
-  filteredVec = new double[totalFaces];
-  int* resID = new int[totalFaces];
+  resVec.resize(totalFaces);
+  filteredVec.resize(totalFaces);
+  MRIIntVec resID(totalFaces);
 
   // Initialize
   for(int loopA=0;loopA<totalFaces;loopA++){
@@ -659,11 +581,11 @@ void MRIStructuredScan::AssembleResidualVector(bool useBCFilter, MRIThresholdCri
   }
 
   // Loop To Assemble Residual Vector
-  for(int loopA=0;loopA<totalCellPoints;loopA++){
+  for(int loopA=0;loopA<topology->totalCells;loopA++){
     // Check for BC
     if(useBCFilter){
-      currentValue = cellPoints[loopA].getQuantity(thresholdCriteria->thresholdQty);
-      continueToProcess = thresholdCriteria->MeetsCriteria(currentValue);
+      currentValue = cells[loopA].getQuantity(thresholdCriteria->thresholdQty);
+      continueToProcess = thresholdCriteria->meetsCriteria(currentValue);
     }else{
       continueToProcess = true;
     }
@@ -671,13 +593,13 @@ void MRIStructuredScan::AssembleResidualVector(bool useBCFilter, MRIThresholdCri
       // Loop On Faces
       for(int loopB=0;loopB<k3DNeighbors;loopB++){
         // Get Current Face
-        currentFace = cellFaces[loopA][loopB];
+        currentFace = topology->cellFaces[loopA][loopB];
         // Get Face Area
-        currFaceArea = faceArea[currentFace];
+        currFaceArea = topology->faceArea[currentFace];
         // Get Normal Veclocity
         faceComponent = 0.0;
         for(int loopC=0;loopC<kNumberOfDimensions;loopC++){
-          faceComponent += cellPoints[loopA].velocity[loopC] * faceNormal[currentFace][loopC];
+          faceComponent += cells[loopA].velocity[loopC] * topology->faceNormal[currentFace][loopC];
         }
         // Assemble
         resVec[currentFace] = resVec[currentFace] + currFaceArea * faceComponent;
@@ -690,8 +612,8 @@ void MRIStructuredScan::AssembleResidualVector(bool useBCFilter, MRIThresholdCri
     if(useBCFilter) checkPassed = (resID[loopA]>2);
     else checkPassed = (resID[loopA]<1)||(resID[loopA]>2);
     if(checkPassed){
-      std::string currentMsgs = "Internal: Wrong Face Connectivity, Face: " + MRIUtils::IntToStr(loopA)+ "; Connectivity: " + MRIUtils::IntToStr(resID[loopA])+".";
-      throw new MRIMeshCompatibilityException(currentMsgs.c_str());
+      std::string currentMsgs = "Internal: Wrong Face Connectivity, Face: " + MRIUtils::intToStr(loopA)+ "; Connectivity: " + MRIUtils::intToStr(resID[loopA])+".";
+      throw new MRIException(currentMsgs.c_str());
     }
   }
   
@@ -708,95 +630,18 @@ void MRIStructuredScan::AssembleResidualVector(bool useBCFilter, MRIThresholdCri
     resNorm = resNorm + (resVec[loopA]*resVec[loopA]);
   }
   resNorm = sqrt(resNorm);
-  // Deallocate
-  delete [] resID;
 }
 
-// ===================
-// PRINT DOUBLE MATRIX
-// ===================
-void printDoubleMatToFile(string fileName, MRIDoubleMat faceNormals){
-  // Open Output File
-  FILE* f;
-  f = fopen(fileName.c_str(),"w");
-  // Write Header
-  for(int loopA=0;loopA<faceNormals.size();loopA++){
-    for(int loopB=0;loopB<faceNormals[loopA].size();loopB++){
-      fprintf(f,"%f ",faceNormals[loopA][loopB]);
-    }
-    fprintf(f,"\n");
-  }
-  // Close Output file
-  fclose(f);
-}
-
-// ================
-// PRINT INT MATRIX
-// ================
-void printIntMatToFile(string fileName, MRIIntMat mat){
-  // Open Output File
-  FILE* f;
-  f = fopen(fileName.c_str(),"w");
-  // Write Header
-  for(int loopA=0;loopA<mat.size();loopA++){
-    for(int loopB=0;loopB<mat[loopA].size();loopB++){
-      fprintf(f,"%d ",mat[loopA][loopB]);
-    }
-    fprintf(f,"\n");
-  }
-  // Close Output file
-  fclose(f);
-}
-
-// ===================
-// PRINT DOUBLE VECTOR
-// ===================
-void printDoubleVecToFile(string fileName, MRIDoubleVec vec){
-  // Open Output File
-  FILE* f;
-  f = fopen(fileName.c_str(),"w");
-  // Write Header
-  for(int loopA=0;loopA<vec.size();loopA++){
-    fprintf(f,"%f\n",vec[loopA]);
-  }
-  // Close Output file
-  fclose(f);
-}
-
-// ===================
-// PRINT DOUBLE VECTOR
-// ===================
-void printIntVecToFile(string fileName, MRIIntVec vec){
-  // Open Output File
-  FILE* f;
-  f = fopen(fileName.c_str(),"w");
-  // Write Header
-  for(int loopA=0;loopA<vec.size();loopA++){
-    fprintf(f,"%d\n",vec[loopA]);
-  }
-  // Close Output file
-  fclose(f);
-}
-
-// ===================
-// PRINT DOUBLE MATRIX
-// ===================
-void printDoubleArrayToFile(string fileName, int size, double* vec){
-  // Open Output File
-  FILE* f;
-  f = fopen(fileName.c_str(),"w");
-  // Write Header
-  for(int loopA=0;loopA<size;loopA++){
-    fprintf(f,"%f\n",vec[loopA]);
-  }
-  // Close Output file
-  fclose(f);
-}
 
 // ================
 // FORM VORTEX LIST
 // ================
-void MRIStructuredScan::formVortexList(int totVortex,int* minFace,int* maxFace,MRIIntVec& innerVortexList,MRIIntVec& boundaryVortexList,MRICommunicator* comm){
+void MRIScan::formVortexList(MRICommunicator* comm,
+                             int totVortex,
+                             const MRIIntVec& minFace,
+                             const MRIIntVec& maxFace,
+                             MRIIntVec& innerVortexList,
+                             MRIIntVec& boundaryVortexList){
   bool foundFace = true;
   bool isInternal = true;
   int currFace = 0;
@@ -805,8 +650,8 @@ void MRIStructuredScan::formVortexList(int totVortex,int* minFace,int* maxFace,M
   // Form Inner List for Current Processor
   for(int loopA=0;loopA<totVortex;loopA++){
     foundFace = true;
-    for(size_t loopB=0;loopB<edgeFaces[loopA].size();loopB++){
-      currFace = abs(edgeFaces[loopA][loopB])-1;
+    for(size_t loopB=0;loopB<topology->edgeFaces[loopA].size();loopB++){
+      currFace = abs(topology->edgeFaces[loopA][loopB])-1;
       foundFace = (foundFace && ((currFace>=minFace[comm->currProc])&&(currFace<maxFace[comm->currProc])));
     }
     if(foundFace){
@@ -821,9 +666,9 @@ void MRIStructuredScan::formVortexList(int totVortex,int* minFace,int* maxFace,M
     isInternal = false;
     for(int loopC=0;loopC<comm->totProc;loopC++){
       foundFace = true;
-      for(size_t loopB=0;loopB<edgeFaces[loopA].size();loopB++){
-        currFace = abs(edgeFaces[loopA][loopB])-1;
-        foundFace = (foundFace && ((currFace>=minFace[loopC])&&(currFace<maxFace[loopC])));
+      for(size_t loopB=0;loopB<topology->edgeFaces[loopA].size();loopB++){
+        currFace = abs(topology->edgeFaces[loopA][loopB])-1;
+        foundFace = (foundFace && ((currFace >= minFace[loopC])&&(currFace < maxFace[loopC])));
       }
       isInternal = (isInternal || foundFace);
     }
@@ -831,68 +676,76 @@ void MRIStructuredScan::formVortexList(int totVortex,int* minFace,int* maxFace,M
       boundaryVortexList.push_back(loopA);
     }
   }
-  //printf("NUMBER OF VORTEXES FOR THIS PROCESS: %d\n",countFace);
 }
 
 // =========================================
 // COMMUNICATE RESIDUAL AND FILTERED VECTORS
 // =========================================
-void communicateResFilt2(int totalFaces,double* resVec,double* filteredVels,MRICommunicator* comm,int* minFaceGlob,int* maxFaceGlob,double& resNorm){
+void communicateResFilt2(MRICommunicator* comm,
+                         int totalFaces,
+                         const MRIIntVec& minFaceGlob,
+                         const MRIIntVec& maxFaceGlob,
+                         MRIDoubleVec& resVec,
+                         MRIDoubleVec& filteredVels,
+                         double& resNorm){
+  
   int size = maxFaceGlob[comm->currProc] - minFaceGlob[comm->currProc];
-  int* recvcounts = new int[comm->totProc];
-  int* displs = new int[comm->totProc];
-  double* storeVec = new double[size];
+  MRIIntVec recvcounts(comm->totProc);
+  MRIIntVec displs(comm->totProc);
+  MRIDoubleVec storeVec(size);
+  
   for(int loopA=0;loopA<comm->totProc;loopA++){
     displs[loopA] = minFaceGlob[loopA];
     recvcounts[loopA] = maxFaceGlob[loopA] - minFaceGlob[loopA];
   }
+  
   // Residual Vector
   for(int loopA=minFaceGlob[comm->currProc];loopA<maxFaceGlob[comm->currProc];loopA++){
     storeVec[loopA-minFaceGlob[comm->currProc]] = resVec[loopA];
   }
-  MPI_Allgatherv(&storeVec[0],size,MPI_DOUBLE,&resVec[0],recvcounts,displs,MPI_DOUBLE,comm->mpiComm);
+  MPI_Allgatherv(&storeVec[0],size,MPI_DOUBLE,&resVec[0],&recvcounts[0],&displs[0],MPI_DOUBLE,comm->mpiComm);
+  
   // Filter Vector
   for(int loopA=minFaceGlob[comm->currProc];loopA<maxFaceGlob[comm->currProc];loopA++){
     storeVec[loopA-minFaceGlob[comm->currProc]] = filteredVels[loopA];
   }
-  MPI_Allgatherv(&storeVec[0],size,MPI_DOUBLE,&filteredVels[0],recvcounts,displs,MPI_DOUBLE,comm->mpiComm);
+  MPI_Allgatherv(&storeVec[0],size,MPI_DOUBLE,&filteredVels[0],&recvcounts[0],&displs[0],MPI_DOUBLE,comm->mpiComm);
   // Update Norm
   resNorm = 0.0;
   for(int loopA=0;loopA<totalFaces;loopA++){
     resNorm += resVec[loopA] * resVec[loopA];
   }
   resNorm = sqrt(resNorm);
-  delete [] recvcounts;
-  delete [] displs;
-  delete [] storeVec;
 }
 
 // =========================================
 // SYNC TEMPORARY EXPANSION AMONG PROCESSORS
 // =========================================
-void SyncExpansion(int totalVortexes, double* currentExp, MRICommunicator* comm){
-  double* target = new double[totalVortexes];
+void syncExpansion(int totalVortexes, MRIDoubleVec& currentExp, MRICommunicator* comm){
+  MRIDoubleVec target(totalVortexes);
   MPI_Reduce(&currentExp[0],&target[0],totalVortexes,MPI_DOUBLE,MPI_SUM,0,comm->mpiComm);
   if(comm->currProc == 0){
     for(int loopA=0;loopA<totalVortexes;loopA++){
       currentExp[loopA] = target[loopA];
     }
   }
-  delete [] target;
 }
-
 
 // =================
 // PHYSICS FILTERING
 // =================
-void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommunicator* comm){
+void MRIScan::applySMPFilter(MRICommunicator* comm, bool isBC, 
+                             MRIThresholdCriteria* thresholdCriteria,
+                             double itTol,
+                             int maxIt,
+                             bool useConstantPatterns){
 
   // INITIALIZATION
-  int totalFaces = faceConnections.size();
-  double* resVec = NULL;
-  double* filteredVec = NULL;
-  std::vector<int> facesID;
-  std::vector<double> facesCoeffs;
+  int totalFaces = topology->faceConnections.size();
+  MRIDoubleVec resVec;
+  MRIDoubleVec filteredVec;
+  MRIIntVec facesID;
+  MRIDoubleVec facesCoeffs;
   MRIIntVec innerVortexList;
   MRIIntVec boundaryVortexList;
   double corrCoeff = 0.0;
@@ -926,8 +779,8 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
   float updateStar_TotalTime = 0.0;
 
   // Global Array for Face Storage
-  int minFaceGlob[comm->totProc];
-  int maxFaceGlob[comm->totProc];
+  MRIIntVec minFaceGlob(comm->totProc);
+  MRIIntVec maxFaceGlob(comm->totProc);
   int minFaceOnProc = 0.0;
   int maxFaceOnProc = 0.0;
   for(int loopA=0;loopA<comm->totProc;loopA++){
@@ -954,23 +807,16 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
 
   // Assemble Face Flux Vectors
   assembleRes_BeginTime = clock();
-  AssembleResidualVector(isBC,options->thresholdCriteria,totalFaces,resVec,filteredVec,resNorm);
+  assembleResidualVector(isBC,thresholdCriteria,totalFaces,resVec,filteredVec,resNorm);
   assembleRes_TotalTime += float( clock () - assembleRes_BeginTime ) /  CLOCKS_PER_SEC;
-
-  // Print Face Normals
-  //string fileName("resVec_proc_" + to_string(comm->currProc) + ".dat");
-  //printfDoubleArrayToFile(fileName,totalFaces,resVec);
-
-  // Print Residual Vector
-  //PrintResidualVector(std::string("resVectorFile_"+std::to_string(comm->currProc)+".txt").c_str(),totalFaces,resVec);
 
   // Initial Residual
   if(comm->currProc == 0){
-    WriteSchMessage("\n");
+    writeSchMessage("\n");
     if (isBC){
-      WriteSchMessage("FILTER ALGORITHM - BC - Step: "+MRIUtils::FloatToStr(scanTime)+" ---------------------------\n");
+      writeSchMessage("FILTER ALGORITHM - BC - Step: "+MRIUtils::floatToStr(scanTime)+" ---------------------------\n");
     }else{
-      WriteSchMessage("FILTER ALGORITHM - FULL - Step "+MRIUtils::FloatToStr(scanTime)+" ---------------------------\n");
+      writeSchMessage("FILTER ALGORITHM - FULL - Step "+MRIUtils::floatToStr(scanTime)+" ---------------------------\n");
     }
   }
 
@@ -978,19 +824,19 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
   const clock_t begin_time = clock();
   
   if(comm->currProc == 0){
-    WriteSchMessage("Initial Residual Norm: "+MRIUtils::FloatToStr(resNorm)+"\n");
+    writeSchMessage("Initial Residual Norm: "+MRIUtils::floatToStr(resNorm)+"\n");
   }
 
   // Initialize Expansion
   MRIExpansion* bcExpansion = NULL;
-  int totalVortexes = EvalTotalVortex();
+  int totalVortexes = evalTotalVortex();
 
   // Allocate Temporary Expansion coefficient place holder
-  double* currentExp = new double[totalVortexes];
+  MRIDoubleVec currentExp(totalVortexes);
 
   // Form List of Vortexes Including Faces for MPI
   if(comm->totProc > 1){
-    formVortexList(totalVortexes,minFaceGlob,maxFaceGlob,innerVortexList,boundaryVortexList,comm);
+    formVortexList(comm,totalVortexes,minFaceGlob,maxFaceGlob,innerVortexList,boundaryVortexList);
   }else{
     for(int loopA=0;loopA<totalVortexes;loopA++){
       innerVortexList.push_back(loopA);
@@ -1011,13 +857,11 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
   int itCount = 0;
   double oldResNorm = resNorm;
   double oldTwoNorm = twoNorm;
-  // Set Tolerance
-  double itTol = options->itTol;
   // Initialize Component Count
   int componentCount = 0;
 
   // Start Filter Loop
-  while((!converged)&&(itCount<options->maxIt)){
+  while((!converged)&&(itCount<maxIt)){
 
     // Update Iteration Count
     itCount++;
@@ -1027,17 +871,17 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
     // LOOP ON THE THREE DIRECTIONS
     for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
       // Correlate Constant Patterns
-      if(options->useConstantPatterns){
+      if(useConstantPatterns){
 
         // Find Constant Patterns
         if(comm->totProc > 1){
-          AssembleConstantPatternMPI(loopB,totalStarFaces,facesID,facesCoeffs,minFaceOnProc,maxFaceOnProc,comm);
+          assembleConstantPatternMPI(loopB,totalStarFaces,facesID,facesCoeffs,minFaceOnProc,maxFaceOnProc,comm);
         }else{
-          AssembleConstantPattern(loopB,totalStarFaces,facesID,facesCoeffs);
+          assembleConstantPattern(loopB,totalStarFaces,facesID,facesCoeffs);
         }
 
         // Find Correlation
-        corrCoeff = EvalCorrelationCoefficient(resVec,totalStarFaces,facesID,facesCoeffs);
+        corrCoeff = evalCorrelationCoefficient(resVec,totalStarFaces,facesID,facesCoeffs);
 
         // Store Correlation coefficient in Expansion
         if(comm->totProc > 1){
@@ -1056,9 +900,12 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
 
         // Update Residual
         if(comm->totProc > 1){
-          UpdateResidualAndFilterMPI(totalFaces,corrCoeff,totalStarFaces,facesID,facesCoeffs,resVec,filteredVec,resNorm,minFaceGlob,maxFaceGlob,comm);
+          updateResidualAndFilterMPI(comm,totalFaces,corrCoeff,
+                                     totalStarFaces,facesID,facesCoeffs,                                
+                                     minFaceGlob,maxFaceGlob,
+                                     resNorm,resVec,filteredVec);
         }else{
-          UpdateResidualAndFilter(corrCoeff,totalStarFaces,facesID,facesCoeffs,resVec,filteredVec,resNorm);
+          updateResidualAndFilter(corrCoeff,totalStarFaces,facesID,facesCoeffs,resNorm,resVec,filteredVec);
         }
       }
     }
@@ -1089,13 +936,13 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
 
       // ASSEMBLE STAR
       assembleStar_BeginTime = clock();
-      AssembleStarShape(currVortex,totalStarFaces,facesID,facesCoeffs);
+      assembleStarShape(currVortex,totalStarFaces,facesID,facesCoeffs);
       // Communicate
       assembleStar_TotalTime += float( clock () - assembleStar_BeginTime ) /  CLOCKS_PER_SEC;
 
       // FIND CORRELATION
       correlateStar_BeginTime = clock();
-      corrCoeff = EvalCorrelationCoefficient(resVec,totalStarFaces,facesID,facesCoeffs);
+      corrCoeff = evalCorrelationCoefficient(resVec,totalStarFaces,facesID,facesCoeffs);
       correlateStar_TotalTime += float( clock () - correlateStar_BeginTime ) /  CLOCKS_PER_SEC;
 
       // Store Correlation coefficient in Expansion
@@ -1103,13 +950,13 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
 
       // UPDATE RESIDUAL
       updateStar_BeginTime = clock();
-      UpdateResidualAndFilter(corrCoeff,totalStarFaces,facesID,facesCoeffs,resVec,filteredVec,resNorm);
+      updateResidualAndFilter(corrCoeff,totalStarFaces,facesID,facesCoeffs,resNorm,resVec,filteredVec);
       updateStar_TotalTime += float( clock () - updateStar_BeginTime ) /  CLOCKS_PER_SEC;
     }
 
     // Sync Expansion for main and boundary filter
     if(comm->totProc > 1){
-      SyncExpansion(totalVortexes,currentExp,comm);
+      syncExpansion(totalVortexes,currentExp,comm);
     }
     // Add to stored expansion
     if(comm->currProc == 0){
@@ -1125,7 +972,9 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
     // IF MPI then Communicate Residual Vector
     if(comm->totProc > 1){
       // Communicate Residual, FilteredVels and Update Norm
-      communicateResFilt2(totalFaces,resVec,filteredVec,comm,minFaceGlob,maxFaceGlob,resNorm);
+      communicateResFilt2(comm,totalFaces,
+                          minFaceGlob,maxFaceGlob,
+                          resVec,filteredVec,resNorm);
     }
 
     for(int loopB=0;loopB<boundaryVortexList.size();loopB++){
@@ -1137,13 +986,13 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
 
       // ASSEMBLE STAR
       assembleStar_BeginTime = clock();
-      AssembleStarShape(currVortex,totalStarFaces,facesID,facesCoeffs);
+      assembleStarShape(currVortex,totalStarFaces,facesID,facesCoeffs);
       // Communicate
       assembleStar_TotalTime += float( clock () - assembleStar_BeginTime ) /  CLOCKS_PER_SEC;
 
       // FIND CORRELATION
       correlateStar_BeginTime = clock();
-      corrCoeff = EvalCorrelationCoefficient(resVec,totalStarFaces,facesID,facesCoeffs);
+      corrCoeff = evalCorrelationCoefficient(resVec,totalStarFaces,facesID,facesCoeffs);
       correlateStar_TotalTime += float( clock () - correlateStar_BeginTime ) /  CLOCKS_PER_SEC;
 
       // Store Correlation coefficient in Expansion
@@ -1157,7 +1006,7 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
 
       // UPDATE RESIDUAL
       updateStar_BeginTime = clock();
-      UpdateResidualAndFilter(corrCoeff,totalStarFaces,facesID,facesCoeffs,resVec,filteredVec,resNorm);
+      updateResidualAndFilter(corrCoeff,totalStarFaces,facesID,facesCoeffs,resNorm,resVec,filteredVec);
       updateStar_TotalTime += float( clock () - updateStar_BeginTime ) /  CLOCKS_PER_SEC;
     }
 
@@ -1166,9 +1015,9 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
     // Eval Two-Norm of the Coefficient Vector
     if(comm->currProc == 0){
       if(!isBC){
-        twoNorm = expansion->Get2Norm(false);
+        twoNorm = expansion->get2Norm(false);
       }else{
-        twoNorm = bcExpansion->Get2Norm(false);
+        twoNorm = bcExpansion->get2Norm(false);
       }
     }
     // Broadcase Two Norm
@@ -1190,8 +1039,8 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
 
     // WRITE MESSAGE AT EVERY INTERATION
     if(comm->currProc == 0){
-      WriteSchMessage("[" + MRIUtils::IntToStr(comm->currProc) + "] It: " + MRIUtils::IntToStr(itCount) + "; ABS Res: "+MRIUtils::FloatToStr(resNorm)+"; Rel: " + MRIUtils::FloatToStr(relResNorm) +
-                      "; Coeff 2-Norm: "+MRIUtils::FloatToStr(twoNorm)+"; Rel 2-Norm: " + MRIUtils::FloatToStr(relTwoNorm)+"\n");
+      writeSchMessage("[" + MRIUtils::intToStr(comm->currProc) + "] It: " + MRIUtils::intToStr(itCount) + "; ABS Res: "+MRIUtils::floatToStr(resNorm)+"; Rel: " + MRIUtils::floatToStr(relResNorm) +
+                      "; Coeff 2-Norm: "+MRIUtils::floatToStr(twoNorm)+"; Rel 2-Norm: " + MRIUtils::floatToStr(relTwoNorm)+"\n");
     }
 
     // Check Convergence
@@ -1210,8 +1059,8 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
     oldTwoNorm = twoNorm;
   }
 
-  // Check If the Flux Is Locally Conservative
-  maxDivergence = EvalMaxDivergence(filteredVec);
+  // Check If the Flux Is Locally Conservative  
+  maxDivergence = evalMaxDivergence(filteredVec);
 
   // Make Diffence between Coefficient Expansions
   if(comm->currProc == 0){
@@ -1226,14 +1075,15 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
   }
 
   // Recover Velocities from Face Fluxes
-  RecoverCellVelocitiesRT0(isBC,filteredVec);
+  recoverCellVelocitiesRT0(isBC,filteredVec);
+  
 
   // WRITE CPU TIME AND NUMBER OF ITERATIONS
   float totalCPUTime = float( clock () - begin_time ) /  CLOCKS_PER_SEC;
-  WriteSchMessage("Total Iterations " + MRIUtils::IntToStr(itCount) + "; Total CPU Time: " + MRIUtils::FloatToStr(totalCPUTime) + "\n");
+  writeSchMessage("Total Iterations " + MRIUtils::intToStr(itCount) + "; Total CPU Time: " + MRIUtils::floatToStr(totalCPUTime) + "\n");
 
   // Eval Magniture and Angle Error
-  RecoverGlobalErrorEstimates(maxNormError,maxAngleError);
+  recoverGlobalErrorEstimates(maxNormError,maxAngleError);
 
   // PRINT TIME STATISTICS
   if(comm->currProc == 0){
@@ -1245,14 +1095,14 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
     printf("Residual Update Time: %f [s]\n",updateStar_TotalTime);
     printf("\n");
     printf("--- INFO\n");
-    WriteSchMessage("Final Residual Norm: " + MRIUtils::FloatToStr(resNorm) + "\n");
+    writeSchMessage("Final Residual Norm: " + MRIUtils::floatToStr(resNorm) + "\n");
     // Write Divergence Message
-    WriteSchMessage("Max Divergence: " + MRIUtils::FloatToStr(maxDivergence) + "\n");
+    writeSchMessage("Max Divergence: " + MRIUtils::floatToStr(maxDivergence) + "\n");
     // Write Final Residual
-    WriteSchMessage("Average Magnitude Error: " + MRIUtils::FloatToStr(maxNormError) + "\n");
-    WriteSchMessage("Average Angular Error: " + MRIUtils::FloatToStr(maxAngleError) + "\n");
+    writeSchMessage("Average Magnitude Error: " + MRIUtils::floatToStr(maxNormError) + "\n");
+    writeSchMessage("Average Angular Error: " + MRIUtils::floatToStr(maxAngleError) + "\n");
     // Close Filter Comments
-    WriteSchMessage("---\n");
+    writeSchMessage("---\n");
   }
 
   // Update Velocities
@@ -1260,26 +1110,23 @@ void MRIStructuredScan::applySMPFilter(MRIOptions* options, bool isBC, MRICommun
 
   // Filtered Velocities Are Available
   //AreVelocityFiltered:=TRUE;
-
-  // Deallocate
-  delete [] currentExp;
-  delete [] resVec;
-  delete [] filteredVec;
 }
 
 // ==================================
 // REBUILD FROM EXPANSION COEFFICIENT
 // ==================================
-void MRIStructuredScan::RebuildFromExpansion(MRIExpansion* expansion,bool useConstantFlux){
+void MRIScan::rebuildFromExpansion(MRIExpansion* expansion, bool useConstantFlux){
+  
   // RECONSTRUCTION
   int totalStarFaces = 0;
   int currFaceID = 0;
   double currFaceCoeff = 0.0;
-  std::vector<int> facesID;
-  std::vector<double> facesCoeffs;
+  MRIIntVec facesID;
+  MRIDoubleVec facesCoeffs;
+  
   // Get total number of vortexes
-  int totalVortex = EvalTotalVortex();
-  double* faceFluxVec = new double[totalVortex+3];
+  int totalVortex = evalTotalVortex();
+  MRIDoubleVec faceFluxVec(totalVortex + 3);
 
   // INITIALIZE
   for(int loopA=0;loopA<totalVortex+3;loopA++){
@@ -1290,7 +1137,7 @@ void MRIStructuredScan::RebuildFromExpansion(MRIExpansion* expansion,bool useCon
   if(useConstantFlux){
     for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
       // Find Star Shape
-      AssembleConstantPattern(loopB/*Current Dimension*/,totalStarFaces,facesID,facesCoeffs);
+      assembleConstantPattern(loopB/*Current Dimension*/,totalStarFaces,facesID,facesCoeffs);
       // Add to faces
       for(int loopC=0;loopC<totalStarFaces;loopC++){
         currFaceID = facesID[loopC];
@@ -1314,7 +1161,7 @@ void MRIStructuredScan::RebuildFromExpansion(MRIExpansion* expansion,bool useCon
     // Increment the current component
     componentCount++;
     // Find Star Shape
-    AssembleStarShape(loopB,totalStarFaces,facesID,facesCoeffs);
+    assembleStarShape(loopB,totalStarFaces,facesID,facesCoeffs);
     // Find Correlation
     for(int loopE=0;loopE<totalStarFaces;loopE++){
       currFaceID = facesID[loopE];
@@ -1324,11 +1171,8 @@ void MRIStructuredScan::RebuildFromExpansion(MRIExpansion* expansion,bool useCon
   }
 
   // Recover Velocities from Face Fluxes
-  RecoverCellVelocitiesRT0(false,faceFluxVec);
+  recoverCellVelocitiesRT0(false,faceFluxVec);
 
   // Update Velocities
-  UpdateVelocities();
-
-  // DELETE ARRAY
-  delete [] faceFluxVec;
+  updateVelocities();
 }

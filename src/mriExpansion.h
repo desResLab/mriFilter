@@ -20,13 +20,13 @@ public:
     ~MRIExpansion();
     // MEMBER FUNCTIONS
     // Fill From Vector
-    void FillFromVector(std::vector<double> Expansion);
+    void fillFromVector(std::vector<double> Expansion);
     // Threshold Vortex Expansion
-    void ApplyVortexThreshold(int thresholdType, double ratio);
+    void applyVortexThreshold(int thresholdType, double ratio);
     // Eval 2-Norm of Coefficient Vector
-    double Get2Norm(bool onlyVortex);
+    double get2Norm(bool onlyVortex);
     // Write to text File
-    void WriteToFile(std::string outFile);
+    void writeToFile(std::string outFile);
 };
 
 #endif // MRIEXPANSION_H

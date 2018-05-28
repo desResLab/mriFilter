@@ -3,9 +3,17 @@
 
 # include <string>
 # include <vector>
+# include <stdlib.h>
+# include <getopt.h>
+# include <boost/algorithm/string.hpp>
+
 
 # include "mriThresholdCriteria.h"
+# include "mriOperation.h"
 # include "mriCommunicator.h"
+# include "mriConstants.h"
+# include "mriUtils.h"
+# include "mriException.h"
 
 using namespace std;
 
@@ -33,13 +41,15 @@ using namespace std;
 
   // INPUT TYPES
   const int itFILEVTK                       = 0;
-  const int itFILETECPLOT                   = 1;
+  const int itFILEPLT                       = 1;
   const int itTEMPLATE                      = 2;
   const int itEXPANSION                     = 3;
 
   // OUTPUT TYPES
   const int otFILEVTK                       = 0;
-  const int otFILETECPLOT                   = 1;
+  const int otFILEPLT                       = 1;
+
+class MRIOperation;
 
 // CLASS MRIPROGRAMOPTIONS
 class MRIOptions{
@@ -51,91 +61,53 @@ public:
   string statFileName;
   // Input Templates
   int templateType;
-  vector<double> templateParams;
+  MRIDoubleVec templateParams;
   // Command File Options
   bool generateCommandFile;
   bool useCommandFile;
   string commandFileName;
-  double itTol;
-  int maxIt;
-  int thresholdQty;
-  int thresholdType;
-  double thresholdValue; 
-  MRIThresholdCriteria* thresholdCriteria;
-  // Noise to apply
-  bool applyNoise;
-  double noiseIntensity;
-  double noiseSeed;
-  // Save Initial Velocities
-  bool saveInitialVel;
-  // Save Expansion Coefficients
-  bool saveExpansionCoeffs;
-  // Export File Format
-  int inputFormatType;
-  int outputFormatType;
-  // Apply SMP Filter
-  bool applySMPFilter;
-  // Apply BC Filter
-  bool applyBCFilter;
-  bool useConstantPatterns;
   // Sequence Processing
   bool haveSequence;
   string sequenceFileName;
-  vector<string> sequenceFileList;
-  vector<double> sequenceFileTimes;
-  // Post processing
-  bool evalPopVortexCriteria;
-  bool evalSMPVortexCriterion;
-  bool evalPressure;
-  // Pressure Gradient Components to include
+  MRIStringVec sequenceFileList;
+  MRIDoubleVec sequenceFileTimes;
+  // Export File Format
+  int inputFormatType;
+  int outputFormatType;
+  // Material Properties
+  double density;
+  double viscosity;
+  // threshold Criteria
+  int thresholdQty;
+  int thresholdType;
+  double thresholdValue;  
+  MRIThresholdCriteria* thresholdCriteria;
+  // PPE Solver Options
   bool PPE_IncludeAccelerationTerm;
   bool PPE_IncludeAdvectionTerm;
   bool PPE_IncludeDiffusionTerm;
-  bool PPE_IncludeReynoldsTerm;
-  // Turbulent Viscosity
+  bool PPE_IncludeReynoldsTerm;  
   bool readMuTFromFile;
   string muTFile;
   double smagorinskyCoeff;
-  // Export to Poisson Solver
-  bool exportToPoisson;
-  string poissonFileName;
-  // Export to Wall Distance Solver
-  bool exportToDistance;
-  string distanceFileName;
-
-  // Options for the material properties
-  double density;
-  double viscosity;
-
-  // Filtering Options
-  int applyMedianFilter;
-  int filterNumIterations;
-  int medianFilterType;
-  int medianFilterOrder;
-
-  // Clean Boundary Velocities
-  bool cleanBoundaryVelocities;
-  bool interpolateBoundaryVelocities;
-
-  // Scale Velocities and Positions
-  bool scaleVelocities;
-  double scaleVelocityFactor;
-  bool scalePositions;
-  double scalePositionFactor;
+  // List of operations
+  vector<MRIOperation*> operationList;
 
   // CONSTRUCTOR
   MRIOptions();
+  
   // Distructor
   ~MRIOptions();
 
   // Get Command Options from input Arguments
   int getCommadLineOptions(int argc, char **argv);
+  
   // Get Options from Command File
   int getOptionsFromCommandFile(string commandFile);
-  // Write Command File Prototype
-  int writeCommandFilePrototype(string commandFile);  
+  
   // Write Options to file
   int writeOptionsToFile(string outFile);
+  
   // Read Sequence File List
   void readSequenceFileList(string fileName,MRIStringVec& sequenceFileList,MRIDoubleVec& sequenceFileTimes);
 

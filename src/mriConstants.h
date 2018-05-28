@@ -26,6 +26,7 @@
   const int kfaceMinusY = 3;
   const int kfacePlusZ =  4;
   const int kfaceMinusZ = 5;
+  
   // Quantities
   const int kNoQuantity =  -1;
   const int kQtyPositionX =  0;
@@ -41,6 +42,13 @@
   const int kQtyPressGradientMod = 10;
   const int kQtyRelPressure =  11;
   const int kQtyVelModule =  12;
+
+  // Threshold Criteria
+  const int kCriterionLessThen = 0;
+  const int kCriterionGreaterThen = 1;
+  const int kCriterionABSLessThen = 2;
+  const int kCriterionABSGreaterThen = 3;
+
   // Directions
   const int kdirX = 0;
   const int kdirY = 1;
@@ -86,6 +94,10 @@
   const int kMedianFilter   = 0;
   const int kMeanFilter     = 1;
   const int kGaussianFilter = 2;
+
+  // Types of inputs
+  const int kInputVTK = 0;
+  const int kInputPLT = 1;
 
   // Aternative Typedefs
   typedef const int MRIDirection;

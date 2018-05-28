@@ -1,11 +1,16 @@
 #ifndef MRICOMMUNICATOR_H
 #define MRICOMMUNICATOR_H
 
-# include "string"
+# include <stddef.h>
+# include <string>
+
+# include "mriCell.h"
+# include "mriUtils.h"
+# include "mriTypes.h"
+# include "mriScan.h"
+# include "mriSequence.h"
 
 # include "mpi.h"
-# include "mriCell.h"
-# include "mriTypes.h"
 
 using namespace std;
 

@@ -1,6 +1,4 @@
-#include <math.h>
-#include "mriThresholdCriteria.h"
-#include "mriConstants.h"
+# include "mriThresholdCriteria.h"
 
 MRIThresholdCriteria::MRIThresholdCriteria(int qty, int type, double value){
   thresholdQty = qty;
@@ -13,7 +11,7 @@ MRIThresholdCriteria::~MRIThresholdCriteria()
 }
 
 // Check If a Value Meets the Predefined Criteria
-bool MRIThresholdCriteria::MeetsCriteria(double currentValue){
+bool MRIThresholdCriteria::meetsCriteria(double currentValue){
   if(thresholdQty == kNoQuantity){
     return false;
   }else{
