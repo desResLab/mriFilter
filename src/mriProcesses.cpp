@@ -1,7 +1,5 @@
 #include <math.h>
 #include <boost/lexical_cast.hpp>
-#include <iostream>
-using namespace std;
 #include "mriScan.h"
 #include "mriStructuredScan.h"
 #include "mriThresholdCriteria.h"
@@ -362,8 +360,6 @@ void MRIScan::ApplyGaussianNoise(double stDev, double seed){
   // Multiply by the velocity module
   stDev = stDev * maxVelModule / 100.0;
   MRIUtils::SetSeed(seed);
-  cout << "STD DEV" << endl;
-  cout << stDev << endl;
   // Apply Gaussian Noise
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
     // Loop On Cells
