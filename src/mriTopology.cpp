@@ -1068,7 +1068,7 @@ void mriTopology::mapCoordsToPosition(const mriIntVec& coords, bool addMeshMinim
 // ============================
 void mriTopology::readFromVTK_ASCII(string vtkFileName, vtkStructuredPointsOptionRecord& vtkOptions){
   // Write Progress
-  writeSchMessage(string("Reading Topology From: ") + vtkFileName + string("\n"));
+  writeSchMessage(string("Reading Topology From VTK: ") + vtkFileName + string("\n"));
 
   // Assign File
   ifstream vtkFile;
@@ -1117,7 +1117,7 @@ void mriTopology::readFromVTK_ASCII(string vtkFileName, vtkStructuredPointsOptio
 void mriTopology::readFromPLT_ASCII(string pltFileName, pltOptionRecord& pltOptions){
   
   // Write Progress
-  writeSchMessage(std::string("Reading topology from : ") + pltFileName + std::string("\n"));
+  writeSchMessage(std::string("Reading Topology from PLT: ") + pltFileName + std::string("\n"));
 
   // Init Line Count
   int lineCount = 0;
@@ -1129,7 +1129,7 @@ void mriTopology::readFromPLT_ASCII(string pltFileName, pltOptionRecord& pltOpti
   mriStringVec tokenizedString;
   bool foundheader = false;
   bool areAllFloats = false;
-  int headerCount = 0;
+  pltOptions.headerCount = 0;
   int totalLinesInFile = 0;
   std::string Buffer;
   while (getline(pltFile,Buffer)){
@@ -1142,7 +1142,7 @@ void mriTopology::readFromPLT_ASCII(string pltFileName, pltOptionRecord& pltOpti
         areAllFloats = (areAllFloats && (mriUtils::isFloat(tokenizedString[loopA])));
       }
       foundheader = areAllFloats;
-      headerCount++;
+      pltOptions.headerCount++;
     }
     // Increase cell and line number
     totalLinesInFile++;
@@ -1152,6 +1152,7 @@ void mriTopology::readFromPLT_ASCII(string pltFileName, pltOptionRecord& pltOpti
   cellTotals[0] = pltOptions.i;
   cellTotals[1] = pltOptions.j;
   cellTotals[2] = pltOptions.k;
+  totalCells = cellTotals[0]*cellTotals[1]*cellTotals[2];
 
   // Read Cells From PLT File
   double maxVelModule;
@@ -1177,6 +1178,15 @@ void mriTopology::readFromPLT_ASCII(string pltFileName, pltOptionRecord& pltOpti
         cellLengths[loopA][loopB] = fabs(domainSizeMax[loopA]-domainSizeMin[loopA])/(cellTotals[loopA]-1);
       }
     }
+  }
+
+  // Assign cell locations
+  cellLocations.resize(totalCells);
+  for(int loopA=0;loopA<totalCells;loopA++){
+    cellLocations[loopA].resize(3);
+    cellLocations[loopA][0] = XCoords[loopA];
+    cellLocations[loopA][1] = YCoords[loopA];
+    cellLocations[loopA][2] = ZCoords[loopA];
   }
 
   // Close File

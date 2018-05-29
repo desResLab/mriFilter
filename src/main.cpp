@@ -125,20 +125,45 @@ int main(int argc, char **argv){
     // Create Options
     options = new mriOptions();
 
-    // Read Options from Command Line
-    int res = options->getCommadLineOptions(argc,argv);
-    if(res != 0){
-      return -1;
-    }
-
-    // Read options from command file if required
-    if(options->useCommandFile){
-      int res = options->getOptionsFromCommandFile(options->commandFileName);
+    try{
+      // Read Options from Command Line
+      int res = options->getCommadLineOptions(argc,argv);
       if(res != 0){
         return -1;
       }
+    }catch (exception& ex){
+      if(comm->currProc == 0){
+        writeSchMessage(std::string("ERROR: Reading Command Line Options.\n"));
+        writeSchMessage(std::string(ex.what()));        
+        writeSchMessage(std::string("\n"));
+        writeSchMessage(std::string("Program Terminated.\n"));
+      }
+      // Finalize MPI
+      delete options;
+      MPI::Finalize();
+      return -1;
     }
 
+    try{
+      // Read options from command file if required
+      if(options->useCommandFile){
+        int res = options->getOptionsFromCommandFile(options->commandFileName);
+        if(res != 0){
+          return -1;
+        }
+      }
+    }catch (exception& ex){
+      if(comm->currProc == 0){
+        writeSchMessage(std::string("ERROR: Reading Command File.\n"));
+        writeSchMessage(std::string(ex.what()));        
+        writeSchMessage(std::string("\n"));
+        writeSchMessage(std::string("Program Terminated.\n"));
+      }
+      // Finalize MPI
+      delete options;
+      MPI::Finalize();
+      return -1;
+    }
   }else{
     options = new mriOptions();
   }

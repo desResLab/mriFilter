@@ -43,6 +43,7 @@ struct pltOptionRecord{
   int k;
   int N;
   int E;
+  int headerCount;
   pltFileTypes type;
 };
 

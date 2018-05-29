@@ -633,6 +633,14 @@ string mriSequence::writeStatistics(){
   myresult += "Number of Scans: "+mriUtils::intToStr(sequence.size())+"\n";
   myresult += "--------------------------------\n";
   myresult += "\n";
+  for(size_t loopA=0;loopA<sequence.size();loopA++){
+    myresult += "--------------------------------\n";
+    myresult += "Scan number: "+to_string(loopA)+"\n";
+    myresult += "Scan time: "+to_string(sequence[loopA]->scanTime)+"\n";
+    myresult += "Maximum Velocity Module: "+to_string(sequence[loopA]->maxVelModule)+"\n";
+    myresult += "--------------------------------\n";
+    myresult += "\n";
+  }
   // Return String
   return myresult;
 }
@@ -655,11 +663,9 @@ void mriSequence::createSampleCase(int sampleType, const mriDoubleVec& params){
     // Assign Current Topology
     topology = topo;
     // Create and Assign Scan
-    printf("Prima\n");
     scan = new mriScan(0.0);
     scan->topology = topo;
     scan->createFromTemplate(sampleType,params);
-    printf("Dopo\n");
     // Add to sequence
     addScan(scan);
   }else{

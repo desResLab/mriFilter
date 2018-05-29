@@ -522,21 +522,16 @@ void mriScan::createFromTemplate(mriSamples sampleType,const mriDoubleVec& param
     throw mriException("ERROR: Invalid template direction in CreateSampleCase.\n");
   }
 
-  printf("Eccolo 3\n");
-
   //Allocate Based on the Topology
   cells.clear();
 
-  printf("Eccolo 4\n");
   mriCell cell;
   for(int loopA=0;loopA<topology->totalCells;loopA++){
     cells.push_back(cell);
   }
 
   // Assign Concentrations and Velocities
-  printf("Eccolo 1\n");
   assignVelocitySignature(dir,sampleType,currTime);
-  printf("Eccolo 2\n");
 
   // Find Velocity Modulus
   maxVelModule = 0.0;

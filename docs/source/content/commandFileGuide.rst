@@ -164,44 +164,19 @@ Example input: ::
 
 Note that when scaling the position, the measurement grid is **translated in space** and the minimum coordinates are set equal to the **origin** of the axis system (0.0,0.0,0.0).
 
-SMP Filter
-^^^^^^^^^^
+Solenoidal Filter
+^^^^^^^^^^^^^^^^^
 
-SMP Filter activation
-"""""""""""""""""""""
+Use the USESMPFILTER token to apply a solenoidal filter. Four possible options can be specified:
 
-Use the USESMPFILTER token to activate/deactivate the SMP filter. 
-
-Two possible inputs can be specified:
-
-1. **TRUE**. The filter is active.
-2. **FALSE**. The filter is inactive.
+1. Use **boundary filter**. This activates a boundary condition filter after the main filter. This provides improvement in the situation where solid walls are present in the domain and one wants to both have a solenoidal velocity field plus satisfy the boundary conditions at the interface between fluid and walls. 
+2. Use **constant flow waveforms**. This includes three constant waveform at each SMP iteration. This helps to speed up the convergence especially for flows characterized by a strong average component.
+3. The SMP **convergence tolerance**. This is the tolerance for the relative change in the 2-norm of the residual between successive iterations.
+4. The **number of iterations**. Maximum number of iterations for the iterative solver.
 
 Example input: :: 
 
-  USESMPFILTER: TRUE
-
-Use Constant flow waveforms
-"""""""""""""""""""""""""""
-
-The USECONSTANTPATTERNS will include three constant waveform at each SMP iteration. This helps to speed up the convergence especially for flows characterized by a strong average component.
-
-Example input: ::
-
-  USECONSTANTPATTERNS: TRUE
-
-Iteration tolerance and number of iterations
-""""""""""""""""""""""""""""""""""""""""""""
-
-The SMP convergence tolerance can be specified using the SMPITERATIONTOLERANCE token. This is the tolerance for the relative change in the 2-norm of the residual between successive iterations.
-
-Example input: ::
-
-  SMPITERATIONTOLERANCE: 1.0e-4
-
-Example input: ::
-
-  SMPMAXITERATIONS: 1000
+  USESMPFILTER: TRUE,TRUE,1.0e-3,2000
 
 Adding Noise
 ^^^^^^^^^^^^
@@ -270,12 +245,11 @@ This means that all the cells with concentration greater than 0.5 will be consid
 Export to PPE Poisson Solver
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The **EXPORTTOPOISSON** and **POISSONFILE** tell the application to export a finite element input file for successive solution with a PPE solver. 
+The **EXPORTTOPOISSON** token tells the application to export a finite element input file for successive solution with a PPE solver. 
 
 Example input: ::
 
-  EXPORTTOPOISSON: TRUE
-  POISSONFILE: poissonInputFile.txt
+  EXPORTTOPOISSON: poissonInputFile.txt
 
 Components of the pressure gradient to evaluate
 """""""""""""""""""""""""""""""""""""""""""""""
@@ -311,12 +285,11 @@ In case the turbulent viscosity is not read from file, the token **SMAGORINSKYCO
 Export to Laplace wall distancing solver
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The **EXPORTTODISTANCE** and **DISTANCEFILE** options tell the application to export a finite element input file for wall distance evaluation.
+The **EXPORTTODISTANCE** token tell the application to export a finite element input file for wall distance evaluation.
 
 Example input: ::
 
-  EXPORTTODISTANCE: TRUE
-  DISTANCEFILE: distanceInputFile.txt
+  EXPORTTODISTANCE: distanceInputFile.txt
 
 Vortex Criteria
 ^^^^^^^^^^^^^^^

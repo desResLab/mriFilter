@@ -96,9 +96,74 @@ void WriteIOLog(std::string LogFileName, std::string MsgsString){
 // READ SCAN FROM PLT FILE
 // =======================
 void mriScan::readFromPLT_ASCII(string pltFileName, const pltOptionRecord& pltOptions){
-  // Init Line Count
-  int lineCount = 0;
 
+  // Write Progress
+  writeSchMessage(std::string("Reading Scan Data from PLT: ") + pltFileName + std::string("\n"));
+
+  // Open PLT File
+  ifstream pltFile;
+  pltFile.open(pltFileName.c_str());
+
+  // Skip File header  
+  string buffer;
+  for(size_t loopA=0;loopA<pltOptions.headerCount-1;loopA++){
+    getline(pltFile,buffer);
+    // printf("Skipping: %s\n",buffer.c_str());
+  }
+
+  // Read Scan Data 
+  mriDoubleMat dataTable; 
+  mriDoubleVec dataVec;
+  mriStringVec tokenizedString;
+  while (getline(pltFile,buffer)){
+    boost::trim(buffer);
+    boost::split(tokenizedString, buffer, boost::is_any_of("= ,"), boost::token_compress_on);
+    if(tokenizedString.size() != 7){
+      throw mriException("ERROR: invalid cell data size while reading PLT file");
+    }
+    dataVec.clear();
+    for(size_t loopA=0;loopA<tokenizedString.size();loopA++){
+      try{
+        dataVec.push_back(atof(tokenizedString[loopA].c_str()));  
+      }catch(...){
+        throw mriException("ERROR: invalid cell numerical entry while reading PLT file");
+      }
+    }
+    dataTable.push_back(dataVec);
+  }
+
+  // Verify dataset size
+  if(dataTable.size() != pltOptions.i*pltOptions.j*pltOptions.k){
+    throw mriException("ERROR: cell number mismatch while reading PLT file");
+  }
+
+  // Get Total Cells
+  int totCells = dataTable.size();
+  // Transfer Scalars and Vectors to Cells
+  cells.clear();
+  mriCell cell;
+  for(int loopA=0;loopA<totCells;loopA++){
+    cell.concentration = dataTable[loopA][3];
+    cells.push_back(cell);
+  }
+
+  // Vectors
+  maxVelModule = 0.0;
+  double currModulus = 0.0;
+  for(int loopA=0;loopA<totCells;loopA++){
+      cells[loopA].velocity[0] = dataTable[loopA][4];
+      cells[loopA].velocity[1] = dataTable[loopA][5];
+      cells[loopA].velocity[2] = dataTable[loopA][6];
+      currModulus = sqrt((cells[loopA].velocity[0] * cells[loopA].velocity[0]) +
+                         (cells[loopA].velocity[1] * cells[loopA].velocity[1]) +
+                         (cells[loopA].velocity[2] * cells[loopA].velocity[2]));
+      if(currModulus > maxVelModule){
+        maxVelModule = currModulus;
+      }
+  }
+
+  // Close File
+  pltFile.close();
 }
 
 // ================
@@ -1477,7 +1542,6 @@ void mriScan::exportForPoisson(string inputFileName,double density,double viscos
   // SAVE MESH TOPOLOGY
   // ==================
   // SAVE NODE COORDS ONLY FOR NODES NUMBERED IN USEDNODEMAP
-  printf("Eccolo: Total Cells: %d\n",topology->totalCells);
   if(topology->totalCells > 0){
     double pos[3];
     for(int loopA=0;loopA<totAuxNodes;loopA++){
