@@ -41,10 +41,10 @@ MRIOpApplySmoothing::MRIOpApplySmoothing(int filterNumIterations, int filterType
 }
 
 // INITIALIZE APPLY NOISE OPERATION
-MRIOpApplyNoise::MRIOpApplyNoise(double noiseIntensity){
+MRIOpApplyNoise::MRIOpApplyNoise(double noiseIntensity, double seed){
   this->noiseIntensity = noiseIntensity;
+  this->seed = seed;
 }
-
 
 // CONSTRUCTOR FOR SOLENOIDAL FILTER OPERATION
 MRIOpApplySolenoidalFilter::MRIOpApplySolenoidalFilter(bool applyBCFilter,bool useConstantPatterns,double itTol,int maxIt){
@@ -72,7 +72,7 @@ void MRIOpSaveState::processSequence(MRICommunicator* comm, MRIThresholdCriteria
 
 // APPLY NOISE
 void MRIOpApplyNoise::processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq){
-  seq->applyNoise(noiseIntensity);
+  seq->applyNoise(noiseIntensity,seed);
 }
 
 // APPLY SMOOTHING FILTER

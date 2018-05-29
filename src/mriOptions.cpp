@@ -177,6 +177,7 @@ int MRIOptions::getOptionsFromCommandFile(string commandFile){
   string poissonFileName;
   bool applyNoise;
   double noiseIntensity;
+  double noiseSeed;
   double smagorinskyCoeff;
   bool scaleVelocities;
   double scaleVelocityFactor;

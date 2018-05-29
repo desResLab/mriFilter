@@ -277,7 +277,7 @@ class MRIScan{
     double evalVortexCriteria(MRIExpansion* exp);
     
     // ADD GAUSSIAN NOISE
-    void applyGaussianNoise(double stDev);
+    void applyGaussianNoise(double stDev, double seed);
     
     // TESTING FUNCTIONALITIES
     void testScanAdjacency(string fileName);

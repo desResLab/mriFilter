@@ -47,8 +47,9 @@ class MRIOpSaveState: public MRIOperation{
 class MRIOpApplyNoise: public MRIOperation{
   public:
     double noiseIntensity;
+    double seed;
     // CONSTRUCTOR
-    MRIOpApplyNoise(double noiseIntensity);
+    MRIOpApplyNoise(double noiseIntensity, double seed);
     // DATA MEMBER
     virtual void processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq);
 };

@@ -293,7 +293,7 @@ void MRIScan::applySmoothingFilter(){
 // ====================
 // APPLY GAUSSIAN NOISE
 // ====================
-void MRIScan::ApplyGaussianNoise(double stDev, double seed){
+void MRIScan::applyGaussianNoise(double stDev, double seed){
   // Multiply by the velocity module
   stDev = stDev * maxVelModule / 100.0;
   MRIUtils::SetSeed(seed);
