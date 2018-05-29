@@ -8,15 +8,15 @@
 
 using namespace std;
 
-class MRIOutput{
+class mriOutput{
   public:
     // DATA MEMBERS
     string name;
     int totComponents;
-    MRIDoubleVec values;
+    mriDoubleVec values;
 
     // CONSTRUCTOR
-    MRIOutput(string locName, int comp);
+    mriOutput(string locName, int comp);
 };
 
 #endif // MRIOUTPUT_H

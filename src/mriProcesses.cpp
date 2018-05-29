@@ -9,12 +9,12 @@ using namespace std;
 // ========================================
 // PERFORM CONVOLUTION WITH GAUSSIAN KERNEL
 // ========================================
-double convoluteWithGaussianKernel(MRIIntVec cellNeighbors,MRIDoubleVec neighValues,MRIDoubleVec gaussKernelVector){
+double convoluteWithGaussianKernel(mriIntVec cellNeighbors,mriDoubleVec neighValues,mriDoubleVec gaussKernelVector){
   // Check Compatibility
   //printf("cellNeig: %d, neighVals: %d, gaussKernel: %d\n",cellNeighbors.size(),neighValues.size(),gaussKernelVector.size());
   //getchar();
   if((cellNeighbors.size() != neighValues.size())||(gaussKernelVector.size() != neighValues.size())){
-    throw MRIException("ERROR: Incompatible size in ConvoluteWithGaussianKernel.\n");
+    throw mriException("ERROR: Incompatible size in ConvoluteWithGaussianKernel.\n");
   }
   double res = 0.0;
   double sumValid = 0.0;
@@ -30,8 +30,8 @@ double convoluteWithGaussianKernel(MRIIntVec cellNeighbors,MRIDoubleVec neighVal
 // ================================
 // GET NEIGHBORS IN STRUCTURED GRID
 // ================================
-void MRIScan::getStructuredNeighbourCells(int centreCell,int order,MRIThresholdCriteria* threshold,MRIIntVec& cellNeighbors){
- MRIIntVec centreCellCoords(3);
+void mriScan::getStructuredNeighbourCells(int centreCell,int order,mriThresholdCriteria* threshold,mriIntVec& cellNeighbors){
+ mriIntVec centreCellCoords(3);
  int nextCell = 0;
  double cellQty = 0.0;
  cellNeighbors.clear();
@@ -70,7 +70,7 @@ void MRIScan::getStructuredNeighbourCells(int centreCell,int order,MRIThresholdC
 
 
 // CREATE GAUSSIAN CONVOLUTION KERNEL
-void createGaussianKernel(int order,MRIDoubleVec& kernel){
+void createGaussianKernel(int order,mriDoubleVec& kernel){
   kernel.clear();
   double sigma = order;
   double currentValue = 0.0;
@@ -93,8 +93,8 @@ void createGaussianKernel(int order,MRIDoubleVec& kernel){
 // ===================
 // APPLY MEDIAN FILTER
 // ===================
-void MRIScan::applyMedianFilter(int qtyID,int maxIt,int order,int filterType,MRIThresholdCriteria* threshold){
-  MRIDoubleVec gaussKernelVector;
+void mriScan::applyMedianFilter(int qtyID,int maxIt,int order,int filterType,mriThresholdCriteria* threshold){
+  mriDoubleVec gaussKernelVector;
   if(filterType == kMedianFilter){
     writeSchMessage(std::string("Applying Median Filter...\n"));
   }else if(filterType == kMeanFilter){
@@ -103,17 +103,17 @@ void MRIScan::applyMedianFilter(int qtyID,int maxIt,int order,int filterType,MRI
     writeSchMessage(std::string("Applying Gaussian Filter...\n"));    
     createGaussianKernel(order,gaussKernelVector);
   }else{
-    throw MRIException("Error in ApplyMedianFilter: Invalid Filter Type.\n");
+    throw mriException("Error in ApplyMedianFilter: Invalid Filter Type.\n");
   }
-  MRIDoubleVec tempVec(topology->totalCells);
+  mriDoubleVec tempVec(topology->totalCells);
   double currValue = 0.0;
   double currMedian = 0.0;
   double currError = 0.0;
   double centerCellValue = 0.0;
   int currCell = 0;
   double cellQty = 0.0;
-  MRIIntVec neighbours;
-  MRIDoubleVec neighValues;
+  mriIntVec neighbours;
+  mriDoubleVec neighValues;
   // PERFORM ITERATIONS
   for(int loop0=0;loop0<maxIt;loop0++){
     // LOOP ON ALL CELLS
@@ -147,13 +147,13 @@ void MRIScan::applyMedianFilter(int qtyID,int maxIt,int order,int filterType,MRI
         // FIND MEDIAN VALUE
         if(filterType == kMedianFilter){
           if(neighValues.size() > 0){
-            currMedian = MRIUtils::getMedian(neighValues);
+            currMedian = mriUtils::getMedian(neighValues);
           }else{
             currMedian = centerCellValue;
           }
         }else if(filterType == kMeanFilter){
           if(neighValues.size() > 0){
-            currMedian = MRIUtils::getMean(neighValues);
+            currMedian = mriUtils::getMean(neighValues);
           }else{
             currMedian = centerCellValue;
           }
@@ -176,14 +176,14 @@ void MRIScan::applyMedianFilter(int qtyID,int maxIt,int order,int filterType,MRI
       cells[loopA].setQuantity(qtyID,tempVec[loopA]);
     }
     // END OF ITERATION PRINT MAX ERROR
-    writeSchMessage(string("Iteration "+MRIUtils::intToStr(loop0+1)+"; Max Error: "+MRIUtils::floatToStr(maxError)+"\n"));
+    writeSchMessage(string("Iteration "+mriUtils::intToStr(loop0+1)+"; Max Error: "+mriUtils::floatToStr(maxError)+"\n"));
   }
 }
 
 // =================================
 // EVALUATE AVERAGE VELOCITY MODULUS
 // =================================
-double MRIScan::evalAverageVelocityMod(){
+double mriScan::evalAverageVelocityMod(){
   // Init Result
   double avVel = 0.0;
   double currentMod = 0.0;
@@ -199,7 +199,7 @@ double MRIScan::evalAverageVelocityMod(){
 // ==================
 // APPLY THRESHOLDING
 // ==================
-void MRIScan::applyThresholding(MRIThresholdCriteria* thresholdCriteria){
+void mriScan::applyThresholding(mriThresholdCriteria* thresholdCriteria){
   writeSchMessage(std::string("\n"));
   writeSchMessage(std::string("Applying Thresholding...\n"));
   // Init Number Of Filtered
@@ -233,14 +233,14 @@ void MRIScan::applyThresholding(MRIThresholdCriteria* thresholdCriteria){
       cells[loopA].velocity[2] = 0.0;
     }
   }
-  writeSchMessage(string("Cells Modified: "+MRIUtils::intToStr(numberOfFiltered)+"\n"));
+  writeSchMessage(string("Cells Modified: "+mriUtils::intToStr(numberOfFiltered)+"\n"));
   writeSchMessage(string("------------------------------------------------------------------\n"));
 }
 
 // =====================
 // APPLY LAVISION FILTER
 // =====================
-void MRIScan::applySmoothingFilter(){
+void mriScan::applySmoothingFilter(){
   bool converged = false;
   int itCount = 0;
   double maxDivergence = 0.0;
@@ -253,7 +253,7 @@ void MRIScan::applySmoothingFilter(){
   double velZMinus = 0.0;
   // Local Divergence 
   double localDivergence = 0.0;
-  MRIIntVec otherCells;
+  mriIntVec otherCells;
   // LOOP UNTIL CONVERGED
   while(!converged){
     // Increment Iteration Count
@@ -284,7 +284,7 @@ void MRIScan::applySmoothingFilter(){
         cells[otherCells[5]].velocity[2] += (1.0/6.0) * localDivergence;
       }
     }
-    writeSchMessage("It: "+MRIUtils::intToStr(itCount)+";Max Div: "+MRIUtils::floatToStr(maxDivergence)+"\n");
+    writeSchMessage("It: "+mriUtils::intToStr(itCount)+";Max Div: "+mriUtils::floatToStr(maxDivergence)+"\n");
     // Check Convergence
     converged = (maxDivergence<1.0e-4);
   }
@@ -293,15 +293,15 @@ void MRIScan::applySmoothingFilter(){
 // ====================
 // APPLY GAUSSIAN NOISE
 // ====================
-void MRIScan::applyGaussianNoise(double stDev, double seed){
+void mriScan::applyGaussianNoise(double stDev, double seed){
   // Multiply by the velocity module
   stDev = stDev * maxVelModule / 100.0;
-  MRIUtils::SetSeed(seed);
+  mriUtils::SetSeed(seed);
   // Apply Gaussian Noise
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
     // Loop On Cells
     for(int loopB=0;loopB<topology->totalCells;loopB++){
-      cells[loopB].velocity[loopA] = cells[loopB].velocity[loopA] + MRIUtils::generateStandardGaussian(stDev);
+      cells[loopB].velocity[loopA] = cells[loopB].velocity[loopA] + mriUtils::generateStandardGaussian(stDev);
     }
   }
 }

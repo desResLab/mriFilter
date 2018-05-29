@@ -100,9 +100,9 @@
   const int kInputPLT = 1;
 
   // Aternative Typedefs
-  typedef const int MRIDirection;
-  typedef const int MRISamples;
-  typedef const int MRIPlane;
+  typedef const int mriDirection;
+  typedef const int mriSamples;
+  typedef const int mriPlane;
   typedef boost::variate_generator<boost::mt19937, boost::normal_distribution<> > stdRndGenerator;
   
 #endif // MRICONST_H

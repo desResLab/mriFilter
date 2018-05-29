@@ -7,12 +7,12 @@
 using namespace std;
 
 // ARRAYS
-typedef vector< vector<double> > MRIDoubleMat;
-typedef vector<double> MRIDoubleVec;
-typedef vector< vector<int> > MRIIntMat;
-typedef vector<int> MRIIntVec;
-typedef vector<bool> MRIBoolVec;
-typedef vector< string > MRIStringVec;
+typedef vector< vector<double> > mriDoubleMat;
+typedef vector<double>           mriDoubleVec;
+typedef vector< vector<int> >    mriIntMat;
+typedef vector<int>              mriIntVec;
+typedef vector<bool>             mriBoolVec;
+typedef vector< string >         mriStringVec;
 
 // RELATIVE POSITION BETWEEN EDGE AND FACE
 enum EdgeFacePositionType{ptTop,ptBottom,ptLeft,ptRight};
@@ -57,9 +57,9 @@ struct vtkStructuredPointsOptionRecord{
   double spacing[3];
   int numDefined;
   bool isDefined[5];
-  MRIIntVec dataBlockStart;
-  MRIIntVec dataBlockType;
-  MRIBoolVec dataBlockRead;
+  mriIntVec dataBlockStart;
+  mriIntVec dataBlockType;
+  mriBoolVec dataBlockRead;
 };
 
 #endif // MRITYPES_H

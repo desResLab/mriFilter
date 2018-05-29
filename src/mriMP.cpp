@@ -44,14 +44,14 @@ void printResidualVector(std::string fileName, int totalFaces, double* resVec){
 // =======================
 // ASSEMBLE CONSTANT SHAPE
 // =======================
-void MRIScan::assembleConstantPattern(int currentDim, int& totalConstantFaces,
-                                      MRIIntVec& facesID, MRIDoubleVec& facesCoeffs){
+void mriScan::assembleConstantPattern(int currentDim, int& totalConstantFaces,
+                                      mriIntVec& facesID, mriDoubleVec& facesCoeffs){
 
   // Clear Vectors
   totalConstantFaces = 0;
   facesID.clear();
   facesCoeffs.clear();
-  MRIIntVec orientation;
+  mriIntVec orientation;
 
   // Loop Over Faces
   int totNegFaces = 0;
@@ -80,15 +80,15 @@ void MRIScan::assembleConstantPattern(int currentDim, int& totalConstantFaces,
 // =======================
 // ASSEMBLE CONSTANT SHAPE
 // =======================
-void MRIScan::assembleConstantPatternMPI(int currentDim, int& totalConstantFacesOnProc,
-                                         MRIIntVec& facesIDOnProc, MRIDoubleVec& facesCoeffsOnProc,
-                                         int minFaceOnProc, int maxFaceOnProc, MRICommunicator* comm){
+void mriScan::assembleConstantPatternMPI(int currentDim, int& totalConstantFacesOnProc,
+                                         mriIntVec& facesIDOnProc, mriDoubleVec& facesCoeffsOnProc,
+                                         int minFaceOnProc, int maxFaceOnProc, mriCommunicator* comm){
 
   // Clear Vectors
   totalConstantFacesOnProc = 0;
   facesIDOnProc.clear();
   facesCoeffsOnProc.clear();
-  MRIDoubleVec orientation;
+  mriDoubleVec orientation;
 
   // Get Total Number of Faces in this Direction
   int totFacesThisDir = 0;
@@ -131,7 +131,7 @@ void MRIScan::assembleConstantPatternMPI(int currentDim, int& totalConstantFaces
 // ====================
 // ASSEMBLE STAR MATRIX
 // ====================
-void MRIScan::assembleStarMatrix(int &totalFaces, int &totalBasis, MRIDoubleMat& starMatrix){
+void mriScan::assembleStarMatrix(int &totalFaces, int &totalBasis, mriDoubleMat& starMatrix){
   // Init Rows and Columns
   totalFaces = topology->getTotalFaces();
   totalBasis = getTotalBasisNumber();
@@ -167,7 +167,7 @@ void MRIScan::assembleStarMatrix(int &totalFaces, int &totalBasis, MRIDoubleMat&
 // =========================
 // GET TOTAL NUMBER OF BASIS
 // =========================
-int MRIScan::getTotalBasisNumber(){
+int mriScan::getTotalBasisNumber(){
   int totBasis = 0;
   int totalSlices = 0;
   int totalStars = 0;
@@ -209,7 +209,7 @@ bool checkPermutation(int size, int* perm){
 }
 
 // EXPAND STAR SHAPE TO FULL VECTOR
-void MRIScan::expandStarShape(int totalStarFaces, int* facesID, double* facesCoeffs, double* &fullStarVector){
+void mriScan::expandStarShape(int totalStarFaces, int* facesID, double* facesCoeffs, double* &fullStarVector){
   // Get Total Number Of Faces
   int totalFaces = topology->cellTotals[0] * topology->cellTotals[1] * (topology->cellTotals[2] + 1)+
                    topology->cellTotals[1] * topology->cellTotals[2] * (topology->cellTotals[0] + 1)+
@@ -228,11 +228,11 @@ void MRIScan::expandStarShape(int totalStarFaces, int* facesID, double* facesCoe
 // ==============================
 // EVAL DIVERGENCE FOR EVERY CELL
 // ==============================
-double MRIScan::evalMaxDivergence(const MRIDoubleVec& filteredVec){
+double mriScan::evalMaxDivergence(const mriDoubleVec& filteredVec){
   double maxDivergence = 0.0;
   double currentDiv = 0.0;
   int currFace = 0;
-  MRIDoubleVec extNormal(3,0.0);
+  mriDoubleVec extNormal(3,0.0);
   double normalSign = 0.0;
   // Loop on cells
   for(int loopA=0;loopA<topology->totalCells;loopA++){
@@ -248,7 +248,7 @@ double MRIScan::evalMaxDivergence(const MRIDoubleVec& filteredVec){
       for(int loopC=0;loopC<kNumberOfDimensions;loopC++){
         normalSign += extNormal[loopC] * topology->faceNormal[currFace][loopC];
       }
-      MRIUtils::round(normalSign);
+      mriUtils::round(normalSign);
       // Get Sign
       currentDiv += filteredVec[topology->cellFaces[loopA][loopB]] * normalSign;
     }
@@ -263,10 +263,10 @@ double MRIScan::evalMaxDivergence(const MRIDoubleVec& filteredVec){
 // ====================================
 // EVAL CELL DIVERGENCE FOR A GIVEN QTY
 // ====================================
-void MRIScan::evalCellDivergences(const MRIDoubleVec& faceVec, MRIDoubleVec& cellDivs){
+void mriScan::evalCellDivergences(const mriDoubleVec& faceVec, mriDoubleVec& cellDivs){
   double currentDiv = 0.0;
   int currFace = 0;
-  MRIDoubleVec extNormal(3,0.0);
+  mriDoubleVec extNormal(3,0.0);
   double normalSign = 0.0;
 
   // Loop on cells
@@ -283,7 +283,7 @@ void MRIScan::evalCellDivergences(const MRIDoubleVec& faceVec, MRIDoubleVec& cel
       for(int loopC=0;loopC<kNumberOfDimensions;loopC++){
         normalSign += extNormal[loopC] * topology->faceNormal[currFace][loopC];
       }
-      MRIUtils::round(normalSign);
+      mriUtils::round(normalSign);
       // Get Sign
       currentDiv += faceVec[topology->cellFaces[loopA][loopB]] * normalSign;
     }
@@ -295,7 +295,7 @@ void MRIScan::evalCellDivergences(const MRIDoubleVec& faceVec, MRIDoubleVec& cel
 // ===================================
 // RECOVER VELOCITIES FROM FACE FLUXES
 // ===================================
-void MRIScan::recoverCellVelocitiesRT0(bool useBCFilter, MRIDoubleVec& filteredVec){
+void mriScan::recoverCellVelocitiesRT0(bool useBCFilter, mriDoubleVec& filteredVec){
   // Variables
   int locFace1 = 0;
   int locFace2 = 0;
@@ -339,7 +339,7 @@ void MRIScan::recoverCellVelocitiesRT0(bool useBCFilter, MRIDoubleVec& filteredV
 // =======================================================
 // GET DIMENSION, SLICE AND STAR NUMBER FROM VORTEX NUMBER
 // =======================================================
-void MRIScan::getDimensionSliceStarFromVortex(int vortexNumber,int &dimNumber,int &sliceNumber,int &starNumber){
+void mriScan::getDimensionSliceStarFromVortex(int vortexNumber,int &dimNumber,int &sliceNumber,int &starNumber){
   // Declare
   int totalSlices[3] = {0};
   int totalStars[3] = {0};
@@ -372,7 +372,7 @@ void MRIScan::getDimensionSliceStarFromVortex(int vortexNumber,int &dimNumber,in
     dimNumber = 2;
     vortexOffset = totalVortexDim2;
   }else{
-    throw MRIException("Total Number of Vortices Exceeded.\n");
+    throw mriException("Total Number of Vortices Exceeded.\n");
   }
 
   // Get Slice and Star Number
@@ -385,7 +385,7 @@ void MRIScan::getDimensionSliceStarFromVortex(int vortexNumber,int &dimNumber,in
 // ====================
 // ASSEMBLE STAR SHAPES
 // ====================
-void MRIScan::assembleStarShape(int vortexNumber, int &totalFaces, std::vector<int> &facesID, std::vector<double> &facesCoeffs){
+void mriScan::assembleStarShape(int vortexNumber, int &totalFaces, std::vector<int> &facesID, std::vector<double> &facesCoeffs){
   // Declare
   int currFace = 0;
   double currCoeff = 0.0;
@@ -408,7 +408,7 @@ void MRIScan::assembleStarShape(int vortexNumber, int &totalFaces, std::vector<i
 
     norm += currCoeff*currCoeff;
 
-    //MRIUtils::InsertInIntList(currFace,totalFaces,facesID);
+    //mriUtils::InsertInIntList(currFace,totalFaces,facesID);
     //facesCoeffs.push_back(currCoeff);
   }
   norm = sqrt(norm);
@@ -420,16 +420,16 @@ void MRIScan::assembleStarShape(int vortexNumber, int &totalFaces, std::vector<i
 // ===========================================
 // UPDATE THE RESIDUAL AND RESIDUAL NORM - MPI
 // ===========================================
-void updateResidualAndFilterMPI(MRICommunicator* comm,
+void updateResidualAndFilterMPI(mriCommunicator* comm,
                                 int globTotFaces, double corrCoeff, 
                                 int totalFaces, 
-                                const MRIIntVec& facesID, 
-                                const MRIDoubleVec& facesCoeffs,                                
-                                const MRIIntVec& minFaceGlob,
-                                const MRIIntVec& maxFaceGlob,
+                                const mriIntVec& facesID, 
+                                const mriDoubleVec& facesCoeffs,                                
+                                const mriIntVec& minFaceGlob,
+                                const mriIntVec& maxFaceGlob,
                                 double &resNorm,
-                                MRIDoubleVec& resVec, 
-                                MRIDoubleVec& filteredVels){
+                                mriDoubleVec& resVec, 
+                                mriDoubleVec& filteredVels){
 
   double normSqrIncr = 0.0;
   double normSqrTot = 0.0;
@@ -489,11 +489,11 @@ void updateResidualAndFilterMPI(MRICommunicator* comm,
 // =====================================
 void updateResidualAndFilter(double corrCoeff, 
                              int totalFaces, 
-                             const MRIIntVec& facesID, 
-                             const MRIDoubleVec& facesCoeffs,
+                             const mriIntVec& facesID, 
+                             const mriDoubleVec& facesCoeffs,
                              double &resNorm,
-                             MRIDoubleVec& resVec, 
-                             MRIDoubleVec& filteredVels){
+                             mriDoubleVec& resVec, 
+                             mriDoubleVec& filteredVels){
 
   double normSqrIncr = 0.0;
   int currentFaceID = 0;
@@ -518,7 +518,7 @@ void updateResidualAndFilter(double corrCoeff,
 
 
 // EVAL CORRELATION COEFFICIENT
-double evalCorrelationCoefficient(const MRIDoubleVec& resVec, int totalFaces, const MRIIntVec& facesID, const MRIDoubleVec& facesCoeffs){
+double evalCorrelationCoefficient(const mriDoubleVec& resVec, int totalFaces, const mriIntVec& facesID, const mriDoubleVec& facesCoeffs){
   double corrCoeff = 0.0;
   int currentFaceID = 0;
   double currentCoeff = 0.0;
@@ -556,8 +556,8 @@ std::string getFaceLocationString(int faceLocation){
 }
 
 // Assemble Face Flux Vectors
-void MRIScan::assembleResidualVector(bool useBCFilter, MRIThresholdCriteria* thresholdCriteria,
-                                     int& totalFaces, MRIDoubleVec& resVec, MRIDoubleVec& filteredVec, double& resNorm){
+void mriScan::assembleResidualVector(bool useBCFilter, mriThresholdCriteria* thresholdCriteria,
+                                     int& totalFaces, mriDoubleVec& resVec, mriDoubleVec& filteredVec, double& resNorm){
   bool   continueToProcess = false;
   double currentValue = 0.0;
   double faceComponent = 0.0;
@@ -571,7 +571,7 @@ void MRIScan::assembleResidualVector(bool useBCFilter, MRIThresholdCriteria* thr
   // Allocate
   resVec.resize(totalFaces);
   filteredVec.resize(totalFaces);
-  MRIIntVec resID(totalFaces);
+  mriIntVec resID(totalFaces);
 
   // Initialize
   for(int loopA=0;loopA<totalFaces;loopA++){
@@ -612,8 +612,8 @@ void MRIScan::assembleResidualVector(bool useBCFilter, MRIThresholdCriteria* thr
     if(useBCFilter) checkPassed = (resID[loopA]>2);
     else checkPassed = (resID[loopA]<1)||(resID[loopA]>2);
     if(checkPassed){
-      std::string currentMsgs = "Internal: Wrong Face Connectivity, Face: " + MRIUtils::intToStr(loopA)+ "; Connectivity: " + MRIUtils::intToStr(resID[loopA])+".";
-      throw new MRIException(currentMsgs.c_str());
+      std::string currentMsgs = "Internal: Wrong Face Connectivity, Face: " + mriUtils::intToStr(loopA)+ "; Connectivity: " + mriUtils::intToStr(resID[loopA])+".";
+      throw new mriException(currentMsgs.c_str());
     }
   }
   
@@ -636,12 +636,12 @@ void MRIScan::assembleResidualVector(bool useBCFilter, MRIThresholdCriteria* thr
 // ================
 // FORM VORTEX LIST
 // ================
-void MRIScan::formVortexList(MRICommunicator* comm,
+void mriScan::formVortexList(mriCommunicator* comm,
                              int totVortex,
-                             const MRIIntVec& minFace,
-                             const MRIIntVec& maxFace,
-                             MRIIntVec& innerVortexList,
-                             MRIIntVec& boundaryVortexList){
+                             const mriIntVec& minFace,
+                             const mriIntVec& maxFace,
+                             mriIntVec& innerVortexList,
+                             mriIntVec& boundaryVortexList){
   bool foundFace = true;
   bool isInternal = true;
   int currFace = 0;
@@ -681,18 +681,18 @@ void MRIScan::formVortexList(MRICommunicator* comm,
 // =========================================
 // COMMUNICATE RESIDUAL AND FILTERED VECTORS
 // =========================================
-void communicateResFilt2(MRICommunicator* comm,
+void communicateResFilt2(mriCommunicator* comm,
                          int totalFaces,
-                         const MRIIntVec& minFaceGlob,
-                         const MRIIntVec& maxFaceGlob,
-                         MRIDoubleVec& resVec,
-                         MRIDoubleVec& filteredVels,
+                         const mriIntVec& minFaceGlob,
+                         const mriIntVec& maxFaceGlob,
+                         mriDoubleVec& resVec,
+                         mriDoubleVec& filteredVels,
                          double& resNorm){
   
   int size = maxFaceGlob[comm->currProc] - minFaceGlob[comm->currProc];
-  MRIIntVec recvcounts(comm->totProc);
-  MRIIntVec displs(comm->totProc);
-  MRIDoubleVec storeVec(size);
+  mriIntVec recvcounts(comm->totProc);
+  mriIntVec displs(comm->totProc);
+  mriDoubleVec storeVec(size);
   
   for(int loopA=0;loopA<comm->totProc;loopA++){
     displs[loopA] = minFaceGlob[loopA];
@@ -721,8 +721,8 @@ void communicateResFilt2(MRICommunicator* comm,
 // =========================================
 // SYNC TEMPORARY EXPANSION AMONG PROCESSORS
 // =========================================
-void syncExpansion(int totalVortexes, MRIDoubleVec& currentExp, MRICommunicator* comm){
-  MRIDoubleVec target(totalVortexes);
+void syncExpansion(int totalVortexes, mriDoubleVec& currentExp, mriCommunicator* comm){
+  mriDoubleVec target(totalVortexes);
   MPI_Reduce(&currentExp[0],&target[0],totalVortexes,MPI_DOUBLE,MPI_SUM,0,comm->mpiComm);
   if(comm->currProc == 0){
     for(int loopA=0;loopA<totalVortexes;loopA++){
@@ -734,20 +734,20 @@ void syncExpansion(int totalVortexes, MRIDoubleVec& currentExp, MRICommunicator*
 // =================
 // PHYSICS FILTERING
 // =================
-void MRIScan::applySMPFilter(MRICommunicator* comm, bool isBC, 
-                             MRIThresholdCriteria* thresholdCriteria,
+void mriScan::applySMPFilter(mriCommunicator* comm, bool isBC, 
+                             mriThresholdCriteria* thresholdCriteria,
                              double itTol,
                              int maxIt,
                              bool useConstantPatterns){
 
   // INITIALIZATION
   int totalFaces = topology->faceConnections.size();
-  MRIDoubleVec resVec;
-  MRIDoubleVec filteredVec;
-  MRIIntVec facesID;
-  MRIDoubleVec facesCoeffs;
-  MRIIntVec innerVortexList;
-  MRIIntVec boundaryVortexList;
+  mriDoubleVec resVec;
+  mriDoubleVec filteredVec;
+  mriIntVec facesID;
+  mriDoubleVec facesCoeffs;
+  mriIntVec innerVortexList;
+  mriIntVec boundaryVortexList;
   double corrCoeff = 0.0;
   int totalStarFaces = 0;
   int mpiError = 0;
@@ -779,8 +779,8 @@ void MRIScan::applySMPFilter(MRICommunicator* comm, bool isBC,
   float updateStar_TotalTime = 0.0;
 
   // Global Array for Face Storage
-  MRIIntVec minFaceGlob(comm->totProc);
-  MRIIntVec maxFaceGlob(comm->totProc);
+  mriIntVec minFaceGlob(comm->totProc);
+  mriIntVec maxFaceGlob(comm->totProc);
   int minFaceOnProc = 0.0;
   int maxFaceOnProc = 0.0;
   for(int loopA=0;loopA<comm->totProc;loopA++){
@@ -801,7 +801,7 @@ void MRIScan::applySMPFilter(MRICommunicator* comm, bool isBC,
 
   // All processes are waiting for the root to read the files
   mpiError = MPI_Barrier(comm->mpiComm);
-  MRIUtils::checkMpiError(mpiError);
+  mriUtils::checkMpiError(mpiError);
 
   printf("[%d/%d] MinFace: %d, MaxFace: %d\n",comm->currProc,comm->totProc,minFaceOnProc,maxFaceOnProc);
 
@@ -814,9 +814,9 @@ void MRIScan::applySMPFilter(MRICommunicator* comm, bool isBC,
   if(comm->currProc == 0){
     writeSchMessage("\n");
     if (isBC){
-      writeSchMessage("FILTER ALGORITHM - BC - Step: "+MRIUtils::floatToStr(scanTime)+" ---------------------------\n");
+      writeSchMessage("FILTER ALGORITHM - BC - Step: "+mriUtils::floatToStr(scanTime)+" ---------------------------\n");
     }else{
-      writeSchMessage("FILTER ALGORITHM - FULL - Step "+MRIUtils::floatToStr(scanTime)+" ---------------------------\n");
+      writeSchMessage("FILTER ALGORITHM - FULL - Step "+mriUtils::floatToStr(scanTime)+" ---------------------------\n");
     }
   }
 
@@ -824,15 +824,15 @@ void MRIScan::applySMPFilter(MRICommunicator* comm, bool isBC,
   const clock_t begin_time = clock();
   
   if(comm->currProc == 0){
-    writeSchMessage("Initial Residual Norm: "+MRIUtils::floatToStr(resNorm)+"\n");
+    writeSchMessage("Initial Residual Norm: "+mriUtils::floatToStr(resNorm)+"\n");
   }
 
   // Initialize Expansion
-  MRIExpansion* bcExpansion = NULL;
+  mriExpansion* bcExpansion = NULL;
   int totalVortexes = evalTotalVortex();
 
   // Allocate Temporary Expansion coefficient place holder
-  MRIDoubleVec currentExp(totalVortexes);
+  mriDoubleVec currentExp(totalVortexes);
 
   // Form List of Vortexes Including Faces for MPI
   if(comm->totProc > 1){
@@ -846,9 +846,9 @@ void MRIScan::applySMPFilter(MRICommunicator* comm, bool isBC,
   // Processor 0 has expansion Coefficients
   if(comm->currProc == 0){
     if(!isBC){
-      expansion = new MRIExpansion(totalVortexes);
+      expansion = new mriExpansion(totalVortexes);
     }else{
-      bcExpansion = new MRIExpansion(totalVortexes);
+      bcExpansion = new mriExpansion(totalVortexes);
     }
   }
 
@@ -1039,8 +1039,8 @@ void MRIScan::applySMPFilter(MRICommunicator* comm, bool isBC,
 
     // WRITE MESSAGE AT EVERY INTERATION
     if(comm->currProc == 0){
-      writeSchMessage("[" + MRIUtils::intToStr(comm->currProc) + "] It: " + MRIUtils::intToStr(itCount) + "; ABS Res: "+MRIUtils::floatToStr(resNorm)+"; Rel: " + MRIUtils::floatToStr(relResNorm) +
-                      "; Coeff 2-Norm: "+MRIUtils::floatToStr(twoNorm)+"; Rel 2-Norm: " + MRIUtils::floatToStr(relTwoNorm)+"\n");
+      writeSchMessage("[" + mriUtils::intToStr(comm->currProc) + "] It: " + mriUtils::intToStr(itCount) + "; ABS Res: "+mriUtils::floatToStr(resNorm)+"; Rel: " + mriUtils::floatToStr(relResNorm) +
+                      "; Coeff 2-Norm: "+mriUtils::floatToStr(twoNorm)+"; Rel 2-Norm: " + mriUtils::floatToStr(relTwoNorm)+"\n");
     }
 
     // Check Convergence
@@ -1080,7 +1080,7 @@ void MRIScan::applySMPFilter(MRICommunicator* comm, bool isBC,
 
   // WRITE CPU TIME AND NUMBER OF ITERATIONS
   float totalCPUTime = float( clock () - begin_time ) /  CLOCKS_PER_SEC;
-  writeSchMessage("Total Iterations " + MRIUtils::intToStr(itCount) + "; Total CPU Time: " + MRIUtils::floatToStr(totalCPUTime) + "\n");
+  writeSchMessage("Total Iterations " + mriUtils::intToStr(itCount) + "; Total CPU Time: " + mriUtils::floatToStr(totalCPUTime) + "\n");
 
   // Eval Magniture and Angle Error
   recoverGlobalErrorEstimates(maxNormError,maxAngleError);
@@ -1095,12 +1095,12 @@ void MRIScan::applySMPFilter(MRICommunicator* comm, bool isBC,
     printf("Residual Update Time: %f [s]\n",updateStar_TotalTime);
     printf("\n");
     printf("--- INFO\n");
-    writeSchMessage("Final Residual Norm: " + MRIUtils::floatToStr(resNorm) + "\n");
+    writeSchMessage("Final Residual Norm: " + mriUtils::floatToStr(resNorm) + "\n");
     // Write Divergence Message
-    writeSchMessage("Max Divergence: " + MRIUtils::floatToStr(maxDivergence) + "\n");
+    writeSchMessage("Max Divergence: " + mriUtils::floatToStr(maxDivergence) + "\n");
     // Write Final Residual
-    writeSchMessage("Average Magnitude Error: " + MRIUtils::floatToStr(maxNormError) + "\n");
-    writeSchMessage("Average Angular Error: " + MRIUtils::floatToStr(maxAngleError) + "\n");
+    writeSchMessage("Average Magnitude Error: " + mriUtils::floatToStr(maxNormError) + "\n");
+    writeSchMessage("Average Angular Error: " + mriUtils::floatToStr(maxAngleError) + "\n");
     // Close Filter Comments
     writeSchMessage("---\n");
   }
@@ -1115,18 +1115,18 @@ void MRIScan::applySMPFilter(MRICommunicator* comm, bool isBC,
 // ==================================
 // REBUILD FROM EXPANSION COEFFICIENT
 // ==================================
-void MRIScan::rebuildFromExpansion(MRIExpansion* expansion, bool useConstantFlux){
+void mriScan::rebuildFromExpansion(mriExpansion* expansion, bool useConstantFlux){
   
   // RECONSTRUCTION
   int totalStarFaces = 0;
   int currFaceID = 0;
   double currFaceCoeff = 0.0;
-  MRIIntVec facesID;
-  MRIDoubleVec facesCoeffs;
+  mriIntVec facesID;
+  mriDoubleVec facesCoeffs;
   
   // Get total number of vortexes
   int totalVortex = evalTotalVortex();
-  MRIDoubleVec faceFluxVec(totalVortex + 3);
+  mriDoubleVec faceFluxVec(totalVortex + 3);
 
   // INITIALIZE
   for(int loopA=0;loopA<totalVortex+3;loopA++){

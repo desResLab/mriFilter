@@ -1,17 +1,17 @@
 # include "mriOperation.h"
 
 // CONSTRUCTOR
-MRIOperation::MRIOperation(){
+mriOperation::mriOperation(){
 
 }
 
 // DISTRUCTOR
-MRIOperation::~MRIOperation(){
+mriOperation::~mriOperation(){
 
 }
 
 // CONSTRUCTOR
-MRIOpExportForPoissonSolver::MRIOpExportForPoissonSolver(string fileName,
+mriOpExportForPoissonSolver::mriOpExportForPoissonSolver(string fileName,
                                                          double density,
                                                          double viscosity,
                                                          bool PPE_IncludeAccelerationTerm,
@@ -34,20 +34,20 @@ MRIOpExportForPoissonSolver::MRIOpExportForPoissonSolver(string fileName,
 }
 
 // DATA MEMBER
-MRIOpApplySmoothing::MRIOpApplySmoothing(int filterNumIterations, int filterType, int filterOrder){
+mriOpApplySmoothing::mriOpApplySmoothing(int filterNumIterations, int filterType, int filterOrder){
   this->numIterations = filterNumIterations;
   this->filterType = filterType;
   this->filterOrder = filterOrder;
 }
 
 // INITIALIZE APPLY NOISE OPERATION
-MRIOpApplyNoise::MRIOpApplyNoise(double noiseIntensity, double seed){
+mriOpApplyNoise::mriOpApplyNoise(double noiseIntensity, double seed){
   this->noiseIntensity = noiseIntensity;
   this->seed = seed;
 }
 
 // CONSTRUCTOR FOR SOLENOIDAL FILTER OPERATION
-MRIOpApplySolenoidalFilter::MRIOpApplySolenoidalFilter(bool applyBCFilter,bool useConstantPatterns,double itTol,int maxIt){
+mriOpApplySolenoidalFilter::mriOpApplySolenoidalFilter(bool applyBCFilter,bool useConstantPatterns,double itTol,int maxIt){
   this->applyBCFilter = applyBCFilter;
   this->useConstantPatterns = useConstantPatterns;
   this->itTol = itTol;
@@ -56,44 +56,44 @@ MRIOpApplySolenoidalFilter::MRIOpApplySolenoidalFilter(bool applyBCFilter,bool u
 
 
 // SCALE VELOCITIES
-void MRIOpScaleVelocities::processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq){
+void mriOpScaleVelocities::processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq){
   seq->scaleVelocities(factor);
 }
 
 // SCALE CELLS
-void MRIOpScaleCells::processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq){
+void mriOpScaleCells::processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq){
   seq->scalePositions(origin,factor);
 }
 
 // SAVE SEQUENCE AT CURRENT STATE
-void MRIOpSaveState::processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq){
+void mriOpSaveState::processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq){
   seq->saveVelocity();
 }
 
 // APPLY NOISE
-void MRIOpApplyNoise::processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq){
+void mriOpApplyNoise::processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq){
   seq->applyNoise(noiseIntensity,seed);
 }
 
 // APPLY SMOOTHING FILTER
-void MRIOpApplySmoothing::processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq){
+void mriOpApplySmoothing::processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq){
   seq->applyMedianFilter(kQtyVelocityX,numIterations,filterOrder,filterType,thresholdCriteria);
   seq->applyMedianFilter(kQtyVelocityY,numIterations,filterOrder,filterType,thresholdCriteria);
   seq->applyMedianFilter(kQtyVelocityZ,numIterations,filterOrder,filterType,thresholdCriteria);
 }
 
 // CLEAN NORMAL COMPONENT ON BOUNDARY
-void MRIOpCleanNormalComponentOnBoundary::processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq){
+void mriOpCleanNormalComponentOnBoundary::processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq){
   seq->cleanNormalComponentOnBoundary(thresholdCriteria);
 }
 
 // INTERPOLATE BOUNDARY VELOCITIES
-void MRIOpInterpolateVelocityOnBoundary::processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq){
+void mriOpInterpolateVelocityOnBoundary::processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq){
   seq->interpolateBoundaryVelocities(thresholdCriteria);
 }
 
 // INTERPOLATE BOUNDARY VELOCITIES
-void MRIOpApplySolenoidalFilter::processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq){
+void mriOpApplySolenoidalFilter::processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq){
   seq->applySMPFilter(comm, false, 
                       thresholdCriteria,
                       itTol,maxIt,
@@ -107,12 +107,12 @@ void MRIOpApplySolenoidalFilter::processSequence(MRICommunicator* comm, MRIThres
 }
 
 // APPLY THRESHOLD
-void MRIOpApplyThreshold::processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq){
+void mriOpApplyThreshold::processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq){
   seq->applyThresholding(thresholdCriteria);
 }
 
 // COMPUTE VORTEX CRITERIA
-void MRIOpComputeVortexCriteria::processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq){
+void mriOpComputeVortexCriteria::processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq){
   // Eval Popular Vortex Criteria
   seq->evalVortexCriteria(thresholdCriteria);
   // Compute Vorticity
@@ -126,17 +126,17 @@ void MRIOpComputeVortexCriteria::processSequence(MRICommunicator* comm, MRIThres
 }
 
 // COMPUTE SMP VORTEX CRITERION
-void MRIOpComputeSMPVortexCriteria::processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq){
+void mriOpComputeSMPVortexCriteria::processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq){
   seq->evalSMPVortexCriteria();
 }
 
 // WRITE EXPANSION COEFFICIENTS
-void MRIOpWriteExpansionCoefficients::processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq){
+void mriOpWriteExpansionCoefficients::processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq){
   seq->writeExpansionFile(string(outputFileName + "_expCoeff"));
 }
 
 // EXPORT FOR FINITE ELEMENT POISSON SOLVER
-void MRIOpExportForPoissonSolver::processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq){
+void mriOpExportForPoissonSolver::processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq){
   seq->exportForPoisson(fileName,density,viscosity,thresholdCriteria,
                         PPE_IncludeAccelerationTerm,
                         PPE_IncludeAdvectionTerm,
@@ -148,53 +148,53 @@ void MRIOpExportForPoissonSolver::processSequence(MRICommunicator* comm, MRIThre
 }
 
 // EXPORT FOR DISTANCE COMPUTATION
-void MRIOpExportForDistanceSolver::processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq){
+void mriOpExportForDistanceSolver::processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq){
   seq->exportForDistancing(distanceFileName,thresholdCriteria);
 }
 
 // DATA MEMBER
-void MRIOpEvalStatistics::processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq){
+void mriOpEvalStatistics::processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq){
   // Apply Factors to limitBox
   double xFactor = 1.0;
   double yFactor = 1.0;
   double zFactor = 1.0;
-  MRIUtils::applyLimitBoxFactors(xFactor,yFactor,zFactor,limitBox);
+  mriUtils::applyLimitBoxFactors(xFactor,yFactor,zFactor,limitBox);
   
   // Allocate Bin Arrays
-  MRIDoubleVec binCenters(numberOfBins);
-  MRIDoubleVec binValues(numberOfBins);
+  mriDoubleVec binCenters(numberOfBins);
+  mriDoubleVec binValues(numberOfBins);
   // Eval Single PDFs
   // FIRST
   seq->getScan(0)->evalScanPDF(kQtyVelModule,numberOfBins,useBox,limitBox,binCenters,binValues);
-  MRIUtils::printBinArrayToFile(statFileNameFirst,numberOfBins,binCenters,binValues);
+  mriUtils::printBinArrayToFile(statFileNameFirst,numberOfBins,binCenters,binValues);
 
   // SECOND
   seq->getScan(0)->evalScanPDF(kQtyVelModule,numberOfBins,useBox,limitBox,binCenters,binValues);
-  MRIUtils::printBinArrayToFile(statFileNameSecond,numberOfBins,binCenters,binValues);
+  mriUtils::printBinArrayToFile(statFileNameSecond,numberOfBins,binCenters,binValues);
 
   // DIFFERENCE
   seq->evalScanDifferencePDF(1,0,kQtyVelModule,numberOfBins,useBox,limitBox,binCenters,binValues);
-  MRIUtils::printBinArrayToFile(statFileNameDiff,numberOfBins,binCenters,binValues);
+  mriUtils::printBinArrayToFile(statFileNameDiff,numberOfBins,binCenters,binValues);
 }
 
 // COMPUTE SCAN MATRICES
-void MRIOpComputeScanMatrices::processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq){
+void mriOpComputeScanMatrices::processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq){
   // VAR
   int totalERows = 0;
   int totalECols = 0;
-  MRIDoubleMat EMat;
+  mriDoubleMat EMat;
   int totalDRows = 0;
   int totalDCols = 0;
-  MRIDoubleMat DMat;
+  mriDoubleMat DMat;
   int totalStarRows = 0;
   int totalStarCols = 0;
-  MRIDoubleMat StarMatrix;
+  mriDoubleMat StarMatrix;
 
   // SET PARAMETERS
   bool isIsotropic = true;
   
   // Set Template Parameters
-  MRIDoubleVec params(8);
+  mriDoubleVec params(8);
   params[0] = 5;
   params[1] = 5;
   params[2] = 5;
@@ -219,23 +219,23 @@ void MRIOpComputeScanMatrices::processSequence(MRICommunicator* comm, MRIThresho
   // RETRIEVE OPERATORS IN MATRIX FORM
   // ENCODING
   seq->getScan(0)->assembleEncodingMatrix(totalERows,totalECols,EMat);
-  MRIUtils::printMatrixToFile("EncodingMat.dat",EMat);
+  mriUtils::printMatrixToFile("EncodingMat.dat",EMat);
   // DECODING
   seq->getScan(0)->assembleDecodingMatrix(totalDRows,totalDCols,DMat);
-  MRIUtils::printMatrixToFile("DecodingMat.dat",DMat);
+  mriUtils::printMatrixToFile("DecodingMat.dat",DMat);
   // VORTEX FRAME MATRIX
   seq->getScan(0)->assembleStarMatrix(totalStarRows,totalStarCols,StarMatrix);
-  MRIUtils::printMatrixToFile("StarMat.dat",StarMatrix);
+  mriUtils::printMatrixToFile("StarMat.dat",StarMatrix);
 }
 
 // =======================
 // SHOW FACE FLUX PATTERNS
 // =======================
-void MRIOpShowFaceFluxPatterns::processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq){
+void mriOpShowFaceFluxPatterns::processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq){
 
   bool isIsotropic = true;
 
-  MRIDoubleVec params(7);
+  mriDoubleVec params(7);
   params[0] = 5.0;
   params[1] = 5.0;
   params[2] = 5.0;
@@ -257,11 +257,11 @@ void MRIOpShowFaceFluxPatterns::processSequence(MRICommunicator* comm, MRIThresh
   // READ FACE FLUXES FROM FILE
   int totalRows = 0;
   int totalCols = 0;
-  MRIDoubleMat faceFluxMat;
-  MRIUtils::readMatrixFromFile(faceFluxFileName,totalRows,totalCols,faceFluxMat);
+  mriDoubleMat faceFluxMat;
+  mriUtils::readMatrixFromFile(faceFluxFileName,totalRows,totalCols,faceFluxMat);
 
   // COPY THE INTERESTING COLUMN
-  MRIDoubleVec faceFluxVec(totalRows);
+  mriDoubleVec faceFluxVec(totalRows);
   for(int loop0=0;loop0<100;loop0++){
     int selectedCol = loop0;
     for(int loopA=0;loopA<totalRows;loopA++){
@@ -277,7 +277,7 @@ void MRIOpShowFaceFluxPatterns::processSequence(MRICommunicator* comm, MRIThresh
 }
 
 // EVALUATE CONCENTRATION GRADIENT
-void MRIOpEvalConcentrationGradient::processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq){
+void mriOpEvalConcentrationGradient::processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq){
 
   bool doPressureSmoothing = false;
 

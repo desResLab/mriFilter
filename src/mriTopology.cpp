@@ -26,12 +26,12 @@ int getLocalAdjacentFace(int localNodeNumber, int totalX, int AdjType){
 // READ CELL DATA FROM PLT FILE
 // ============================
 void readCellsFromPLTFile(string pltFileName, 
-                          MRIDoubleVec& domainSizeMin, MRIDoubleVec& domainSizeMax, 
+                          mriDoubleVec& domainSizeMin, mriDoubleVec& domainSizeMax, 
                           double& maxVelModule, 
-                          MRIDoubleVec& XCoords,
-                          MRIDoubleVec& YCoords,
-                          MRIDoubleVec& ZCoords,
-                          MRIDoubleMat& gridData){
+                          mriDoubleVec& XCoords,
+                          mriDoubleVec& YCoords,
+                          mriDoubleVec& ZCoords,
+                          mriDoubleMat& gridData){
 
   ifstream pltFile;
   pltFile.open(pltFileName.c_str());
@@ -47,12 +47,12 @@ void readCellsFromPLTFile(string pltFileName,
   // Read Lines
   string Buffer;
   int lineCount = 0;
-  MRIStringVec resultArray;
+  mriStringVec resultArray;
   bool Continue;
   int valueCounter = 0;
   int neededValues = 7;
-  MRIDoubleVec LocalVal(7);
-  MRIDoubleVec TempVal(7);
+  mriDoubleVec LocalVal(7);
+  mriDoubleVec TempVal(7);
   double LocalXCoord = 0.0;
   double LocalYCoord = 0.0;
   double LocalZCoord = 0.0;
@@ -61,13 +61,13 @@ void readCellsFromPLTFile(string pltFileName,
   double LocalYVel = 0.0;
   double LocalZVel = 0.0;
   double CurrentModule = 0.0;
-  MRIDoubleVec tmp;
+  mriDoubleVec tmp;
   while (getline(pltFile,Buffer)){
     // Read Line
     lineCount++;
 
     // Tokenize Line
-    resultArray = MRIUtils::extractSubStringFromBufferMS(Buffer);
+    resultArray = mriUtils::extractSubStringFromBufferMS(Buffer);
     
     // Store Local Structure
     try{
@@ -122,7 +122,7 @@ void readCellsFromPLTFile(string pltFileName,
     }catch (...){
       //Set Continue
       Continue = false;
-      std::string outString = "WARNING[*] Error Reading Line: "+MRIUtils::intToStr(lineCount)+"; Line Skipped.\n";
+      std::string outString = "WARNING[*] Error Reading Line: "+mriUtils::intToStr(lineCount)+"; Line Skipped.\n";
       printf("%s",outString.c_str());
     }
     if(Continue){
@@ -143,9 +143,9 @@ void readCellsFromPLTFile(string pltFileName,
       }
 
       // Store Node Coords To Find Grid Size
-      MRIUtils::insertInList(LocalXCoord,XCoords);
-      MRIUtils::insertInList(LocalYCoord,YCoords);
-      MRIUtils::insertInList(LocalZCoord,ZCoords);    
+      mriUtils::insertInList(LocalXCoord,XCoords);
+      mriUtils::insertInList(LocalYCoord,YCoords);
+      mriUtils::insertInList(LocalZCoord,ZCoords);    
 
       // Store Velocity/Concentrations
       tmp.clear();
@@ -214,7 +214,7 @@ void getFaceConnections(int faceID, vector<int> cellConnections, vector<int> &fa
 // ====================================
 // GET LOCAL EDGE CONNECTIONS FROM FACE
 // ====================================
-void getEdgeConnections(int EdgeID, const MRIIntVec& faceConnections, MRIIntVec& edgeIds){
+void getEdgeConnections(int EdgeID, const mriIntVec& faceConnections, mriIntVec& edgeIds){
   switch(EdgeID){
     case 0:
       edgeIds[0] = faceConnections[0];
@@ -235,7 +235,7 @@ void getEdgeConnections(int EdgeID, const MRIIntVec& faceConnections, MRIIntVec&
   }
 }
 
-MRITopology::MRITopology(){
+mriTopology::mriTopology(){
   domainSizeMin.resize(3);
   domainSizeMax.resize(3);
   totalCells = 0;
@@ -244,12 +244,12 @@ MRITopology::MRITopology(){
 }
 
 // CONSTRUCTOR
-MRITopology::MRITopology(const MRIIntVec& totals,
-                         const MRIDoubleVec& lengthX,
-                         const MRIDoubleVec& lengthY,
-                         const MRIDoubleVec& lengthZ,
-                         const MRIDoubleVec& minlimits,
-                         const MRIDoubleVec& maxlimits){
+mriTopology::mriTopology(const mriIntVec& totals,
+                         const mriDoubleVec& lengthX,
+                         const mriDoubleVec& lengthY,
+                         const mriDoubleVec& lengthZ,
+                         const mriDoubleVec& minlimits,
+                         const mriDoubleVec& maxlimits){
 
   // SET UP SCAN QUANTITIES
   // CELL TOTALS
@@ -287,8 +287,8 @@ MRITopology::MRITopology(const MRIIntVec& totals,
   totalCells = cellTotals[0]*cellTotals[1]*cellTotals[2];
 
   // INITIALIZE POSITIONS
-  MRIIntVec intCoords(3,0);
-  MRIDoubleVec Pos(3,0.0);
+  mriIntVec intCoords(3,0);
+  mriDoubleVec Pos(3,0.0);
   for(int loopA=0;loopA<totalCells;loopA++){
     mapIndexToCoords(loopA,intCoords);
     mapCoordsToPosition(intCoords,true,Pos);
@@ -299,11 +299,11 @@ MRITopology::MRITopology(const MRIIntVec& totals,
 }
 
 // DISTRUCTOR
-MRITopology::~MRITopology(){
+mriTopology::~mriTopology(){
 }
 
 // Map To Cells Coords
-void MRITopology::mapIndexToCoords(int index, MRIIntVec& intCoords){
+void mriTopology::mapIndexToCoords(int index, mriIntVec& intCoords){
   int CurrentIndex = index;
   intCoords[2] = (int)(CurrentIndex/(cellTotals[0] * cellTotals[1]));
   CurrentIndex = (CurrentIndex-intCoords[2] * cellTotals[0] * cellTotals[1]);
@@ -313,7 +313,7 @@ void MRITopology::mapIndexToCoords(int index, MRIIntVec& intCoords){
 }
 
 // Map From Cells Coords
-int MRITopology::mapCoordsToIndex(int i, int j, int k){
+int mriTopology::mapCoordsToIndex(int i, int j, int k){
   // C++ INDEXES ZERO BASED
   return k*(cellTotals[0]*cellTotals[1])+j*(cellTotals[0])+i;
 }
@@ -321,14 +321,14 @@ int MRITopology::mapCoordsToIndex(int i, int j, int k){
 // ===================
 // GET TOTAL AUX NODES
 // ===================
-int MRITopology::getTotalAuxNodes(){
+int mriTopology::getTotalAuxNodes(){
   return (cellTotals[0] + 1)*(cellTotals[1] + 1)*(cellTotals[2] + 1);
 }
 
 // ===============
 // GET TOTAL FACES
 // ===============
-int MRITopology::getTotalFaces(){
+int mriTopology::getTotalFaces(){
   return cellTotals[0] * cellTotals[1] * (cellTotals[2] + 1) +
          cellTotals[1] * cellTotals[2] * (cellTotals[0] + 1) +
          cellTotals[2] * cellTotals[0] * (cellTotals[1] + 1);
@@ -337,11 +337,11 @@ int MRITopology::getTotalFaces(){
 // ======================
 // GET VORTEX COEFFICIENT
 // ======================
-double MRITopology::getEdgeFaceVortexCoeff(int edgeID, int faceID){
+double mriTopology::getEdgeFaceVortexCoeff(int edgeID, int faceID){
   
-  MRIDoubleVec edgeDirVector(3);
-  MRIDoubleVec edgeFaceVector(3);
-  MRIDoubleVec resVec(3);
+  mriDoubleVec edgeDirVector(3);
+  mriDoubleVec edgeFaceVector(3);
+  mriDoubleVec resVec(3);
   double res = 0.0;
   
   // Get Vectors
@@ -367,11 +367,11 @@ double MRITopology::getEdgeFaceVortexCoeff(int edgeID, int faceID){
 // ==================
 // GET EDGE DIRECTION
 // ==================
-void MRITopology::getEdgeDirection(int edgeID, MRIDoubleVec& edgeDirVector){
+void mriTopology::getEdgeDirection(int edgeID, mriDoubleVec& edgeDirVector){
   int node1 = 0;
   int node2 = 0;
-  MRIDoubleVec node1Pos(3,0.0);
-  MRIDoubleVec node2Pos(3,0.0);
+  mriDoubleVec node1Pos(3,0.0);
+  mriDoubleVec node2Pos(3,0.0);
 
   // Get The Two Nodes
   node1 = edgeConnections[edgeID][0];
@@ -401,10 +401,10 @@ void MRITopology::getEdgeDirection(int edgeID, MRIDoubleVec& edgeDirVector){
 // ==========================
 // GET EDGE TO FACE DIRECTION
 // ==========================
-void MRITopology::getEdgeToFaceDirection(int edgeID, int faceID, MRIDoubleVec& edgeFaceVector){
+void mriTopology::getEdgeToFaceDirection(int edgeID, int faceID, mriDoubleVec& edgeFaceVector){
   // Declare
-  MRIDoubleVec ec(3,0.0);
-  MRIDoubleVec fc(3,0.0);
+  mriDoubleVec ec(3,0.0);
+  mriDoubleVec fc(3,0.0);
 
   // Get Edge Center
   getEdgeCenter(edgeID,ec);
@@ -425,7 +425,7 @@ void MRITopology::getEdgeToFaceDirection(int edgeID, int faceID, MRIDoubleVec& e
 // ===============
 // GET EDGE CENTER
 // ===============
-void MRITopology::getEdgeCenter(int edgeID, MRIDoubleVec& ec){
+void mriTopology::getEdgeCenter(int edgeID, mriDoubleVec& ec){
   int node1 = 0;
   int node2 = 0;
   double node1Pos[3] = {0.0};
@@ -451,9 +451,9 @@ void MRITopology::getEdgeCenter(int edgeID, MRIDoubleVec& ec){
 // ===============
 // GET FACE CENTER
 // ===============
-void MRITopology::getFaceCenter(int faceID, MRIDoubleVec& fc){
+void mriTopology::getFaceCenter(int faceID, mriDoubleVec& fc){
   int currNode = 0;
-  MRIDoubleVec pos(3,0.0);
+  mriDoubleVec pos(3,0.0);
 
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
     fc[loopA] = 0.0;
@@ -476,9 +476,9 @@ void MRITopology::getFaceCenter(int faceID, MRIDoubleVec& fc){
 // ===================================
 // CREATE MATRIX WITH AUX NODES COORDS
 // ===================================
-void MRITopology::buildAuxNodesCoords(){
-  MRIDoubleVec nodePos(3,0.0);
-  MRIDoubleVec nodePosVec(3);
+void mriTopology::buildAuxNodesCoords(){
+  mriDoubleVec nodePos(3,0.0);
+  mriDoubleVec nodePosVec(3);
   int totAuxNodes = getTotalAuxNodes();
   for(int loopA=0;loopA<totAuxNodes;loopA++){
     getAuxNodeCoordinates(loopA,nodePos);
@@ -492,8 +492,8 @@ void MRITopology::buildAuxNodesCoords(){
 // ====================================
 // GET COORDINATEDS FOR AUXILIARY NODES
 // ====================================
-void MRITopology::getAuxNodeCoordinates(int nodeNum, MRIDoubleVec& pos){
-  MRIIntVec intAuxCoords(3,0.0);
+void mriTopology::getAuxNodeCoordinates(int nodeNum, mriDoubleVec& pos){
+  mriIntVec intAuxCoords(3,0.0);
   // Map To Integer Coordinates
   mapIndexToAuxNodeCoords(nodeNum,intAuxCoords);
   // Map To Spatial Position
@@ -503,7 +503,7 @@ void MRITopology::getAuxNodeCoordinates(int nodeNum, MRIDoubleVec& pos){
 // =======================
 // MAP TO AUX CELLS COORDS
 // =======================
-void MRITopology::mapIndexToAuxNodeCoords(int index, MRIIntVec& intCoords){
+void mriTopology::mapIndexToAuxNodeCoords(int index, mriIntVec& intCoords){
   int CurrentIndex = index;
   int totalX = cellTotals[0] + 1;
   int totalY = cellTotals[1] + 1;
@@ -517,7 +517,7 @@ void MRITopology::mapIndexToAuxNodeCoords(int index, MRIIntVec& intCoords){
 // ========================================
 // MAP AUXILIARY INTEGER COORDS TO POSITION
 // ========================================
-void MRITopology::mapAuxCoordsToPosition(const MRIIntVec& auxCoords, MRIDoubleVec& pos){
+void mriTopology::mapAuxCoordsToPosition(const mriIntVec& auxCoords, mriDoubleVec& pos){
   // Loop on the three dimensions
   for(int loopA=0;loopA<3;loopA++){
     pos[loopA] = 0.0;
@@ -533,9 +533,9 @@ void MRITopology::mapAuxCoordsToPosition(const MRIIntVec& auxCoords, MRIDoubleVe
 // ========================================
 // BUILD GRID CONNECTIVITY FOR THE SEQUENCE
 // ========================================
-void MRITopology::buildCellConnections(){
+void mriTopology::buildCellConnections(){
 
-  MRIIntVec intCoords(3,0);
+  mriIntVec intCoords(3,0);
   int totZSilceNodes = 0;
   int zOffset = 0;
   int yOffset = 0;
@@ -588,8 +588,8 @@ void MRITopology::buildCellConnections(){
 // =======================
 // BUILD FACE CONNECTIVITY
 // =======================
-void MRITopology::buildFaceConnections(){
-  MRIIntVec faceIds;
+void mriTopology::buildFaceConnections(){
+  mriIntVec faceIds;
   vector<vector<mriFace* > > AuxFirstNodeFaceList;
   int currFace = 0;
   cellFaces.resize(totalCells);
@@ -609,15 +609,15 @@ void MRITopology::buildFaceConnections(){
 // =====================
 // ADD FACE TO FACE LIST
 // =====================
-int MRITopology::addToFaceConnections(const MRIIntVec& faceIds, vector<vector<mriFace* > >& AuxFirstNodeFaceList){
+int mriTopology::addToFaceConnections(const mriIntVec& faceIds, vector<vector<mriFace* > >& AuxFirstNodeFaceList){
   mriFace* newFace;
   // Get first node in connectivity
-  int firstConnectivityNode = MRIUtils::getMinInt(faceIds);
+  int firstConnectivityNode = mriUtils::getMinInt(faceIds);
   // Try to find with the first node list
   bool found = false;
   size_t count = 0;
   while((!found)&&(count<AuxFirstNodeFaceList[firstConnectivityNode].size())){
-    found = MRIUtils::isSameIntVector(faceIds,AuxFirstNodeFaceList[firstConnectivityNode][count]->connections);
+    found = mriUtils::isSameIntVector(faceIds,AuxFirstNodeFaceList[firstConnectivityNode][count]->connections);
     // Update
     if(!found){
       count++;
@@ -643,9 +643,9 @@ int MRITopology::addToFaceConnections(const MRIIntVec& faceIds, vector<vector<mr
 // =====================
 // ADD EDGE TO FACE LIST
 // =====================
-int MRITopology::addToEdgeConnections(const MRIIntVec& edgeIds,vector<vector<mriEdge*> >& AuxFirstNodeEdgeList){
+int mriTopology::addToEdgeConnections(const mriIntVec& edgeIds,vector<vector<mriEdge*> >& AuxFirstNodeEdgeList){
   mriEdge* newEdge;
-  MRIIntVec tmp;
+  mriIntVec tmp;
   tmp.resize(2);
   tmp[0] = edgeIds[0];
   tmp[1] = edgeIds[1];
@@ -662,7 +662,7 @@ int MRITopology::addToEdgeConnections(const MRIIntVec& edgeIds,vector<vector<mri
   bool found = false;
   size_t count = 0;
   while((!found)&&(count<AuxFirstNodeEdgeList[firstConnectivityNode].size())){
-    found = MRIUtils::isSameIntVector(tmp,AuxFirstNodeEdgeList[firstConnectivityNode][count]->connections);
+    found = mriUtils::isSameIntVector(tmp,AuxFirstNodeEdgeList[firstConnectivityNode][count]->connections);
     // Update
     if(!found){
       count++;
@@ -688,7 +688,7 @@ int MRITopology::addToEdgeConnections(const MRIIntVec& edgeIds,vector<vector<mri
 // =======================
 // BUILD EDGE CONNECTIVITY
 // =======================
-void MRITopology::buildFaceCells(){
+void mriTopology::buildFaceCells(){
   faceCells.resize(faceConnections.size());
   int currFace = 0;
   for(int loopA=0;loopA<totalCells;loopA++){
@@ -702,9 +702,9 @@ void MRITopology::buildFaceCells(){
 // =======================
 // BUILD EDGE CONNECTIVITY
 // =======================
-void MRITopology::buildEdgeConnections(){
+void mriTopology::buildEdgeConnections(){
 
-  MRIIntVec edgeIds(2,0);
+  mriIntVec edgeIds(2,0);
   vector<vector<mriEdge*> > AuxFirstNodeEdgeList;
   int currEdge = 0;
   double coeff = 0.0;
@@ -741,21 +741,21 @@ void MRITopology::buildEdgeConnections(){
 // ======================
 // BUILD FACE AREA VECTOR
 // ======================
-void MRITopology::buildFaceAreasAndNormals(){
+void mriTopology::buildFaceAreasAndNormals(){
   double prod = 0.0;
   faceArea.resize(faceConnections.size());
   faceNormal.resize(faceConnections.size());
   // Declare
-  MRIIntVec node1Coords(3,0);
-  MRIIntVec node2Coords(3,0);
-  MRIIntVec node3Coords(3,0);
-  MRIDoubleVec node1Pos(3,0.0);
-  MRIDoubleVec node2Pos(3,0.0);
-  MRIDoubleVec node3Pos(3,0.0);
-  MRIDoubleVec diff1(3,0.0);
-  MRIDoubleVec diff2(3,0.0);
-  MRIDoubleVec diff3(3,0.0);
-  MRIDoubleVec currNormal(3,0.0);
+  mriIntVec node1Coords(3,0);
+  mriIntVec node2Coords(3,0);
+  mriIntVec node3Coords(3,0);
+  mriDoubleVec node1Pos(3,0.0);
+  mriDoubleVec node2Pos(3,0.0);
+  mriDoubleVec node3Pos(3,0.0);
+  mriDoubleVec diff1(3,0.0);
+  mriDoubleVec diff2(3,0.0);
+  mriDoubleVec diff3(3,0.0);
+  mriDoubleVec currNormal(3,0.0);
   double d1 = 0.0;
   double d2 = 0.0;
   double innerProd = 0.0;
@@ -780,15 +780,15 @@ void MRITopology::buildFaceAreasAndNormals(){
       innerProd += diff1[loopB] * diff2[loopB];
     }
     if(fabs(innerProd) > kMathZero){
-      throw MRIException("ERROR: Face sides are not Orthogonal in buildFaceAreasAndNormals\n");
+      throw mriException("ERROR: Face sides are not Orthogonal in buildFaceAreasAndNormals\n");
     }
-    d1 = MRIUtils::do3DEucNorm(diff1);
-    d2 = MRIUtils::do3DEucNorm(diff2);
+    d1 = mriUtils::do3DEucNorm(diff1);
+    d2 = mriUtils::do3DEucNorm(diff2);
     // Evaluate Face Area
     faceArea[loopA] = d1 * d2;
     // Get the normal
-    MRIUtils::do3DExternalProduct(diff1,diff2,currNormal);
-    MRIUtils::normalize3DVector(currNormal);
+    mriUtils::do3DExternalProduct(diff1,diff2,currNormal);
+    mriUtils::normalize3DVector(currNormal);
     //printf("NODE 1 POS: %f %f %f\n",node1Pos[0],node1Pos[1],node1Pos[2]);
     //printf("CELL CENTRE POS: %f %f %f\n",cellPoints[faceCells[loopA][0]].position[0],cellPoints[faceCells[loopA][0]].position[1],cellPoints[faceCells[loopA][0]].position[2]);
     //getchar();
@@ -816,7 +816,7 @@ void MRITopology::buildFaceAreasAndNormals(){
 // ===============
 // SCALE POSITIONS
 // ===============
-void MRITopology::scalePositions(const MRIDoubleVec& origin, double factor){
+void mriTopology::scalePositions(const mriDoubleVec& origin, double factor){
   // SCALE CELL LENGTHS
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
     for(size_t loopB=0;loopB<cellLengths[loopA].size();loopB++){
@@ -847,18 +847,18 @@ void MRITopology::scalePositions(const MRIDoubleVec& origin, double factor){
 // =========
 // CROP SCAN
 // =========
-void MRITopology::crop(const MRIDoubleVec& limitBox, MRIBoolVec& indexes){
+void mriTopology::crop(const mriDoubleVec& limitBox, mriBoolVec& indexes){
   
   // Clear Index Vector
   indexes.clear();
 
-  MRIDoubleVec tmp(3);
-  MRIDoubleMat newCellLocations;
+  mriDoubleVec tmp(3);
+  mriDoubleMat newCellLocations;
 
   // Count The Number Of Cells Remaining
   int remainingCells = 0;
   for(int loopA=0;loopA<totalCells;loopA++){
-    if (MRIUtils::isPointInsideBox(cellLocations[loopA][0],
+    if (mriUtils::isPointInsideBox(cellLocations[loopA][0],
                                    cellLocations[loopA][1],
                                    cellLocations[loopA][2],
                                    limitBox)){
@@ -897,7 +897,7 @@ void MRITopology::crop(const MRIDoubleVec& limitBox, MRIBoolVec& indexes){
 // ============================================
 // Create Grid from VTK Structured Scan Options
 // ============================================
-void MRITopology::createGridFromVTKStructuredPoints(const vtkStructuredPointsOptionRecord& opts){
+void mriTopology::createGridFromVTKStructuredPoints(const vtkStructuredPointsOptionRecord& opts){
   // Assign cell totals
   cellTotals.resize(3);
   cellTotals[0] = opts.dimensions[0];
@@ -962,24 +962,24 @@ void MRITopology::createGridFromVTKStructuredPoints(const vtkStructuredPointsOpt
 // ================================
 // GET CELL EXTERNAL NORMAL AT FACE
 // ================================
-void MRITopology::getExternalFaceNormal(int cellID, int localFaceID, MRIDoubleVec& extNormal){
+void mriTopology::getExternalFaceNormal(int cellID, int localFaceID, mriDoubleVec& extNormal){
   // Get Face Nodes
-  MRIIntVec faceIds;
+  mriIntVec faceIds;
   getFaceConnections(localFaceID,cellConnections[cellID],faceIds);
 
-  MRIIntVec node1Coords(3,0);
-  MRIIntVec node2Coords(3,0);
-  MRIIntVec node3Coords(3,0);
+  mriIntVec node1Coords(3,0);
+  mriIntVec node2Coords(3,0);
+  mriIntVec node3Coords(3,0);
   // Get the integer coordinates for the first three nodes
   mapIndexToAuxNodeCoords(faceIds[0],node1Coords);
   mapIndexToAuxNodeCoords(faceIds[1],node2Coords);
   mapIndexToAuxNodeCoords(faceIds[2],node3Coords);
   
   // Get the positions for the first three nodes
-  MRIDoubleVec node1Pos(3,0.0);
-  MRIDoubleVec node2Pos(3,0.0);
-  MRIDoubleVec node3Pos(3,0.0);
-  MRIDoubleVec centreCellPos(3,0.0);
+  mriDoubleVec node1Pos(3,0.0);
+  mriDoubleVec node2Pos(3,0.0);
+  mriDoubleVec node3Pos(3,0.0);
+  mriDoubleVec centreCellPos(3,0.0);
   mapAuxCoordsToPosition(node1Coords,node1Pos);
   mapAuxCoordsToPosition(node2Coords,node2Pos);
   mapAuxCoordsToPosition(node3Coords,node3Pos);
@@ -987,17 +987,17 @@ void MRITopology::getExternalFaceNormal(int cellID, int localFaceID, MRIDoubleVe
   centreCellPos[1] = cellLocations[cellID][1];
   centreCellPos[2] = cellLocations[cellID][2];
   // Get the difference
-  MRIDoubleVec diff1(3,0.0);
-  MRIDoubleVec diff2(3,0.0);
-  MRIDoubleVec normVec(3,0.0);
+  mriDoubleVec diff1(3,0.0);
+  mriDoubleVec diff2(3,0.0);
+  mriDoubleVec normVec(3,0.0);
   for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
     diff1[loopB] = node2Pos[loopB] - node1Pos[loopB];
     diff2[loopB] = node3Pos[loopB] - node2Pos[loopB];
     normVec[loopB] = node1Pos[loopB] - centreCellPos[loopB];
   }
   // Get the normal
-  MRIUtils::do3DExternalProduct(diff1,diff2,extNormal);
-  MRIUtils::normalize3DVector(extNormal);
+  mriUtils::do3DExternalProduct(diff1,diff2,extNormal);
+  mriUtils::normalize3DVector(extNormal);
   // Check Sign
   double sign = 0.0;
   for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
@@ -1013,7 +1013,7 @@ void MRITopology::getExternalFaceNormal(int cellID, int localFaceID, MRIDoubleVe
 // =========================
 // CHECK COMPATIBLE TOPOLOGY
 // =========================
-bool MRITopology::isCompatibleTopology(MRITopology* topo){
+bool mriTopology::isCompatibleTopology(mriTopology* topo){
   bool result = true;
 
   result = result && (totalCells == topo->totalCells);
@@ -1048,7 +1048,7 @@ bool MRITopology::isCompatibleTopology(MRITopology* topo){
 // ==============================
 // MAP INTEGER COORDS TO POSITION
 // ==============================
-void MRITopology::mapCoordsToPosition(const MRIIntVec& coords, bool addMeshMinima, MRIDoubleVec& pos){
+void mriTopology::mapCoordsToPosition(const mriIntVec& coords, bool addMeshMinima, mriDoubleVec& pos){
   // Loop on the three dimensions
   for(int loopA=0;loopA<3;loopA++){
     pos[loopA] = 0.0;
@@ -1066,7 +1066,7 @@ void MRITopology::mapCoordsToPosition(const MRIIntVec& coords, bool addMeshMinim
 // ============================
 // READ TOPOLOGY FROM ASCII VTK
 // ============================
-void MRITopology::readFromVTK_ASCII(string vtkFileName, vtkStructuredPointsOptionRecord& vtkOptions){
+void mriTopology::readFromVTK_ASCII(string vtkFileName, vtkStructuredPointsOptionRecord& vtkOptions){
   // Write Progress
   writeSchMessage(string("Reading Topology From: ") + vtkFileName + string("\n"));
 
@@ -1078,7 +1078,7 @@ void MRITopology::readFromVTK_ASCII(string vtkFileName, vtkStructuredPointsOptio
   initVTKStructuredPointsOptions(vtkOptions);
 
   // Read Through and look for options
-  MRIStringVec tokenizedString;
+  mriStringVec tokenizedString;
   int totalLinesInFile = 0;
   string Buffer;
   while(getline(vtkFile,Buffer)){
@@ -1114,7 +1114,7 @@ void MRITopology::readFromVTK_ASCII(string vtkFileName, vtkStructuredPointsOptio
 // ================================
 // READ TOPOLOGY FROM ASCII TECPLOT
 // ================================
-void MRITopology::readFromPLT_ASCII(string pltFileName, pltOptionRecord& pltOptions){
+void mriTopology::readFromPLT_ASCII(string pltFileName, pltOptionRecord& pltOptions){
   
   // Write Progress
   writeSchMessage(std::string("Reading topology from : ") + pltFileName + std::string("\n"));
@@ -1126,7 +1126,7 @@ void MRITopology::readFromPLT_ASCII(string pltFileName, pltOptionRecord& pltOpti
   // READ PLT FILE HEADER
   ifstream pltFile;
   pltFile.open(pltFileName.c_str());
-  MRIStringVec tokenizedString;
+  mriStringVec tokenizedString;
   bool foundheader = false;
   bool areAllFloats = false;
   int headerCount = 0;
@@ -1139,7 +1139,7 @@ void MRITopology::readFromPLT_ASCII(string pltFileName, pltOptionRecord& pltOpti
       areAllFloats = true;
       assignPLTOptions(tokenizedString, pltOptions);
       for(size_t loopA=0;loopA<tokenizedString.size();loopA++){
-        areAllFloats = (areAllFloats && (MRIUtils::isFloat(tokenizedString[loopA])));
+        areAllFloats = (areAllFloats && (mriUtils::isFloat(tokenizedString[loopA])));
       }
       foundheader = areAllFloats;
       headerCount++;
@@ -1155,10 +1155,10 @@ void MRITopology::readFromPLT_ASCII(string pltFileName, pltOptionRecord& pltOpti
 
   // Read Cells From PLT File
   double maxVelModule;
-  MRIDoubleVec XCoords;
-  MRIDoubleVec YCoords;
-  MRIDoubleVec ZCoords;
-  MRIDoubleMat gridData;  
+  mriDoubleVec XCoords;
+  mriDoubleVec YCoords;
+  mriDoubleVec ZCoords;
+  mriDoubleMat gridData;  
   readCellsFromPLTFile(pltFileName, 
                        domainSizeMin,domainSizeMax,
                        maxVelModule, 
@@ -1186,13 +1186,13 @@ void MRITopology::readFromPLT_ASCII(string pltFileName, pltOptionRecord& pltOpti
 // =========================
 // Get Global Adjacent Plane
 // =========================
-int MRITopology::getAdjacentFace(int globalNodeNumber /*Already Ordered Globally x-y-z*/, int AdjType){
+int mriTopology::getAdjacentFace(int globalNodeNumber /*Already Ordered Globally x-y-z*/, int AdjType){
   
   // Get The Z Coord
   double currentZCoord = cellLocations[globalNodeNumber][2] - domainSizeMin[2];
   
   // Find The Node Number in The Current Plane
-  int ZCompleteLevels = MRIUtils::findHowMany(currentZCoord,cellLengths[2]);
+  int ZCompleteLevels = mriUtils::findHowMany(currentZCoord,cellLengths[2]);
   int localNodeNumber = globalNodeNumber - ZCompleteLevels * cellTotals[0] * cellTotals[1];
 
   // Find The Adjacent face in the Current Plane
@@ -1219,17 +1219,17 @@ int MRITopology::getAdjacentFace(int globalNodeNumber /*Already Ordered Globally
 // ================================
 // GET VORTEXES ASSOCIATED TO CELLS
 // ================================
-void MRITopology::getNeighborVortexes(int cellNumber,int dim,MRIIntVec& idx){
+void mriTopology::getNeighborVortexes(int cellNumber,int dim,mriIntVec& idx){
   // Loop through the edges
-  MRIIntVec ElEdgeList;
-  MRIDoubleVec currEdgeDirVector(3);
+  mriIntVec ElEdgeList;
+  mriDoubleVec currEdgeDirVector(3);
   int currFace = 0;
   int currEdge = 0;
   for(int loopA=0;loopA<cellFaces[cellNumber].size();loopA++){
     currFace = cellFaces[cellNumber][loopA];
     for(int loopB=0;loopB<faceEdges[currFace].size();loopB++){
       currEdge = faceEdges[currFace][loopB];
-      MRIUtils::insertInList(currEdge,ElEdgeList);
+      mriUtils::insertInList(currEdge,ElEdgeList);
     }
   }
   // Find the Edges Aligned with the Selected Dimension
@@ -1244,7 +1244,7 @@ void MRITopology::getNeighborVortexes(int cellNumber,int dim,MRIIntVec& idx){
     }else if((fabs(currEdgeDirVector[0])<kMathZero)&&(fabs(currEdgeDirVector[1])<kMathZero)){
       currDir = 2;
     }else{
-      throw MRIException("ERROR: Invalid Edge Direction in getNeighborVortexes.\n");
+      throw mriException("ERROR: Invalid Edge Direction in getNeighborVortexes.\n");
     }
     if(currDir == dim){
       idx.push_back(ElEdgeList[loopA]);
@@ -1255,7 +1255,7 @@ void MRITopology::getNeighborVortexes(int cellNumber,int dim,MRIIntVec& idx){
 // ===================
 // CREATE SAMPLE FLOWS
 // ===================
-void MRITopology::createFromTemplate(MRISamples sampleType,const MRIDoubleVec& params){
+void mriTopology::createFromTemplate(mriSamples sampleType,const mriDoubleVec& params){
 
   // Store Parameter Values
   int sizeX = int(params[0]);
@@ -1276,10 +1276,10 @@ void MRITopology::createFromTemplate(MRISamples sampleType,const MRIDoubleVec& p
   }else if(direction == 2){
     dir = kdirZ;
   }else{
-    throw MRIException("ERROR: Invalid template direction in CreateSampleCase.\n");
+    throw mriException("ERROR: Invalid template direction in CreateSampleCase.\n");
   }
 
-  MRIIntVec currentCoords(kNumberOfDimensions);
+  mriIntVec currentCoords(kNumberOfDimensions);
   // Set Cells Totals
   cellTotals.resize(3);
   cellTotals[0] = sizeX;

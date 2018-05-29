@@ -49,10 +49,10 @@ using namespace std;
   const int otFILEVTK                       = 0;
   const int otFILEPLT                       = 1;
 
-class MRIOperation;
+class mriOperation;
 
 // CLASS MRIPROGRAMOPTIONS
-class MRIOptions{
+class mriOptions{
 public:
   // OPTIONS
   int runMode;
@@ -61,7 +61,7 @@ public:
   string statFileName;
   // Input Templates
   int templateType;
-  MRIDoubleVec templateParams;
+  mriDoubleVec templateParams;
   // Command File Options
   bool generateCommandFile;
   bool useCommandFile;
@@ -69,8 +69,8 @@ public:
   // Sequence Processing
   bool haveSequence;
   string sequenceFileName;
-  MRIStringVec sequenceFileList;
-  MRIDoubleVec sequenceFileTimes;
+  mriStringVec sequenceFileList;
+  mriDoubleVec sequenceFileTimes;
   // Export File Format
   int inputFormatType;
   int outputFormatType;
@@ -81,7 +81,7 @@ public:
   int thresholdQty;
   int thresholdType;
   double thresholdValue;  
-  MRIThresholdCriteria* thresholdCriteria;
+  mriThresholdCriteria* thresholdCriteria;
   // PPE Solver Options
   bool PPE_IncludeAccelerationTerm;
   bool PPE_IncludeAdvectionTerm;
@@ -91,13 +91,13 @@ public:
   string muTFile;
   double smagorinskyCoeff;
   // List of operations
-  vector<MRIOperation*> operationList;
+  vector<mriOperation*> operationList;
 
   // CONSTRUCTOR
-  MRIOptions();
+  mriOptions();
   
   // Distructor
-  ~MRIOptions();
+  ~mriOptions();
 
   // Get Command Options from input Arguments
   int getCommadLineOptions(int argc, char **argv);
@@ -109,13 +109,13 @@ public:
   int writeOptionsToFile(string outFile);
   
   // Read Sequence File List
-  void readSequenceFileList(string fileName,MRIStringVec& sequenceFileList,MRIDoubleVec& sequenceFileTimes);
+  void readSequenceFileList(string fileName,mriStringVec& sequenceFileList,mriDoubleVec& sequenceFileTimes);
 
   // Process Options
   void finalize();
 
   // MESSAGE PASSING
-  void DistributeProgramOptions(MRICommunicator* comm);
+  void DistributeProgramOptions(mriCommunicator* comm);
 
 };
 

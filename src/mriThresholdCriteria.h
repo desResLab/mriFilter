@@ -5,15 +5,15 @@
 
 # include "mriConstants.h"
 
-class MRIThresholdCriteria{
+class mriThresholdCriteria{
 public:
   // Data Members
   int thresholdType;
   int thresholdQty;
   double thresholdValue;
   // Constructor and Destructor
-  MRIThresholdCriteria(int type, int qty, double value);
-  ~MRIThresholdCriteria();
+  mriThresholdCriteria(int type, int qty, double value);
+  ~mriThresholdCriteria();
   // Data Members
   bool meetsCriteria(double currentValue);
 };

@@ -3,20 +3,20 @@
 #include "mriConstants.h"
 #include "mriException.h"
 
-MRICell::MRICell(){
+mriCell::mriCell(){
   // Initialize Cell
   concentration = 0.0;
   velocity.resize(3,0.0);
   auxVector.resize(3,0.0);
 }
 
-MRICell::~MRICell(){
+mriCell::~mriCell(){
 }
 
 // ============
 // GET QUANTITY
 // ============
-double MRICell::getQuantity(int qtyID){
+double mriCell::getQuantity(int qtyID){
   switch(qtyID){
     case kQtyConcentration:
       return concentration;
@@ -31,7 +31,7 @@ double MRICell::getQuantity(int qtyID){
       return velocity[2];
       break;
     default:
-      throw MRIException("ERROR: Invalid quantity in MRICell::getQuantity.\n");
+      throw mriException("ERROR: Invalid quantity in mriCell::getQuantity.\n");
       break;
   }
 }
@@ -39,7 +39,7 @@ double MRICell::getQuantity(int qtyID){
 // ============
 // SET QUANTITY
 // ============
-void MRICell::setQuantity(int qtyID, double value){
+void mriCell::setQuantity(int qtyID, double value){
   switch(qtyID){
     case kQtyConcentration:
       concentration = value;
@@ -54,7 +54,7 @@ void MRICell::setQuantity(int qtyID, double value){
       velocity[2] = value;
       break;
     default:
-      throw MRIException("ERROR: Invalid quantity.\n");
+      throw mriException("ERROR: Invalid quantity.\n");
       break;
   }
 }

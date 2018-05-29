@@ -1,8 +1,8 @@
 #include "mriImagedata.h"
 
-MRIImageData::MRIImageData(){
+mriImageData::mriImageData(){
 }
 
-MRIImageData::~MRIImageData(){
+mriImageData::~mriImageData(){
 
 }

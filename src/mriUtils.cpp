@@ -18,7 +18,7 @@ void writeHeader(){
 }
 
 // MRI UTILITIES
-namespace MRIUtils{
+namespace mriUtils{
 
 // ==================
 // WRITE PROGRAM HELP
@@ -78,7 +78,7 @@ string floatToStr(double number){
 // ===============================================
 // EXTRACT STRING FROM BUFFER WITH MULTIPLE SPACES
 // ===============================================
-MRIStringVec extractSubStringFromBufferMS(std::string Buffer){
+mriStringVec extractSubStringFromBufferMS(std::string Buffer){
   // Tokenize
   char* BufferCH = const_cast<char*> (Buffer.c_str());
   char* tok = strtok (BufferCH," ");
@@ -97,7 +97,7 @@ MRIStringVec extractSubStringFromBufferMS(std::string Buffer){
 // =======================
 // EVAL TWO-NORM OF VECTOR
 // =======================
-double do3DEucNorm(const MRIDoubleVec& v){
+double do3DEucNorm(const mriDoubleVec& v){
   double norm2 = 0.0;
   for(int i = 0;i<kNumberOfDimensions;i++){
     norm2 += v[i]*v[i];
@@ -109,7 +109,7 @@ double do3DEucNorm(const MRIDoubleVec& v){
 // ===================
 // NORMALIZE 3D VECTOR
 // ===================
-void normalize3DVector(MRIDoubleVec& v){
+void normalize3DVector(mriDoubleVec& v){
   double norm = do3DEucNorm(v);
   if(norm>kMathZero){
     for(int LoopA=0;LoopA<kNumberOfDimensions;LoopA++){
@@ -121,7 +121,7 @@ void normalize3DVector(MRIDoubleVec& v){
 // =============================
 // INSERT IN GENERIC DOUBLE LIST
 // =============================
-void insertInList(double value, MRIDoubleVec& list){
+void insertInList(double value, mriDoubleVec& list){
   double distance;	  
   for(int LoopA=0;LoopA<list.size();LoopA++){
     distance = fabs(list[LoopA] - value);
@@ -134,7 +134,7 @@ void insertInList(double value, MRIDoubleVec& list){
 // ==============================
 // INSERT IN GENERIC INTEGER LIST
 // ==============================
-void insertInList(int value, MRIIntVec& list){
+void insertInList(int value, mriIntVec& list){
   for(int LoopA=0;LoopA<list.size();LoopA++){
     if (list[LoopA] == value) return;
   }
@@ -178,7 +178,7 @@ void writeGraphToFile(std::string fileName, int vecSize, std::vector<double> &ve
 // ========================
 // PERFORM EXTERNAL PRODUCT
 // ========================
-void do3DExternalProduct(const MRIDoubleVec& v1, const MRIDoubleVec& v2, MRIDoubleVec& resVec){
+void do3DExternalProduct(const mriDoubleVec& v1, const mriDoubleVec& v2, mriDoubleVec& resVec){
   resVec[0] = v1[1] * v2[2] - v2[1] * v1[2];
   resVec[1] = v1[2] * v2[0] - v2[2] * v1[0];
   resVec[2] = v1[0] * v2[1] - v2[0] * v1[1];
@@ -187,7 +187,7 @@ void do3DExternalProduct(const MRIDoubleVec& v1, const MRIDoubleVec& v2, MRIDoub
 // ============================
 // CHECK IF POINT IS INSIDE BOX
 // ============================
-bool isPointInsideBox(double xCoord, double yCoord, double zCoord, const MRIDoubleVec& limitBox){
+bool isPointInsideBox(double xCoord, double yCoord, double zCoord, const mriDoubleVec& limitBox){
     return ((xCoord>=limitBox[0])&&(xCoord<=limitBox[1]))&&
            ((yCoord>=limitBox[2])&&(yCoord<=limitBox[3]))&&
            ((zCoord>=limitBox[4])&&(zCoord<=limitBox[5]));
@@ -196,7 +196,7 @@ bool isPointInsideBox(double xCoord, double yCoord, double zCoord, const MRIDoub
 // =======================
 // PRINT BIN ARRAY TO FILE
 // =======================
-void printBinArrayToFile(string fileName, int numberOfBins, const MRIDoubleVec& binCenter, const MRIDoubleVec& binValues){
+void printBinArrayToFile(string fileName, int numberOfBins, const mriDoubleVec& binCenter, const mriDoubleVec& binValues){
   // Open Output File
 	FILE* outFile;
 	outFile = fopen(fileName.c_str(),"w");
@@ -211,7 +211,7 @@ void printBinArrayToFile(string fileName, int numberOfBins, const MRIDoubleVec& 
 // ======================
 // APPLY LIMIT BOX FACTOR
 // ======================
-void applyLimitBoxFactors(double xFactor, double yFactor, double zFactor, MRIDoubleVec& limitBox){
+void applyLimitBoxFactors(double xFactor, double yFactor, double zFactor, mriDoubleVec& limitBox){
   double center[3] = {0.0};
   double domainSize[3] = {0.0};
   center[0] = 0.5 * (limitBox[0] + limitBox[1]);
@@ -231,7 +231,7 @@ void applyLimitBoxFactors(double xFactor, double yFactor, double zFactor, MRIDou
 // ====================
 // PRINT MATRIX TO FILE
 // ====================
-void printMatrixToFile(string fileName, const MRIDoubleMat& Mat){
+void printMatrixToFile(string fileName, const mriDoubleMat& Mat){
   int totalRows = Mat.size();
   int totalCols = Mat[0].size();
     // Open Output File
@@ -319,7 +319,7 @@ void readMatrixFromFile(std::string inFileName,int& nrow,int& ncol,std::vector<s
 // ====================
 // GET MEDIAN OF VECTOR
 // ====================
-double getMedian(MRIDoubleVec& v){
+double getMedian(mriDoubleVec& v){
   size_t n = v.size() / 2;
   nth_element(v.begin(), v.begin()+n, v.end());
   return v[n];
@@ -328,7 +328,7 @@ double getMedian(MRIDoubleVec& v){
 // ========
 // GET MEAN
 // ========
-double getMean(const MRIDoubleVec& v){
+double getMean(const mriDoubleVec& v){
   double av = 0.0;
   for(size_t loopA=0;loopA<v.size();loopA++){
     av = av + v[loopA];
@@ -409,9 +409,9 @@ void sortIntArray(std::vector<int> &faceIds){
 // ===================================
 // CHECK THAT TWO VECTORS ARE THE SAME
 // ===================================
-bool isSameIntVector(const MRIIntVec& one, const MRIIntVec& two){
-  MRIIntVec first(one);
-  MRIIntVec second(two);
+bool isSameIntVector(const mriIntVec& one, const mriIntVec& two){
+  mriIntVec first(one);
+  mriIntVec second(two);
   // SORT THE TWO VECTORS FIRST
   std::sort(first.begin(),first.end());
   std::sort(second.begin(),second.end());
@@ -431,7 +431,7 @@ bool isSameIntVector(const MRIIntVec& one, const MRIIntVec& two){
 // =======================
 // FIND HOW MANY INTERVALS
 // =======================
-int findHowMany(double distance, const MRIDoubleVec& lengths){
+int findHowMany(double distance, const mriDoubleVec& lengths){
   bool found = false;
   int count = 0;
   double currDist = 0.0;
@@ -546,7 +546,7 @@ bool isFloat(string token){
 // ====================
 // READ TABLE FROM FILE
 // ====================
-int readTableFromFile(string fileName, MRIDoubleMat& table, bool skipFirstRow){
+int readTableFromFile(string fileName, mriDoubleMat& table, bool skipFirstRow){
   // Open File
   ifstream myReadFile;
   string buffer;
@@ -590,7 +590,7 @@ int readTableFromFile(string fileName, MRIDoubleMat& table, bool skipFirstRow){
 // ===================
 // PRINT DOUBLE MATRIX
 // ===================
-void printDoubleMatToFile(string fileName, const MRIDoubleMat& faceNormals){
+void printDoubleMatToFile(string fileName, const mriDoubleMat& faceNormals){
   // Open Output File
   FILE* f;
   f = fopen(fileName.c_str(),"w");
@@ -608,7 +608,7 @@ void printDoubleMatToFile(string fileName, const MRIDoubleMat& faceNormals){
 // ================
 // PRINT INT MATRIX
 // ================
-void printIntMatToFile(string fileName, const MRIIntMat& mat){
+void printIntMatToFile(string fileName, const mriIntMat& mat){
   // Open Output File
   FILE* f;
   f = fopen(fileName.c_str(),"w");
@@ -626,7 +626,7 @@ void printIntMatToFile(string fileName, const MRIIntMat& mat){
 // ===================
 // PRINT DOUBLE VECTOR
 // ===================
-void printDoubleVecToFile(string fileName, const MRIDoubleVec& vec){
+void printDoubleVecToFile(string fileName, const mriDoubleVec& vec){
   // Open Output File
   FILE* f;
   f = fopen(fileName.c_str(),"w");
@@ -641,7 +641,7 @@ void printDoubleVecToFile(string fileName, const MRIDoubleVec& vec){
 // ===================
 // PRINT DOUBLE VECTOR
 // ===================
-void printIntVecToFile(string fileName, const MRIIntVec& vec){
+void printIntVecToFile(string fileName, const mriIntVec& vec){
   // Open Output File
   FILE* f;
   f = fopen(fileName.c_str(),"w");
@@ -671,7 +671,7 @@ void printDoubleArrayToFile(string fileName, int size, double* vec){
 // ==============
 // NORMALIZE BINS
 // ==============
-void normalizeBinArray(MRIDoubleVec& binArray,double currInterval){
+void normalizeBinArray(mriDoubleVec& binArray,double currInterval){
   double sum = 0.0;
   // Compute Summation
   for(int loopA=0;loopA<binArray.size();loopA++){
@@ -690,7 +690,7 @@ void normalizeBinArray(MRIDoubleVec& binArray,double currInterval){
 // =============
 // ASSIGN TO BIN
 // =============
-void assignToBin(double currValue, int numberOfBins, const MRIDoubleVec& binMin, const MRIDoubleVec& binMax, MRIDoubleVec& binArray){
+void assignToBin(double currValue, int numberOfBins, const mriDoubleVec& binMin, const mriDoubleVec& binMax, mriDoubleVec& binArray){
   bool found = false;
   int count = 0;
   bool isMoreThanMin = false;
@@ -716,7 +716,7 @@ void assignToBin(double currValue, int numberOfBins, const MRIDoubleVec& binMin,
     // Increase Bin Count
     binArray[count] = binArray[count] + 1.0;
   }else{
-    throw MRIException("Error: Value Cannot fit in Bin.\n");
+    throw mriException("Error: Value Cannot fit in Bin.\n");
   } 
 }
 

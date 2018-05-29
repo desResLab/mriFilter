@@ -11,8 +11,8 @@ using namespace std;
 // =================================
 // GET CARTESIAN NEIGHBORS OF A CELL
 // =================================
-void MRIScan::getCartesianNeighbourCells(int CurrentCell,MRIIntVec& cellNeighbors, bool addself){
-  MRIIntVec coords(3);
+void mriScan::getCartesianNeighbourCells(int CurrentCell,mriIntVec& cellNeighbors, bool addself){
+  mriIntVec coords(3);
   cellNeighbors.clear();
   if(addself){
     cellNeighbors.push_back(CurrentCell);
@@ -64,7 +64,7 @@ void MRIScan::getCartesianNeighbourCells(int CurrentCell,MRIIntVec& cellNeighbor
 // =====================================
 // CHECK IF IS BOUNDARY OR INTERNAL CELL
 // =====================================
-bool MRIScan::isInnerCell(int cell){
+bool mriScan::isInnerCell(int cell){
   // Init Result
   bool isInside = true; 
   std::vector<int> others;
@@ -79,19 +79,19 @@ bool MRIScan::isInnerCell(int cell){
 }
 
 // Get Unit Vector From Current Cell To Face Centre
-void MRISequence::getUnitVector(int CurrentCell, const MRIDoubleVec& GlobalFaceCoords, MRIDoubleVec& myVect){
+void mriSequence::getUnitVector(int CurrentCell, const mriDoubleVec& GlobalFaceCoords, mriDoubleVec& myVect){
   // Get Vector
   myVect[0] = GlobalFaceCoords[0] - topology->cellLocations[CurrentCell][0];
   myVect[1] = GlobalFaceCoords[1] - topology->cellLocations[CurrentCell][1];
   myVect[2] = GlobalFaceCoords[2] - topology->cellLocations[CurrentCell][2];
   // Normalize
-  MRIUtils::normalize3DVector(myVect);
+  mriUtils::normalize3DVector(myVect);
 }
 
 // ===================================
 // GET GLOBAL COORDS FROM LOCAL COORDS
 // ===================================
-void MRISequence::getGlobalCoords(int DimNumber, int SliceNumber, double FaceCoord1, double FaceCoord2, MRIDoubleVec& globalCoords){
+void mriSequence::getGlobalCoords(int DimNumber, int SliceNumber, double FaceCoord1, double FaceCoord2, mriDoubleVec& globalCoords){
   // Sum up the slices
   double sliceValue = 0.0;
   for(int loopA=1;loopA<SliceNumber;loopA++){
@@ -120,11 +120,11 @@ void MRISequence::getGlobalCoords(int DimNumber, int SliceNumber, double FaceCoo
 }
 
 // Map Cell Number
-int MRISequence::getCellNumber(const MRIDoubleVec& coords){
+int mriSequence::getCellNumber(const mriDoubleVec& coords){
   // Check Indexes
-  int i = MRIUtils::findHowMany(coords[0] - topology->domainSizeMin[0],topology->cellLengths[0]);
-  int j = MRIUtils::findHowMany(coords[1] - topology->domainSizeMin[1],topology->cellLengths[1]);
-  int k = MRIUtils::findHowMany(coords[2] - topology->domainSizeMin[2],topology->cellLengths[2]);
+  int i = mriUtils::findHowMany(coords[0] - topology->domainSizeMin[0],topology->cellLengths[0]);
+  int j = mriUtils::findHowMany(coords[1] - topology->domainSizeMin[1],topology->cellLengths[1]);
+  int k = mriUtils::findHowMany(coords[2] - topology->domainSizeMin[2],topology->cellLengths[2]);
   // If OutSide Project To Max Index
   if(i>(topology->cellTotals[0]-1)){
     i = (topology->cellTotals[0]-1);
@@ -151,7 +151,7 @@ int MRISequence::getCellNumber(const MRIDoubleVec& coords){
 }
 
 // Get Velocity Norm At Specific Cell for all scans: sort of Frobenius Norm
-double MRISequence::getVelocityNormAtCell(int cell){
+double mriSequence::getVelocityNormAtCell(int cell){
   double norm = 0.0;
   for(int loopA=0;loopA<sequence.size();loopA++){
     norm += sequence[loopA]->cells[loopA].velocity[0] * sequence[loopA]->cells[loopA].velocity[0];
@@ -162,14 +162,14 @@ double MRISequence::getVelocityNormAtCell(int cell){
 }
 
 // Compute Global Permutation
-void MRISequence::getGlobalPermutation(MRIIntVec& GlobalPerm){
+void mriSequence::getGlobalPermutation(mriIntVec& GlobalPerm){
   double Norm = 0.0;
   double VelNorm = 0.0;
   int invalidCount = 0;
   // Fill Permutation Vector
   int NumberOfZeroNorms = 0;
   for(int loopA=0;loopA<topology->totalCells;loopA++){
-    Norm = MRIUtils::do3DEucNorm(topology->cellLocations[loopA]);
+    Norm = mriUtils::do3DEucNorm(topology->cellLocations[loopA]);
     // Get Velocity Norm Form One Cell In all Scans
     VelNorm = getVelocityNormAtCell(loopA);
     if (Norm<kMathZero){

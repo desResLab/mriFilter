@@ -3,17 +3,17 @@
 
 # include "mriTypes.h"
 
-class MRICell{
+class mriCell{
   public:
     double concentration;
-    MRIDoubleVec velocity;
-    MRIDoubleVec auxVector;
+    mriDoubleVec velocity;
+    mriDoubleVec auxVector;
     // Constructor and Destructor
-    MRICell();
-    ~MRICell();
+    mriCell();
+    virtual ~mriCell();
     // Member Functions
     double getQuantity(int qtyID);
-    void setQuantity(int qtyID, double value);
+    void   setQuantity(int qtyID, double value);
 };
 
 #endif // MRICELL_H
