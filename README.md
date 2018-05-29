@@ -17,28 +17,24 @@ The following modules should be loaded before running cmake and make to compile 
 
 ### Installation
 
-First, clone the git repository in a local folder:
+First, clone this git repository in a local folder:
+
+Create a directory for out-of-source build (e.g., mriBin):
 
 ```
-git clone git@bitbucket.org:danschi/mpfilter.git 
-```
-
-Create a directory for out-of-source build (e.g., smpBin):
-
-```
-mkdir smpBin
+mkdir mriBin
 ```
 
 Enter this folder 
 
 ```
-cd smpBin
+cd mriBin
 ```
 
 run cmake with the following command:
 
 ```
-cmake ../mpfilter/
+cmake ../mriFilter/
 ```
 
 Run make:
@@ -68,5 +64,5 @@ An **index.html** document will be created in the **docs/build/html** folder.
 The preferred way to run the code is by reading a command file:
 
 ```
-mpFilterApp -c command_file_name
+mriFilter -c command_file_name
 ```
