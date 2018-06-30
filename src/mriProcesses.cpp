@@ -68,8 +68,9 @@ void mriScan::getStructuredNeighbourCells(int centreCell,int order,mriThresholdC
  }
 }
 
-
+// ==================================
 // CREATE GAUSSIAN CONVOLUTION KERNEL
+// ==================================
 void createGaussianKernel(int order,mriDoubleVec& kernel){
   kernel.clear();
   double sigma = order;

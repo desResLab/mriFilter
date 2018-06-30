@@ -11,8 +11,8 @@ void writeHeader(){
   writeSchMessage(string("\n"));
   writeSchMessage(string("-----------------------------------\n"));
   writeSchMessage(string(" Flow Manipulation Toolkit\n"));
-  writeSchMessage(string(" 2016 - Daniele Schiavazzi,Ph.D.\n"));
-  writeSchMessage(string(" Release: 0.2\n"));
+  writeSchMessage(string(" 2018 - Daniele E. Schiavazzi, Ph.D.\n"));
+  writeSchMessage(string(" Release: 2.0.1\n"));
   writeSchMessage(string("-----------------------------------\n"));
   writeSchMessage(string("\n"));
 }

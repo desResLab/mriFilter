@@ -1,3 +1,4 @@
+# include <exception>
 # include "mriTopology.h"
 
 using namespace std;
@@ -53,13 +54,13 @@ void readCellsFromPLTFile(string pltFileName,
   int neededValues = 7;
   mriDoubleVec LocalVal(7);
   mriDoubleVec TempVal(7);
-  double LocalXCoord = 0.0;
-  double LocalYCoord = 0.0;
-  double LocalZCoord = 0.0;
-  double LocalConc = 0.0;
-  double LocalXVel = 0.0;
-  double LocalYVel = 0.0;
-  double LocalZVel = 0.0;
+  double LocalXCoord   = 0.0;
+  double LocalYCoord   = 0.0;
+  double LocalZCoord   = 0.0;
+  double LocalConc     = 0.0;
+  double LocalXVel     = 0.0;
+  double LocalYVel     = 0.0;
+  double LocalZVel     = 0.0;
   double CurrentModule = 0.0;
   mriDoubleVec tmp;
   while (getline(pltFile,Buffer)){
@@ -77,17 +78,17 @@ void readCellsFromPLTFile(string pltFileName,
       if((int)resultArray.size()+valueCounter < neededValues){
         // Read the whole Result Array
         for(size_t loopA=0;loopA<resultArray.size();loopA++){
-          LocalVal[loopA] = atof(resultArray[loopA].c_str());
+          LocalVal[loopA] = stof(resultArray[loopA].c_str());
         }
         Continue = false;
       }else{
         // Read part of the result array
         for(int loopA=0;loopA<neededValues-valueCounter;loopA++){
-          LocalVal[loopA] = atof(resultArray[loopA].c_str());
+          LocalVal[loopA] = stof(resultArray[loopA].c_str());
         }
         // Put the rest in temporary array
         for(size_t loopA=0;loopA<resultArray.size()-(neededValues-valueCounter);loopA++){
-          TempVal[loopA] = atof(resultArray[loopA].c_str());
+          TempVal[loopA] = stof(resultArray[loopA].c_str());
         }
         Continue = true;
         // Coords
@@ -119,11 +120,11 @@ void readCellsFromPLTFile(string pltFileName,
       if (CurrentModule>1000.0){
         throw 20;
       }
-    }catch (...){
+    }catch(exception& e){
       //Set Continue
       Continue = false;
-      std::string outString = "WARNING[*] Error Reading Line: "+mriUtils::intToStr(lineCount)+"; Line Skipped.\n";
-      printf("%s",outString.c_str());
+      //std::string outString = "WARNING[*] Error Reading Line: "+mriUtils::intToStr(lineCount)+"; Line Skipped.\n";
+      //printf("%s",outString.c_str());
     }
     if(Continue){
 
@@ -138,14 +139,14 @@ void readCellsFromPLTFile(string pltFileName,
       if (LocalZCoord>domainSizeMax[2]) domainSizeMax[2] = LocalZCoord;
 
       // Update Max Speeds
-      if (CurrentModule>maxVelModule) {
+      if (CurrentModule>maxVelModule){
         maxVelModule = CurrentModule;
       }
 
       // Store Node Coords To Find Grid Size
       mriUtils::insertInList(LocalXCoord,XCoords);
       mriUtils::insertInList(LocalYCoord,YCoords);
-      mriUtils::insertInList(LocalZCoord,ZCoords);    
+      mriUtils::insertInList(LocalZCoord,ZCoords);
 
       // Store Velocity/Concentrations
       tmp.clear();
@@ -982,17 +983,19 @@ void mriTopology::getExternalFaceNormal(int cellID, int localFaceID, mriDoubleVe
   mriDoubleVec centreCellPos(3,0.0);
   mapAuxCoordsToPosition(node1Coords,node1Pos);
   mapAuxCoordsToPosition(node2Coords,node2Pos);
-  mapAuxCoordsToPosition(node3Coords,node3Pos);
+  mapAuxCoordsToPosition(node3Coords,node3Pos);  
+
   centreCellPos[0] = cellLocations[cellID][0];
   centreCellPos[1] = cellLocations[cellID][1];
   centreCellPos[2] = cellLocations[cellID][2];
+
   // Get the difference
   mriDoubleVec diff1(3,0.0);
   mriDoubleVec diff2(3,0.0);
   mriDoubleVec normVec(3,0.0);
   for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
-    diff1[loopB] = node2Pos[loopB] - node1Pos[loopB];
-    diff2[loopB] = node3Pos[loopB] - node2Pos[loopB];
+    diff1[loopB]   = node2Pos[loopB] - node1Pos[loopB];
+    diff2[loopB]   = node3Pos[loopB] - node2Pos[loopB];
     normVec[loopB] = node1Pos[loopB] - centreCellPos[loopB];
   }
   // Get the normal
@@ -1183,10 +1186,17 @@ void mriTopology::readFromPLT_ASCII(string pltFileName, pltOptionRecord& pltOpti
   // Assign cell locations
   cellLocations.resize(totalCells);
   for(int loopA=0;loopA<totalCells;loopA++){
+
+    //cellLocations[loopA][0] = XCoords[loopA];
+    //cellLocations[loopA][1] = YCoords[loopA];
+    //cellLocations[loopA][2] = ZCoords[loopA];
+
     cellLocations[loopA].resize(3);
-    cellLocations[loopA][0] = XCoords[loopA];
-    cellLocations[loopA][1] = YCoords[loopA];
-    cellLocations[loopA][2] = ZCoords[loopA];
+
+    cellLocations[loopA][0] = gridData[loopA][0];
+    cellLocations[loopA][1] = gridData[loopA][1];
+    cellLocations[loopA][2] = gridData[loopA][2];
+    
   }
 
   // Close File
