@@ -56,7 +56,7 @@ class mriTopology{
     void readFromPLT_ASCII(string pltFileName, pltOptionRecord& pltOptions);
     
     // CREATE FROM TEMPLATE
-    void createFromTemplate(mriSamples sampleType, const mriDoubleVec& params);
+    void createFromTemplate(mriTemplateType sampleType, const mriDoubleVec& params);
 
     // CREATION FROM STRUCTURED GRIDS
     void createGridFromVTKStructuredPoints(const vtkStructuredPointsOptionRecord& opts);

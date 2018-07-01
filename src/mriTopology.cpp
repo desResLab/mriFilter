@@ -1275,7 +1275,7 @@ void mriTopology::getNeighborVortexes(int cellNumber,int dim,mriIntVec& idx){
 // ===================
 // CREATE SAMPLE FLOWS
 // ===================
-void mriTopology::createFromTemplate(mriSamples sampleType,const mriDoubleVec& params){
+void mriTopology::createFromTemplate(mriTemplateType sampleType,const mriDoubleVec& params){
 
   // Store Parameter Values
   int sizeX = int(params[0]);

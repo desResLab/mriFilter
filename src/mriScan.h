@@ -248,11 +248,11 @@ class mriScan{
     // ==============
     // TEMPLATE FLOWS
     // ==============
-    void createFromTemplate(mriSamples sampleType,const mriDoubleVec& params);
-    void assignVelocitySignature(mriDirection dir, mriSamples sample, double currTime);
+    void createFromTemplate(mriTemplateType sampleType,const mriDoubleVec& params);
+    void assignVelocitySignature(mriDirection dir, mriTemplateType sample, double currTime, const mriDoubleVec& auxParams);
     void assignConstantSignature(mriDirection dir);
     void assignStagnationFlowSignature(mriDirection dir);
-    void assignPoiseilleSignature(mriDirection dir);
+    void assignPoiseuilleSignature(mriDirection dir, const mriDoubleVec& auxParams);
     void assignCylindricalFlowSignature(mriDirection dir);
     void assignSphericalFlowSignature(mriDirection dir);
     void assignToroidalVortexFlowSignature();

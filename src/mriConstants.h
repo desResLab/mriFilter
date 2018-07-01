@@ -67,7 +67,7 @@
   // Sample Flow Configurations
   const int kZeroVelocity         = 0;
   const int kConstantFlow         = 1;
-  const int kPoiseilleFlow        = 2;
+  const int kPoiseuilleFlow       = 2;
   const int kStagnationFlow       = 3; 
   const int kCylindricalVortex    = 4;
   const int kSphericalVortex      = 5;
@@ -101,7 +101,7 @@
 
   // Aternative Typedefs
   typedef const int mriDirection;
-  typedef const int mriSamples;
+  typedef const int mriTemplateType;
   typedef const int mriPlane;
   typedef boost::variate_generator<boost::mt19937, boost::normal_distribution<> > stdRndGenerator;
   

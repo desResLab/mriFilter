@@ -88,7 +88,7 @@ Using the TEMPLATETYPE token it is possible to create a pre-defined flow configu
 
 1. **ZEROVELOCITY**, a velocity field with uniformly zero velocities. 
 2. **CONSTANT**, a constant flow along one of the coordinate axis, x,y or z. 
-3. **POISEILLE**, a parabolic velocity profile in a cilinder.
+3. **POISEUILLE**, a parabolic velocity profile in a cilinder.
 4. **STAGNATION**, stagnation point flow. 
 5. **CYLINDRICALVOLTEX**. 
 6. **SPHERICALVORTEX**. 
@@ -101,7 +101,7 @@ Specification of the selected template is completed by specifing a few parameter
 
 Example input: ::
 
-  TEMPLATEPARAMS: sizeX,sizeY,sizeZ,distX,distY,distZ,time,direction
+  TEMPLATEPARAMS: sizeX,sizeY,sizeZ,distX,distY,distZ,time,direction,auxParams1,auxParams2,auxParams3... 
 
 These parameters are:
 
@@ -113,6 +113,24 @@ These parameters are:
 6. **distZ**, cell spacing in the z direction.
 7. **time**, time parameter (used only for the **TRANSIENT** template)
 8. **direction**, orientation parameter.
+9. **auxParamters**, template specific parameters.
+
+The auxiliary parameters for the various templates are:
+
+1. **ZEROVELOCITY**, no additional parameters. 
+2. **CONSTANT**, no additional parameters.
+3. **POISEUILLE**, two addtional parameters:
+
+   - Radius of the cylindrical domain.
+   - Peak velocity.
+
+4. **STAGNATION**, no additional parameters.
+5. **CYLINDRICALVOLTEX**, no additional parameters. 
+6. **SPHERICALVORTEX**, no additional parameters. 
+7. **TOROIDALVORTEX**, no additional parameters. 
+8. **TRANSIENT**, no additional parameters. 
+9. **CONSTANTWITHSTEP**, no additional parameters. 
+10. **ROTATINGVORTEX**, no additional parameters.
 
 Output file type
 """"""""""""""""
@@ -181,13 +199,13 @@ Example input: ::
 Adding Noise
 ^^^^^^^^^^^^
 
-In some situations you may want to add Gaussianly distributed, component independent noise, to an input velocity field. To do so, the ADDNOISE token allows to enter the intensity of the noise as a percent of the maximum velocity module.
+In some situations you may want to add Gaussianly distributed, component independent noise, to an input velocity field. To do so, the ADDNOISE token allows to enter the intensity of the noise as a percent of the maximum velocity module together with the seed for the random number generator
 
 Example input: ::
 
-  ADDNOISE: 10.0
+  ADDNOISE: 10.0,1234
 
-This will use 10\% of the maximum velocity module in the field as the standard deviation of the Gaussian noise intensity.
+This will use 10\% of the maximum velocity module in the field as the standard deviation of the Gaussian noise intensity and a random seed equal to **1234**.
 
 Physical Constants
 ^^^^^^^^^^^^^^^^^^

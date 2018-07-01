@@ -150,7 +150,7 @@ class mriSequence{
     void interpolateBoundaryVelocities(mriThresholdCriteria* threshold);
 
     // TEMPLATE FLOW SEQUENCE
-    void createSampleCase(mriSamples sampleType,const mriDoubleVec& params);
+    void createSampleCase(mriTemplateType sampleType,const mriDoubleVec& params);
 };
 
 #endif // MRISEQUENCE_H

@@ -491,8 +491,8 @@ int mriOptions::getOptionsFromCommandFile(string commandFile){
         templateType = kZeroVelocity;
       }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("CONSTANT")){
         templateType = kConstantFlow;
-      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("POISEILLE")){
-        templateType = kPoiseilleFlow;
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("POISEUILLE")){
+        templateType = kPoiseuilleFlow;
       }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("STAGNATION")){
         templateType = kStagnationFlow;
       }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("CYLINDRICALVOLTEX")){
@@ -518,6 +518,14 @@ int mriOptions::getOptionsFromCommandFile(string commandFile){
       }catch(...){
         throw mriException("ERROR: Invalid template parameters.\n");
       }
+      // Not enough parameters
+      if(templateParams.size() < 8){
+        throw mriException("ERROR: Invalid number of template parameters.\n");
+      }
+      // Not enough parameters for Posiseuille Flow
+      if((templateType == kPoiseuilleFlow)&&(templateParams.size() < 10)){
+        throw mriException("ERROR: Invalid number parameters for Poiseuille template.\n");
+      }      
     }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("USETURBVISCOSITYFROMFILE")){
       if(boost::to_upper_copy(tokenizedString.at(1)) == string("TRUE")){
         readMuTFromFile = true;

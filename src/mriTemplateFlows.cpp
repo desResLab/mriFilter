@@ -395,10 +395,12 @@ void mriScan::assignRandomStandardGaussianFlow(){
 
 // =====================
 // ASSIGN POISEILLE FLOW
-// =====================
-void mriScan::assignPoiseilleSignature(mriDirection dir){
+// ===================== 
+void mriScan::assignPoiseuilleSignature(mriDirection dir, const mriDoubleVec& auxParams){
+  double totalDistance   = auxParams[0];
+  double peakVel         = auxParams[1];
   double currentVelocity = 0.0;
-  double conc = 0.0;
+  double conc            = 0.0;
   // SET CENTER POINT
   double centerPoint[3];
   centerPoint[0] = 0.5*(topology->domainSizeMax[0] + topology->domainSizeMin[0]);
@@ -406,37 +408,25 @@ void mriScan::assignPoiseilleSignature(mriDirection dir){
   centerPoint[2] = 0.5*(topology->domainSizeMax[2] + topology->domainSizeMin[2]);
   for(int loopA=0;loopA<topology->totalCells;loopA++){
     double currentDistance = 0.0;
-    double totalDistance = 0.0;
     // Set to Zero
-    cells[loopA].velocity[0] = 0.0;
-    cells[loopA].velocity[1] = 0.0;
-    cells[loopA].velocity[2] = 0.0;
+    cells[loopA].velocity[0]   = 0.0;
+    cells[loopA].velocity[1]   = 0.0;
+    cells[loopA].velocity[2]   = 0.0;
     cells[loopA].concentration = 0.0;
     switch(dir){
       case kdirX:
         currentDistance = sqrt((topology->cellLocations[loopA][1] - centerPoint[1])*(topology->cellLocations[loopA][1] - centerPoint[1]) +
                                (topology->cellLocations[loopA][2] - centerPoint[2])*(topology->cellLocations[loopA][2] - centerPoint[2]));
-        //totalDistance = 0.5*min(0.5*(domainSizeMax[1]-domainSizeMin[1]),0.5*(domainSizeMax[2]-domainSizeMin[2]));
-        //totalDistance = 0.00855;
-        totalDistance = 0.01;
         break;
       case kdirY:
         currentDistance = sqrt((topology->cellLocations[loopA][0] - centerPoint[0])*(topology->cellLocations[loopA][0] - centerPoint[0]) +
                                (topology->cellLocations[loopA][2] - centerPoint[2])*(topology->cellLocations[loopA][2] - centerPoint[2]));
-        //totalDistance = 0.5*min(0.5*(domainSizeMax[0]-domainSizeMin[0]),0.5*(domainSizeMax[2]-domainSizeMin[2]));
-        //totalDistance = 0.00855;
-        totalDistance = 0.01;
         break;
       case kdirZ:
         currentDistance = sqrt((topology->cellLocations[loopA][0] - centerPoint[0])*(topology->cellLocations[loopA][0] - centerPoint[0]) +
                                (topology->cellLocations[loopA][1] - centerPoint[1])*(topology->cellLocations[loopA][1] - centerPoint[1]));
-        //totalDistance = 0.5*min(0.5*(domainSizeMax[0]-domainSizeMin[0]),0.5*(domainSizeMax[1]-domainSizeMin[1]));
-        //totalDistance = 0.00855;
-        totalDistance = 0.01;
         break;
     }
-    //double peakVel = 0.22938;
-    double peakVel = 0.4265;
     // Apply a threshold
     if(currentDistance<totalDistance){
       currentVelocity = -(peakVel/(totalDistance*totalDistance))*(currentDistance*currentDistance) + peakVel;
@@ -462,7 +452,7 @@ void mriScan::assignPoiseilleSignature(mriDirection dir){
 }
 
 // ASSIGN CONCENTRATIONS AND VELOCITIES
-void mriScan::assignVelocitySignature(mriDirection dir, mriSamples sample, double currTime){
+void mriScan::assignVelocitySignature(mriDirection dir, mriTemplateType sample, double currTime, const mriDoubleVec& auxParams){
   switch(sample){
     case kZeroVelocity:
       assignZeroVelocities();
@@ -470,8 +460,8 @@ void mriScan::assignVelocitySignature(mriDirection dir, mriSamples sample, doubl
     case kConstantFlow:
       assignConstantSignature(dir);
       break;    
-    case kPoiseilleFlow:
-      assignPoiseilleSignature(dir);
+    case kPoiseuilleFlow:
+      assignPoiseuilleSignature(dir,auxParams);
       break;
     case kStagnationFlow:
       assignStagnationFlowSignature(dir);
@@ -497,17 +487,31 @@ void mriScan::assignVelocitySignature(mriDirection dir, mriSamples sample, doubl
   }
 }
 
-// CREATE SAMPLE FLOWS
-void mriScan::createFromTemplate(mriSamples sampleType,const mriDoubleVec& params){
+// =====================
+// CREATE TEMPLATE FLOWS
+// =====================
+void mriScan::createFromTemplate(mriTemplateType sampleType,const mriDoubleVec& params){
 
   // Store Parameter Values
-  int sizeX = int(params[0]);
-  int sizeY = int(params[1]);
-  int sizeZ = int(params[2]);
-  double distX = params[3];
-  double distY = params[4];
-  double distZ = params[5];
+  int sizeX       = int(params[0]);
+  int sizeY       = int(params[1]);
+  int sizeZ       = int(params[2]);
+  double distX    = params[3];
+  double distY    = params[4];
+  double distZ    = params[5];
   double currTime = params[6];  
+
+  // Slice the additional parameters if any
+  mriDoubleVec::const_iterator first;
+  mriDoubleVec::const_iterator last;
+  if(params.size()>8){
+    first = params.begin() + 8;
+    last  = params.end();
+  }else{
+    first = params.end();
+    last  = params.end();    
+  }
+  mriDoubleVec auxParams(first,last);
 
   // Template Orientation
   int dir = 0;
@@ -531,7 +535,7 @@ void mriScan::createFromTemplate(mriSamples sampleType,const mriDoubleVec& param
   }
 
   // Assign Concentrations and Velocities
-  assignVelocitySignature(dir,sampleType,currTime);
+  assignVelocitySignature(dir,sampleType,currTime,auxParams);
 
   // Find Velocity Modulus
   maxVelModule = 0.0;
