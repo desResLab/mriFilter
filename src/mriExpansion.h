@@ -4,20 +4,18 @@
 #include <string>
 #include <vector>
 
-class MRIExpansion
-{
-public:
+class mriExpansion{
+  public:
     // Data Members
     int totalVortices;
     double* constantFluxCoeff;
     double* vortexCoeff;
     // Constructor
-    MRIExpansion(int totVortex);
+    mriExpansion(int totVortex);
     // Copy Constructor
-    MRIExpansion(MRIExpansion* otherExp);
-
+    mriExpansion(mriExpansion* otherExp);
     // Distructor
-    ~MRIExpansion();
+    virtual ~mriExpansion();
     // MEMBER FUNCTIONS
     // Fill From Vector
     void fillFromVector(std::vector<double> Expansion);

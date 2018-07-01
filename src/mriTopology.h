@@ -9,45 +9,45 @@
 // ================
 // GENERIC TOPOLOGY
 // ================
-class MRITopology{
+class mriTopology{
   public:
     // GENERIC TOPOLOGY
     // Domain Dimension
-    MRIDoubleVec domainSizeMin;
-    MRIDoubleVec domainSizeMax;
+    mriDoubleVec domainSizeMin;
+    mriDoubleVec domainSizeMax;
     // Velocities And Concentrations for all Measure Points
     int totalCells;
     // Cells Centroid Coordinates
-    MRIDoubleMat cellLocations;
+    mriDoubleMat cellLocations;
     // Cells Topology
-    MRIIntMat cellConnections;
-    MRIIntMat cellFaces;
+    mriIntMat cellConnections;
+    mriIntMat cellFaces;
     // Face Topology
-    MRIIntMat faceCells;
-    MRIIntMat faceConnections;
-    MRIIntMat faceEdges;
-    MRIDoubleVec faceArea;
-    MRIDoubleMat faceNormal;
+    mriIntMat faceCells;
+    mriIntMat faceConnections;
+    mriIntMat faceEdges;
+    mriDoubleVec faceArea;
+    mriDoubleMat faceNormal;
     // Edge Topology
-    MRIIntMat edgeConnections;
-    MRIIntMat edgeFaces;
+    mriIntMat edgeConnections;
+    mriIntMat edgeFaces;
 
     // STRUCTURED GRID TOPOLOGY
     // Cells Totals
-    MRIIntVec cellTotals;
-    MRIDoubleMat cellLengths;
+    mriIntVec cellTotals;
+    mriDoubleMat cellLengths;
     // Auxiliary
-    MRIDoubleMat auxNodesCoords;
+    mriDoubleMat auxNodesCoords;
 
-    MRITopology();
-    MRITopology(const MRIIntVec& totals,
-                const MRIDoubleVec& lengthX,
-                const MRIDoubleVec& lengthY,
-                const MRIDoubleVec& lengthZ,
-                const MRIDoubleVec& minlimits,
-                const MRIDoubleVec& maxlimits);
+    mriTopology();
+    mriTopology(const mriIntVec& totals,
+                const mriDoubleVec& lengthX,
+                const mriDoubleVec& lengthY,
+                const mriDoubleVec& lengthZ,
+                const mriDoubleVec& minlimits,
+                const mriDoubleVec& maxlimits);
     
-    virtual ~MRITopology();
+    virtual ~mriTopology();
 
     // MEMBER FUNCTIONS
 
@@ -56,43 +56,43 @@ class MRITopology{
     void readFromPLT_ASCII(string pltFileName, pltOptionRecord& pltOptions);
     
     // CREATE FROM TEMPLATE
-    void createFromTemplate(MRISamples sampleType, const MRIDoubleVec& params);
+    void createFromTemplate(mriTemplateType sampleType, const mriDoubleVec& params);
 
     // CREATION FROM STRUCTURED GRIDS
     void createGridFromVTKStructuredPoints(const vtkStructuredPointsOptionRecord& opts);
 
     // MAPPING
-    void   mapIndexToCoords(int index, MRIIntVec& intCoords);
+    void   mapIndexToCoords(int index, mriIntVec& intCoords);
     int    mapCoordsToIndex(int i, int j, int k);
     int    getTotalAuxNodes();
     int    getTotalFaces();
     double getEdgeFaceVortexCoeff(int edgeID, int faceID);
-    void   getEdgeDirection(int edgeID, MRIDoubleVec& edgeDirVector);
-    void   getEdgeToFaceDirection(int edgeID, int faceID, MRIDoubleVec& edgeFaceVector);
-    void   getFaceCenter(int faceID, MRIDoubleVec& fc);
-    void   getEdgeCenter(int edgeID, MRIDoubleVec& ec);
+    void   getEdgeDirection(int edgeID, mriDoubleVec& edgeDirVector);
+    void   getEdgeToFaceDirection(int edgeID, int faceID, mriDoubleVec& edgeFaceVector);
+    void   getFaceCenter(int faceID, mriDoubleVec& fc);
+    void   getEdgeCenter(int edgeID, mriDoubleVec& ec);
     void   buildAuxNodesCoords();
-    void   getAuxNodeCoordinates(int nodeNum, MRIDoubleVec& pos);
-    void   mapIndexToAuxNodeCoords(int index, MRIIntVec& intCoords);
-    void   mapAuxCoordsToPosition(const MRIIntVec& auxCoords, MRIDoubleVec& pos);
+    void   getAuxNodeCoordinates(int nodeNum, mriDoubleVec& pos);
+    void   mapIndexToAuxNodeCoords(int index, mriIntVec& intCoords);
+    void   mapAuxCoordsToPosition(const mriIntVec& auxCoords, mriDoubleVec& pos);
     void   buildCellConnections();
     void   buildFaceConnections();
-    int    addToFaceConnections(const MRIIntVec& faceIds, vector<vector<mriFace* > >& AuxFirstNodeFaceList);
-    int    addToEdgeConnections(const MRIIntVec& edgeIds,vector<vector<mriEdge*> >& AuxFirstNodeEdgeList);
+    int    addToFaceConnections(const mriIntVec& faceIds, vector<vector<mriFace* > >& AuxFirstNodeFaceList);
+    int    addToEdgeConnections(const mriIntVec& edgeIds,vector<vector<mriEdge*> >& AuxFirstNodeEdgeList);
     void   buildFaceCells();
     void   buildEdgeConnections();
     void   buildFaceAreasAndNormals();
-    void   getExternalFaceNormal(int cellID, int localFaceID, MRIDoubleVec& extNormal);
-    void   mapCoordsToPosition(const MRIIntVec& coords, bool addMeshMinima, MRIDoubleVec& pos);
+    void   getExternalFaceNormal(int cellID, int localFaceID, mriDoubleVec& extNormal);
+    void   mapCoordsToPosition(const mriIntVec& coords, bool addMeshMinima, mriDoubleVec& pos);
     int    getAdjacentFace(int globalNodeNumber /*Already Ordered Globally x-y-z*/, int AdjType);
-    void   getNeighborVortexes(int cellNumber,int dim,MRIIntVec& idx);
+    void   getNeighborVortexes(int cellNumber,int dim,mriIntVec& idx);
 
     // MANIPULATIONS TO TOPOLOGY
-    void   scalePositions(const MRIDoubleVec& origin, double factor);
-    void   crop(const MRIDoubleVec& limitBox, MRIBoolVec& indexes);
+    void   scalePositions(const mriDoubleVec& origin, double factor);
+    void   crop(const mriDoubleVec& limitBox, mriBoolVec& indexes);
 
     // CHECK COMPATIBILITY
-    bool isCompatibleTopology(MRITopology* topo);
+    bool isCompatibleTopology(mriTopology* topo);
 };
 
 #endif // MRITOPOLOGY_H

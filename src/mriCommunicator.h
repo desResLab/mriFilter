@@ -14,7 +14,7 @@
 
 using namespace std;
 
-class MRICommunicator{
+class mriCommunicator{
 public:
   // Main Communicator
   MPI_Comm mpiComm;
@@ -22,21 +22,21 @@ public:
   int currProc;
   int totProc;
   // Constructor
-  MRICommunicator();
-  ~MRICommunicator();
+  mriCommunicator();
+  virtual ~mriCommunicator();
 
   // PASS CELL DATA
-  void passCellData(int& totalCellPoints,vector<MRICell>& cellPoints);
+  void passCellData(int& totalCellPoints,vector<mriCell>& cellPoints);
 
   // SEND AND RECEIVE STD MATRICES AND VECTORS
   // Int Mat
-  void passStdIntMatrix(MRIIntMat& matrix);
+  void passStdIntMatrix(mriIntMat& matrix);
   // Double Mat
-  void passStdDoubleMatrix(MRIDoubleMat& matrix);
+  void passStdDoubleMatrix(mriDoubleMat& matrix);
   // Int Vector
-  void passStdIntVector(MRIIntVec& vector);
+  void passStdIntVector(mriIntVec& vector);
   // Double Vector
-  void passStdDoubleVector(MRIDoubleVec& vector);
+  void passStdDoubleVector(mriDoubleVec& vector);
   // String
   void passString(string& msg);
 

@@ -6,25 +6,25 @@
 # include "mriTopology.h"
 # include "mriExpansion.h"
 
-class MRIScan;
-class MRITopology;
+class mriScan;
+class mriTopology;
 
-void readPLTData(string PltFileName, MRITopology* topo, MRIScan* scan);
+void readPLTData(string PltFileName, mriTopology* topo, mriScan* scan);
 
 void readExpansionFile(string fileName,
-                       MRIIntVec& tot,
-                       MRIDoubleVec& lengthX,
-                       MRIDoubleVec& lengthY,
-                       MRIDoubleVec& lengthZ,
-                       MRIDoubleVec& minlimits,
-                       MRIDoubleVec& maxlimits,
-                       MRIExpansion* exp);
+                       mriIntVec& tot,
+                       mriDoubleVec& lengthX,
+                       mriDoubleVec& lengthY,
+                       mriDoubleVec& lengthZ,
+                       mriDoubleVec& minlimits,
+                       mriDoubleVec& maxlimits,
+                       mriExpansion* exp);
 
 void initVTKStructuredPointsOptions(vtkStructuredPointsOptionRecord &opts);
 
-void assignVTKOptions(int lineNum, const MRIStringVec& tokens, vtkStructuredPointsOptionRecord &vtkOptions);
+void assignVTKOptions(int lineNum, const mriStringVec& tokens, vtkStructuredPointsOptionRecord &vtkOptions);
 
-void assignPLTOptions(const MRIStringVec& tokens, pltOptionRecord& pltOptions);
+void assignPLTOptions(const mriStringVec& tokens, pltOptionRecord& pltOptions);
 
 
 #endif // MRIIO_H

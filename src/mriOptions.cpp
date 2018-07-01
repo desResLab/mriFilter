@@ -1,8 +1,9 @@
 #include "mriOptions.h"
 
 using namespace boost::algorithm;
+using namespace std;
 
-MRIOptions::MRIOptions(){
+mriOptions::mriOptions(){
   // Set Default Values of the parameters
   runMode = rmHELP;
   // File Names
@@ -35,14 +36,14 @@ MRIOptions::MRIOptions(){
   smagorinskyCoeff = 0.15;
 }
 
-MRIOptions::~MRIOptions(){
+mriOptions::~mriOptions(){
 
 }
 
 // =========================
 // GET COMMANDLINE ARGUMENTS
 // =========================
-int MRIOptions::getCommadLineOptions(int argc, char **argv){
+int mriOptions::getCommadLineOptions(int argc, char **argv){
   int c;
   string threshString;
   printf("--- COMMAND OPTIONS ECHO\n");
@@ -97,7 +98,7 @@ int MRIOptions::getCommadLineOptions(int argc, char **argv){
 // ============================
 // READ FILE SEQUENCE AND TIMES
 // ============================
-void MRIOptions::readSequenceFileList(string fileName,MRIStringVec& sequenceFileList,MRIDoubleVec& sequenceFileTimes){
+void mriOptions::readSequenceFileList(string fileName,mriStringVec& sequenceFileList,mriDoubleVec& sequenceFileTimes){
   vector<string> tokenizedString;
 
   // Clear Outputs
@@ -105,10 +106,10 @@ void MRIOptions::readSequenceFileList(string fileName,MRIStringVec& sequenceFile
   sequenceFileTimes.clear();
 
   // Read Data From File
-  std::string buffer;
-  std::ifstream infile;
+  string buffer;
+  ifstream infile;
   infile.open(fileName.c_str());
-  while (std::getline(infile,buffer)){
+  while (getline(infile,buffer)){
     // Trim String
     boost::trim(buffer);
     // Tokenize String
@@ -119,7 +120,7 @@ void MRIOptions::readSequenceFileList(string fileName,MRIStringVec& sequenceFile
       sequenceFileTimes.push_back(atof(tokenizedString[1].c_str()));
     }catch(...){
       infile.close();
-      throw MRIException("ERROR: Cannot read sequence file.\n");
+      throw mriException("ERROR: Cannot read sequence file.\n");
     }
   }
   // Close File
@@ -129,7 +130,7 @@ void MRIOptions::readSequenceFileList(string fileName,MRIStringVec& sequenceFile
 // ======================================
 // FINALIZE OPTIONS: PROCESS INPUT PARAMS
 // ======================================
-void MRIOptions::finalize(){
+void mriOptions::finalize(){
   // FILL FILE LIST SEQUENCE WITH SINGLE FILE
   if(!haveSequence){
     sequenceFileList.push_back(inputFileName);
@@ -139,13 +140,13 @@ void MRIOptions::finalize(){
     readSequenceFileList(sequenceFileName,sequenceFileList,sequenceFileTimes);
   }
   // Create Threshold Object
-  thresholdCriteria = new MRIThresholdCriteria(thresholdQty, thresholdType, thresholdValue);
+  thresholdCriteria = new mriThresholdCriteria(thresholdQty, thresholdType, thresholdValue);
 }
 
 // =============================
 // GET OPTIONS FROM COMMAND FILE
 // =============================
-int MRIOptions::getOptionsFromCommandFile(string commandFile){
+int mriOptions::getOptionsFromCommandFile(string commandFile){
   
   // Write Message
   printf("Reading Command file: %s\n",commandFile.c_str());
@@ -177,6 +178,7 @@ int MRIOptions::getOptionsFromCommandFile(string commandFile){
   string poissonFileName;
   bool applyNoise;
   double noiseIntensity;
+  double noiseSeed;
   double smagorinskyCoeff;
   bool scaleVelocities;
   double scaleVelocityFactor;
@@ -184,15 +186,16 @@ int MRIOptions::getOptionsFromCommandFile(string commandFile){
   double scalePositionFactor;
 
   // Declare input File
-  std::ifstream infile;
+  ifstream infile;
   infile.open(commandFile.c_str());
 
   // Declare
-  vector<string> tokenizedString;
+  mriStringVec tokenizedString;
 
   // Read Data From File
-  std::string buffer;
-  while (std::getline(infile,buffer)){
+  string buffer;
+  while (getline(infile,buffer)){
+    // printf("%s\n",buffer.c_str());
     // Trim String
     boost::trim(buffer);
     // Tokenize String
@@ -202,256 +205,248 @@ int MRIOptions::getOptionsFromCommandFile(string commandFile){
       trim(tokenizedString[loopA]);
     }
     // CHECK THE ELEMENT TYPE
-    if(boost::to_upper_copy(tokenizedString[0]) == std::string("RUNMODE")){
+    if(boost::to_upper_copy(tokenizedString.at(0)) == string("RUNMODE")){
       // READ RUN MODE
-      if(boost::to_upper_copy(tokenizedString[1]) == std::string("NORMAL")){
+      if(boost::to_upper_copy(tokenizedString.at(1)) == string("NORMAL")){
         runMode =rmNORMAL;
       }else{
-        throw MRIException("ERROR: Invalid Run Mode.\n");
+        throw mriException("ERROR: Invalid Run Mode.\n");
       }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("INPUTFILE")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("INPUTFILE")){
       try{
         inputFileName = tokenizedString[1];
       }catch(...){
-        throw MRIException("ERROR: Invalid Input File.\n");
+        throw mriException("ERROR: Invalid Input File.\n");
       }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("OUTPUTFILE")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("OUTPUTFILE")){
       try{
         outputFileName = tokenizedString[1];
       }catch(...){
-        throw MRIException("ERROR: Invalid Output File.\n");
+        throw mriException("ERROR: Invalid Output File.\n");
       }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("STATFILE")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("STATFILE")){
       try{
         statFileName = tokenizedString[1];
       }catch(...){
-        throw MRIException("ERROR: Invalid Statistics File.\n");
+        throw mriException("ERROR: Invalid Statistics File.\n");
       }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("DENSITY")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("DENSITY")){
         try{
           density = atof(tokenizedString[1].c_str());
         }catch(...){
-          throw MRIException("ERROR: Invalid Density Value.\n");
+          throw mriException("ERROR: Invalid Density Value.\n");
         }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("VISCOSITY")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("VISCOSITY")){
         try{
           viscosity = atof(tokenizedString[1].c_str());
         }catch(...){
-          throw MRIException("ERROR: Invalid Density Value.\n");
+          throw mriException("ERROR: Invalid Density Value.\n");
         }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("APPLYSMOOTHINGFILTER")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("APPLYSMOOTHINGFILTER")){
         
         try{
           applyMedianFilter = true;
-          filterNumIterations = atoi(tokenizedString[1].c_str());
-          if(boost::to_upper_copy(tokenizedString[2]) == std::string("MEDIAN")){
+          filterNumIterations = atoi(tokenizedString.at(1).c_str());
+          if(boost::to_upper_copy(tokenizedString.at(2)) == string("MEDIAN")){
             filterType = kMedianFilter;
-          }else if(boost::to_upper_copy(tokenizedString[2]) == std::string("MEAN")){
+          }else if(boost::to_upper_copy(tokenizedString.at(2)) == string("MEAN")){
             filterType = kMeanFilter;
-          }else if(boost::to_upper_copy(tokenizedString[2]) == std::string("GAUSSIAN")){
+          }else if(boost::to_upper_copy(tokenizedString.at(2)) == string("GAUSSIAN")){
             filterType = kGaussianFilter;
           }else{
-            throw MRIException("ERROR: Invalid Filter Type.\n");
+            throw mriException("ERROR: Invalid Filter Type.\n");
           }
-          filterOrder = atoi(tokenizedString[3].c_str());
+          filterOrder = atoi(tokenizedString.at(3).c_str());
 
           // Create New Operation
-          MRIOperation* op = new MRIOpApplySmoothing(filterNumIterations,filterType,filterOrder);
+          mriOperation* op = new mriOpApplySmoothing(filterNumIterations,filterType,filterOrder);
           // Add to the operation list
           operationList.push_back(op);
 
         }catch(...){
-          throw MRIException("ERROR: Invalid Median Filter Entry.\n");
+          throw mriException("ERROR: Invalid Median Filter Entry.\n");
         }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("SMPITERATIONTOLERANCE")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("SMPITERATIONTOLERANCE")){
       try{
-        itTol = atof(tokenizedString[1].c_str());
+        itTol = atof(tokenizedString.at(1).c_str());
       }catch(...){
-        throw MRIException("ERROR: Invalid SMP Tolerance.\n");
+        throw mriException("ERROR: Invalid SMP Tolerance.\n");
       }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("SMPMAXITERATIONS")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("SMPMAXITERATIONS")){
       try{
-        maxIt = atoi(tokenizedString[1].c_str());
+        maxIt = atoi(tokenizedString.at(1).c_str());
       }catch(...){
-        throw MRIException("ERROR: Invalid Max number of SMP Iterations.\n");
+        throw mriException("ERROR: Invalid Max number of SMP Iterations.\n");
       }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("THRESHOLDQTY")){
-      if(boost::to_upper_copy(tokenizedString[1]) == std::string("POSX")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("THRESHOLDQTY")){
+      if(boost::to_upper_copy(tokenizedString.at(1)) == string("POSX")){
         thresholdQty = kQtyPositionX;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("POSY")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("POSY")){
         thresholdQty = kQtyPositionY;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("POSZ")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("POSZ")){
         thresholdQty = kQtyPositionZ;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("CONCENTRATION")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("CONCENTRATION")){
         thresholdQty = kQtyConcentration;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("VELX")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("VELX")){
         thresholdQty = kQtyVelocityX;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("VELY")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("VELY")){
         thresholdQty = kQtyVelocityY;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("VELZ")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("VELZ")){
         thresholdQty = kQtyVelocityZ;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("VELMOD")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("VELMOD")){
         thresholdQty = kQtyVelModule;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("NONE")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("NONE")){
           thresholdQty = kNoQuantity;
       }else{
-        throw MRIException("ERROR: Invalid Threshold Quantity.\n");
+        throw mriException("ERROR: Invalid Threshold Quantity.\n");
       }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("THRESHOLDTYPE")){
-      if(boost::to_upper_copy(tokenizedString[1]) == std::string("LT")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("THRESHOLDTYPE")){
+      if(boost::to_upper_copy(tokenizedString.at(1)) == string("LT")){
         thresholdType = kCriterionLessThen;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("GT")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("GT")){
         thresholdType = kCriterionGreaterThen;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("ABSLT")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("ABSLT")){
         thresholdType = kCriterionABSLessThen;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("ABSGT")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("ABSGT")){
         thresholdType = kCriterionABSGreaterThen;
       }else{
-        throw MRIException("ERROR: Invalid Threshold Type.\n");
+        throw mriException("ERROR: Invalid Threshold Type.\n");
       }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("THRESHOLDVALUE")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("THRESHOLDVALUE")){
       try{
-        thresholdValue = atof(tokenizedString[1].c_str());
+        thresholdValue = atof(tokenizedString.at(1).c_str());
       }catch(...){
-        throw MRIException("ERROR: Invalid Threshold Value.\n");
+        throw mriException("ERROR: Invalid Threshold Value.\n");
       }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("SAVEINITIALVELOCITIES")){
-      if(boost::to_upper_copy(tokenizedString[1]) == std::string("TRUE")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("SAVEINITIALVELOCITIES")){
+      if(boost::to_upper_copy(tokenizedString.at(1)) == string("TRUE")){
         saveInitialVel = true;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("FALSE")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("FALSE")){
         saveInitialVel = false;
       }else{
-        throw MRIException("ERROR: Invalid logical value for saveInitialVel.\n");
+        throw mriException("ERROR: Invalid logical value for saveInitialVel.\n");
       }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("SAVEEXPANSIONCOEFFS")){
-      if(boost::to_upper_copy(tokenizedString[1]) == std::string("TRUE")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("SAVEEXPANSIONCOEFFS")){
+      if(boost::to_upper_copy(tokenizedString.at(1)) == string("TRUE")){
         saveExpansionCoeffs = true;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("FALSE")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("FALSE")){
         saveExpansionCoeffs = false;
       }else{
-        throw MRIException("ERROR: Invalid logical value for saveExpansionCoeffs.\n");
+        throw mriException("ERROR: Invalid logical value for saveExpansionCoeffs.\n");
       }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("INPUTTYPE")){
-      if(boost::to_upper_copy(tokenizedString[1]) == std::string("VTK")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("INPUTTYPE")){
+      if(boost::to_upper_copy(tokenizedString.at(1)) == string("VTK")){
         inputFormatType = itFILEVTK;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("PLT")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("PLT")){
         inputFormatType = itFILEPLT;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("TEMPLATE")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("TEMPLATE")){
         inputFormatType = itTEMPLATE;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("EXPANSION")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("EXPANSION")){
         inputFormatType = itEXPANSION;
       }else{
-        throw MRIException("ERROR: Invalid input file type.\n");
+        throw mriException("ERROR: Invalid input file type.\n");
       }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("OUTPUTTYPE")){
-      if(boost::to_upper_copy(tokenizedString[1]) == std::string("VTK")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("OUTPUTTYPE")){
+      if(boost::to_upper_copy(tokenizedString.at(1)) == string("VTK")){
         outputFormatType = otFILEVTK;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("PLT")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("PLT")){
         outputFormatType = otFILEPLT;
       }else{
-        throw MRIException("ERROR: Invalid output file type.\n");
+        throw mriException("ERROR: Invalid output file type.\n");
       }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("USESMPFILTER")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("USESMPFILTER")){
 
       try{
         // applyBCFilter
-        if(boost::to_upper_copy(tokenizedString[1]) == std::string("TRUE")){
+        if(boost::to_upper_copy(tokenizedString.at(1)) == string("TRUE")){
           applyBCFilter = true;
-        }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("FALSE")){
+        }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("FALSE")){
           applyBCFilter = false;
         }else{
-          throw MRIException("ERROR: Invalid logical value for applySMPFilter.\n");
+          throw mriException("ERROR: Invalid logical value (applyBCFilter) for USESMPFILTER.\n");
         }
         // useConstantPatterns
-        if(boost::to_upper_copy(tokenizedString[2]) == std::string("TRUE")){
+        if(boost::to_upper_copy(tokenizedString.at(2)) == string("TRUE")){
           useConstantPatterns = true;
-        }else if(boost::to_upper_copy(tokenizedString[2]) == std::string("FALSE")){
+        }else if(boost::to_upper_copy(tokenizedString.at(2)) == string("FALSE")){
           useConstantPatterns = false;
         }else{
-          throw MRIException("ERROR: Invalid logical value for applySMPFilter.\n");
+          throw mriException("ERROR: Invalid logical value (useConstantPatterns) for USESMPFILTER.\n");
         }
         // itTol
-        itTol = atof(tokenizedString[3].c_str());
+        itTol = atof(tokenizedString.at(3).c_str());
         // maxIt
-        maxIt = atoi(tokenizedString[4].c_str());
+        maxIt = atoi(tokenizedString.at(4).c_str());
       }catch(...){
-        throw MRIException("ERROR: Invalid Export To Poisson Command Line.\n");
+        throw mriException("ERROR: Invalid definition of USESMPFILTER.\n");
       }    
       // Create Operation
-      MRIOperation* op = new MRIOpApplySolenoidalFilter(applyBCFilter,useConstantPatterns,itTol,maxIt);
+      mriOperation* op = new mriOpApplySolenoidalFilter(applyBCFilter,useConstantPatterns,itTol,maxIt);
       // Add to the operation list
       operationList.push_back(op);
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("USEBCFILTER")){
-      if(boost::to_upper_copy(tokenizedString[1]) == std::string("TRUE")){
-        applyBCFilter = true;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("FALSE")){
-        applyBCFilter = false;
-      }else{
-        throw MRIException("ERROR: Invalid logical value for applyBCFilter.\n");
-      }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("CLEANBOUNDARYVELOCITIES")){
-      if(boost::to_upper_copy(tokenizedString[1]) == std::string("TRUE")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("CLEANBOUNDARYVELOCITIES")){
+      if(boost::to_upper_copy(tokenizedString.at(1)) == string("TRUE")){
         cleanBoundaryVelocities = true;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("FALSE")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("FALSE")){
         cleanBoundaryVelocities = false;
       }else{
-        throw MRIException("ERROR: Invalid logical value for CLEANBOUNDARYVELOCITIES.\n");
+        throw mriException("ERROR: Invalid logical value for CLEANBOUNDARYVELOCITIES.\n");
       }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("INTERPOLATEBOUNDARYVELOCITY")){
-      if(boost::to_upper_copy(tokenizedString[1]) == std::string("TRUE")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("INTERPOLATEBOUNDARYVELOCITY")){
+      if(boost::to_upper_copy(tokenizedString.at(1)) == string("TRUE")){
         interpolateBoundaryVelocities = true;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("FALSE")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("FALSE")){
         interpolateBoundaryVelocities = false;
       }else{
-        throw MRIException("ERROR: Invalid logical value for CLEANBOUNDARYVELOCITIES.\n");
+        throw mriException("ERROR: Invalid logical value for CLEANBOUNDARYVELOCITIES.\n");
       }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("USECONSTANTPATTERNS")){
-      if(boost::to_upper_copy(tokenizedString[1]) == std::string("TRUE")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("USECONSTANTPATTERNS")){
+      if(boost::to_upper_copy(tokenizedString.at(1)) == string("TRUE")){
         useConstantPatterns = true;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("FALSE")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("FALSE")){
         useConstantPatterns = false;
       }else{
-        throw MRIException("ERROR: Invalid logical value for useConstantPatterns.\n");
+        throw mriException("ERROR: Invalid logical value for useConstantPatterns.\n");
       }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("SEQUENCEFILENAME")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("SEQUENCEFILENAME")){
       try{
         haveSequence = true;
-        sequenceFileName = tokenizedString[1];
+        sequenceFileName = tokenizedString.at(1);
       }catch(...){
-        throw MRIException("ERROR: Invalid Sequence File Name.\n");
+        throw mriException("ERROR: Invalid Sequence File Name.\n");
       }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("EVALVORTEXCRITERIA")){
-      if(boost::to_upper_copy(tokenizedString[1]) == std::string("TRUE")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("EVALVORTEXCRITERIA")){
+      if(boost::to_upper_copy(tokenizedString.at(1)) == string("TRUE")){
         evalPopVortexCriteria = true;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("FALSE")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("FALSE")){
         evalPopVortexCriteria = false;
       }else{
-        throw MRIException("ERROR: Invalid logical value for evalPopVortexCriteria.\n");
+        throw mriException("ERROR: Invalid logical value for evalPopVortexCriteria.\n");
       }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("EVALSMPVORTEXCRITERIA")){
-      if(boost::to_upper_copy(tokenizedString[1]) == std::string("TRUE")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("EVALSMPVORTEXCRITERIA")){
+      if(boost::to_upper_copy(tokenizedString.at(1)) == string("TRUE")){
         evalSMPVortexCriterion = true;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("FALSE")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("FALSE")){
         evalSMPVortexCriterion = false;
       }else{
-        throw MRIException("ERROR: Invalid logical value for evalSMPVortexCriterion.\n");
+        throw mriException("ERROR: Invalid logical value for evalSMPVortexCriterion.\n");
       }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("EVALPRESSURE")){
-      if(boost::to_upper_copy(tokenizedString[1]) == std::string("TRUE")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("EVALPRESSURE")){
+      if(boost::to_upper_copy(tokenizedString.at(1)) == string("TRUE")){
         evalPressure = true;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("FALSE")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("FALSE")){
         evalPressure = false;
       }else{
-        throw MRIException("ERROR: Invalid logical value for evalPressure.\n");
+        throw mriException("ERROR: Invalid logical value for evalPressure.\n");
       }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("EXPORTTOPOISSON")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("EXPORTTOPOISSON")){
       try{
-        poissonFileName = tokenizedString[1];
+        poissonFileName = tokenizedString.at(1);
       }catch(...){
-        throw MRIException("ERROR: Invalid Export To Poisson Command Line.\n");
+        throw mriException("ERROR: Invalid Export To Poisson Command Line.\n");
       }    
       // Create Operation For Poisson Export
-      MRIOperation* op = new MRIOpExportForPoissonSolver(poissonFileName,
+      mriOperation* op = new mriOpExportForPoissonSolver(poissonFileName,
                                                          density,
                                                          viscosity,
                                                          PPE_IncludeAccelerationTerm,
@@ -463,138 +458,146 @@ int MRIOptions::getOptionsFromCommandFile(string commandFile){
                                                          smagorinskyCoeff);
       // Add to the operation list
       operationList.push_back(op);
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("EXPORTTODISTANCE")){
-      if(boost::to_upper_copy(tokenizedString[1]) == std::string("TRUE")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("EXPORTTODISTANCE")){
+      if(boost::to_upper_copy(tokenizedString.at(1)) == string("TRUE")){
         exportToDistance = true;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("FALSE")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("FALSE")){
         exportToDistance = false;
       }else{
-        throw MRIException("ERROR: Invalid logical value for exportToDistance.\n");
+        throw mriException("ERROR: Invalid logical value for exportToDistance.\n");
       }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("DISTANCEFILE")){
-      distanceFileName = tokenizedString[1];
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("ADDNOISE")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("DISTANCEFILE")){
+      distanceFileName = tokenizedString.at(1);
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("ADDNOISE")){
       applyNoise = true;
       try{
-        noiseIntensity = atof(tokenizedString[1].c_str());        
+        noiseIntensity = atof(tokenizedString.at(1).c_str());        
       }catch(...){
-        throw MRIException("ERROR: Invalid Noise Intensity.\n");
+        throw mriException("ERROR: Invalid Noise Intensity.\n");
       }
       if(tokenizedString.size() > 2){
 	      try{
-	        noiseSeed = atof(tokenizedString[2].c_str());
+	        noiseSeed = atof(tokenizedString.at(2).c_str());
         }catch(...){
-	        throw MRIException("ERROR: Invalid Noise Seed.\n");
+	        throw mriException("ERROR: Invalid Noise Seed.\n");
         }
       }
       // Create Operation
-      MRIOperation* op = new MRIOpApplyNoise(noiseIntensity,noiseSeed);
+      mriOperation* op = new mriOpApplyNoise(noiseIntensity,noiseSeed);
       // Add to the operation list
       operationList.push_back(op);
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("TEMPLATETYPE")){
-      if(boost::to_upper_copy(tokenizedString[1]) == std::string("ZEROVELOCITY")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("TEMPLATETYPE")){
+      if(boost::to_upper_copy(tokenizedString.at(1)) == string("ZEROVELOCITY")){
         templateType = kZeroVelocity;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("CONSTANT")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("CONSTANT")){
         templateType = kConstantFlow;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("POISEILLE")){
-        templateType = kPoiseilleFlow;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("STAGNATION")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("POISEUILLE")){
+        templateType = kPoiseuilleFlow;
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("STAGNATION")){
         templateType = kStagnationFlow;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("CYLINDRICALVOLTEX")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("CYLINDRICALVOLTEX")){
         templateType = kCylindricalVortex;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("SPHERICALVORTEX")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("SPHERICALVORTEX")){
         templateType = kSphericalVortex;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("TOROIDALVORTEX")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("TOROIDALVORTEX")){
           templateType = kToroidalVortex;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("TRANSIENT")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("TRANSIENT")){
           templateType = kTransientFlow;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("CONSTANTWITHSTEP")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("CONSTANTWITHSTEP")){
           templateType = kConstantFlowWithStep;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("TAYLORVORTEX")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("TAYLORVORTEX")){
           templateType = kTaylorVortex;
       }else{
-        throw MRIException("ERROR: Invalid logical value for exportToPoisson.\n");
+        throw mriException("ERROR: Invalid logical value for exportToPoisson.\n");
       }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("TEMPLATEPARAMS")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("TEMPLATEPARAMS")){
       try{
         for(int loopA=1;loopA<tokenizedString.size();loopA++){
           templateParams.push_back(atof(tokenizedString[loopA].c_str()));
         }
       }catch(...){
-        throw MRIException("ERROR: Invalid template parameters.\n");
+        throw mriException("ERROR: Invalid template parameters.\n");
       }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("USETURBVISCOSITYFROMFILE")){
-      if(boost::to_upper_copy(tokenizedString[1]) == std::string("TRUE")){
+      // Not enough parameters
+      if(templateParams.size() < 8){
+        throw mriException("ERROR: Invalid number of template parameters.\n");
+      }
+      // Not enough parameters for Posiseuille Flow
+      if((templateType == kPoiseuilleFlow)&&(templateParams.size() < 10)){
+        throw mriException("ERROR: Invalid number parameters for Poiseuille template.\n");
+      }      
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("USETURBVISCOSITYFROMFILE")){
+      if(boost::to_upper_copy(tokenizedString.at(1)) == string("TRUE")){
         readMuTFromFile = true;
-      }else if(boost::to_upper_copy(tokenizedString[1]) == std::string("FALSE")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("FALSE")){
         readMuTFromFile = false;
       }else{
-        throw MRIException("ERROR: Invalid logical value for USETURBVISCOSITYFROMFILE.\n");
+        throw mriException("ERROR: Invalid logical value for USETURBVISCOSITYFROMFILE.\n");
       }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("TURBVISCOSITYFILE")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("TURBVISCOSITYFILE")){
       muTFile = tokenizedString[1];
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("SMAGORINSKYCONSTANT")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("SMAGORINSKYCONSTANT")){
       try{
-        smagorinskyCoeff = atof(tokenizedString[1].c_str());
+        smagorinskyCoeff = atof(tokenizedString.at(1).c_str());
       }catch(...){
-        throw MRIException("ERROR: Invalid Smagorinsky Constant.\n");
+        throw mriException("ERROR: Invalid Smagorinsky Constant.\n");
       }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("SCALEVELOCITY")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("SCALEVELOCITY")){
         try{
           scaleVelocities = true;
-          scaleVelocityFactor = atof(tokenizedString[1].c_str());
+          scaleVelocityFactor = atof(tokenizedString.at(1).c_str());
         }catch(...){
-          throw MRIException("ERROR: Invalid velocity scaling parameters.\n");
+          throw mriException("ERROR: Invalid velocity scaling parameters.\n");
         }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("SCALEPOSITION")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("SCALEPOSITION")){
         try{
           scalePositions = true;
-          scalePositionFactor = atof(tokenizedString[1].c_str());
+          scalePositionFactor = atof(tokenizedString.at(1).c_str());
         }catch(...){
-          throw MRIException("ERROR: Invalid position scaling parameters.\n");
+          throw mriException("ERROR: Invalid position scaling parameters.\n");
         }
-    }else if(boost::to_upper_copy(tokenizedString[0]) == std::string("PRESSUREGRADIENTCOMPONENTS")){
+    }else if(boost::to_upper_copy(tokenizedString.at(0)) == string("PRESSUREGRADIENTCOMPONENTS")){
         try{
           // ACCELERATION TERM
-          if(tokenizedString[1].compare("Y") == 0){
+          if(tokenizedString.at(1).compare("Y") == 0){
             PPE_IncludeAccelerationTerm = true;
-          }else if(tokenizedString[1].compare("N") == 0){
+          }else if(tokenizedString.at(1).compare("N") == 0){
             PPE_IncludeAccelerationTerm = false;
           }else{
-            throw MRIException("ERROR: Invalid token for acceleration term.\n");
+            throw mriException("ERROR: Invalid token for acceleration term.\n");
           }
           // ADVECTION TERM
-          if(tokenizedString[2].compare("Y") == 0){
+          if(tokenizedString.at(2).compare("Y") == 0){
             PPE_IncludeAdvectionTerm = true;
-          }else if(tokenizedString[2].compare("N") == 0){
+          }else if(tokenizedString.at(2).compare("N") == 0){
             PPE_IncludeAdvectionTerm = false;
           }else{
-            throw MRIException("ERROR: Invalid token for advection term.\n");
+            throw mriException("ERROR: Invalid token for advection term.\n");
           }
           // DIFFUSION TERM
-          if(tokenizedString[3].compare("Y") == 0){
+          if(tokenizedString.at(3).compare("Y") == 0){
             PPE_IncludeDiffusionTerm = true;
-          }else if(tokenizedString[3].compare("N") == 0){
+          }else if(tokenizedString.at(3).compare("N") == 0){
             PPE_IncludeDiffusionTerm = false;
           }else{
-            throw MRIException("ERROR: Invalid token for diffusion term.\n");
+            throw mriException("ERROR: Invalid token for diffusion term.\n");
           }
           // REYNOLDS TERM
-          if(tokenizedString[4].compare("Y") == 0){
+          if(tokenizedString.at(4).compare("Y") == 0){
             PPE_IncludeReynoldsTerm = true;
-          }else if(tokenizedString[4].compare("N") == 0){
+          }else if(tokenizedString.at(4).compare("N") == 0){
             PPE_IncludeReynoldsTerm = false;
           }else{
-            throw MRIException("ERROR: Invalid token for Reynolds term.\n");
+            throw mriException("ERROR: Invalid token for Reynolds term.\n");
           }
         }catch(...){
-          throw MRIException("ERROR: Invalid pressure gradient component inclusion command.\n");
+          throw mriException("ERROR: Invalid pressure gradient component inclusion command.\n");
         }
-    }else if((tokenizedString[0].empty())||(tokenizedString[0].at(0) == '#')){
+    }else if((tokenizedString.at(0).empty())||(tokenizedString[0].at(0) == '#')){
       // Comment: Do Nothing
     }else{
       string errorMsg("ERROR: Invalid Token in input File: " + tokenizedString[0] + "\n");
-      throw MRIException(errorMsg.c_str());
+      throw mriException(errorMsg.c_str());
     }
   }
   // Close File
@@ -612,9 +615,8 @@ string getTrueFalseString(bool value){
   }
 }
 
-
 // Distribute Program Options
-void MRIOptions::DistributeProgramOptions(MRICommunicator* comm){
+void mriOptions::DistributeProgramOptions(mriCommunicator* comm){
   // FORM INTEGER OPTIONS
 /*  int size = 0;
   int mpiError = 0;
@@ -632,7 +634,7 @@ void MRIOptions::DistributeProgramOptions(MRICommunicator* comm){
   intParams[5] = inputFormatType;
   intParams[6] = outputFormatType;
   mpiError = MPI_Bcast(intParams,size,MPI_INT,0,comm->mpiComm);
-  MRIUtils::checkMpiError(mpiError);
+  mriUtils::checkMpiError(mpiError);
   if(comm->currProc > 0){
     runMode = intParams[0];
     templateType = intParams[1];
@@ -651,7 +653,7 @@ void MRIOptions::DistributeProgramOptions(MRICommunicator* comm){
   doubleParams[1] = thresholdValue;
   doubleParams[2] = noiseIntensity;
   mpiError = MPI_Bcast(doubleParams,size,MPI_DOUBLE,0,comm->mpiComm);
-  MRIUtils::checkMpiError(mpiError);
+  mriUtils::checkMpiError(mpiError);
   if(comm->currProc > 0){
     itTol = doubleParams[0];
     thresholdValue = doubleParams[1];
@@ -675,7 +677,7 @@ void MRIOptions::DistributeProgramOptions(MRICommunicator* comm){
   boolParams[10] =  evalPressure;
   boolParams[11] =  exportToPoisson;
   mpiError = MPI_Bcast(boolParams,size,MPI::BOOL,0,comm->mpiComm);
-  MRIUtils::checkMpiError(mpiError);
+  mriUtils::checkMpiError(mpiError);
   if(comm->currProc > 0){
     generateCommandFile = boolParams[0];
     useCommandFile = boolParams[1];

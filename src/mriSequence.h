@@ -9,44 +9,44 @@
 
 using namespace std;
 
-class MRIScan;
-class MRITopology;
-class MRICommunicator;
+class mriScan;
+class mriTopology;
+class mriCommunicator;
 
 // Generic Sequence Containing General 
 // Unstructured Data Sets
 
-class MRISequence{
+class mriSequence{
   public:
-    vector<MRIScan*> sequence;
+    vector<mriScan*> sequence;
     string*          fileNames;
     bool             isCyclic;
 
     // TOPOLOGY COMMON TO EVERY SCAN
-    MRITopology* topology;
+    mriTopology* topology;
 
     // Constructor and
-    MRISequence(bool cyclic);
+    mriSequence(bool cyclic);
     // Copy Constructor
-    MRISequence(MRISequence* copySequence);
+    mriSequence(mriSequence* copySequence);
     // Destructor
-    ~MRISequence();
+    ~mriSequence();
 
     // WRITE STATS
     string writeStatistics();
     
     // ADD AND GET FROM SEQUENCE
-    void addScan(MRIScan* scan);
+    void addScan(mriScan* scan);
     int  getTotalScans(){return sequence.size();}
     bool getIsCyclic(){return isCyclic;}
-    MRIScan* getScan(int scanNumber);
+    mriScan* getScan(int scanNumber);
 
     // READ SEQUENCE FROM FILE
     void readFromASCIISequence(int asciiInputType, 
-                               const MRIStringVec& vtkFileNames, 
-                               const MRIDoubleVec& times);    
-    void readFromExpansionFiles(const MRIStringVec& fileNames, 
-                                const MRIDoubleVec& Times, 
+                               const mriStringVec& vtkFileNames, 
+                               const mriDoubleVec& times);    
+    void readFromExpansionFiles(const mriStringVec& fileNames, 
+                                const mriDoubleVec& Times, 
                                 bool applyThreshold, 
                                 int thresholdType,
                                 double thresholdRatio);
@@ -54,9 +54,9 @@ class MRISequence{
     // EXPORT SEQUENCE TO FILE
     void exportToTECPLOT(string outfileName);
     void exportToVOL(string outfileName);
-    void exportToVTK(string outfileName,MRIThresholdCriteria* thresholdCriteria);    
-    void exportForDistancing(string inputFileName, MRIThresholdCriteria* threshold);
-    void exportForPoisson(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold,
+    void exportToVTK(string outfileName,mriThresholdCriteria* thresholdCriteria);    
+    void exportForDistancing(string inputFileName, mriThresholdCriteria* threshold);
+    void exportForPoisson(string inputFileName,double density,double viscosity,mriThresholdCriteria* threshold,
                           bool PPE_IncludeAccelerationTerm,bool PPE_IncludeAdvectionTerm,bool PPE_IncludeDiffusionTerm,bool PPE_IncludeReynoldsTerm,
                           bool readMuTFromFile, string muTFile, double smagorinskyCoeff);
     void writeExpansionFile(string fileName);    
@@ -67,55 +67,55 @@ class MRISequence{
 
     // TOPOLOGY AND MAPPING
     void createTopology();
-    void getUnitVector(int CurrentCell, const MRIDoubleVec& GlobalFaceCoords, MRIDoubleVec& myVect);
-    void getGlobalCoords(int DimNumber, int SliceNumber, double FaceCoord1, double FaceCoord2, MRIDoubleVec& globalCoords);
-    int  getCellNumber(const MRIDoubleVec& coords);
-    void getGlobalPermutation(MRIIntVec& GlobalPerm);
+    void getUnitVector(int CurrentCell, const mriDoubleVec& GlobalFaceCoords, mriDoubleVec& myVect);
+    void getGlobalCoords(int DimNumber, int SliceNumber, double FaceCoord1, double FaceCoord2, mriDoubleVec& globalCoords);
+    int  getCellNumber(const mriDoubleVec& coords);
+    void getGlobalPermutation(mriIntVec& GlobalPerm);
     int  getAdjacentFace(int globalNodeNumber, int AdjType);
-    void getNeighborVortexes(int cellNumber,int dim,MRIIntVec& idx);
+    void getNeighborVortexes(int cellNumber,int dim,mriIntVec& idx);
     void getEdgeDirection(int edgeID, double* edgeDirVector);
-    void getAuxNodeCoordinates(int nodeNum, MRIDoubleVec& pos);
+    void getAuxNodeCoordinates(int nodeNum, mriDoubleVec& pos);
     void buildCellConnections();
-    int  addToFaceConnections(const MRIIntVec& faceIds, vector<vector<mriFace* > >& AuxFirstNodeFaceList);
-    int  addToEdgeConnections(const MRIIntVec& edgeIds,vector<vector<mriEdge*> >& AuxFirstNodeEdgeList);
+    int  addToFaceConnections(const mriIntVec& faceIds, vector<vector<mriFace* > >& AuxFirstNodeFaceList);
+    int  addToEdgeConnections(const mriIntVec& edgeIds,vector<vector<mriEdge*> >& AuxFirstNodeEdgeList);
     void buildFaceConnections();
     void buildFaceCells();
     void buildEdgeConnections();
     
     // MAPPING     
     int  mapCoordsToIndex(int i, int j, int k);
-    void mapCoordsToPosition(const MRIIntVec& coords, bool addMeshMinima, MRIDoubleVec& pos);
-    void mapIndexToAuxNodeCoords(int index, MRIIntVec& intCoords);
-    void mapAuxCoordsToPosition(const MRIIntVec& auxCoords, MRIDoubleVec& pos);    
+    void mapCoordsToPosition(const mriIntVec& coords, bool addMeshMinima, mriDoubleVec& pos);
+    void mapIndexToAuxNodeCoords(int index, mriIntVec& intCoords);
+    void mapAuxCoordsToPosition(const mriIntVec& auxCoords, mriDoubleVec& pos);    
     
     // DIV FREE Filtering
-    void applySMPFilter(MRICommunicator* comm, bool isBC, 
-                        MRIThresholdCriteria* thresholdCriteria,
+    void applySMPFilter(mriCommunicator* comm, bool isBC, 
+                        mriThresholdCriteria* thresholdCriteria,
                         double itTol,
                         int maxIt,
                         bool useConstantPatterns);
     
     // APPLY THRESHOLDING 
-    void applyThresholding(MRIThresholdCriteria* thresholdCriteria);
+    void applyThresholding(mriThresholdCriteria* thresholdCriteria);
 
     // EVAL VORTEX CRITERIA
-    void evalVortexCriteria(MRIThresholdCriteria* thresholdCriteria);
-    void evalVorticity(MRIThresholdCriteria* thresholdCriteria);
-    void evalEnstrophy(MRIThresholdCriteria* thresholdCriteria);
+    void evalVortexCriteria(mriThresholdCriteria* thresholdCriteria);
+    void evalVorticity(mriThresholdCriteria* thresholdCriteria);
+    void evalEnstrophy(mriThresholdCriteria* thresholdCriteria);
     void evalSMPVortexCriteria();
     
     // PRESSURE COMPUTATION
-    void computePressureGradients(MRIThresholdCriteria* threshold);
+    void computePressureGradients(mriThresholdCriteria* threshold);
 
     // COMPUTING REYNOLDS STRESSES
-    void evalReynoldsStresses(MRIThresholdCriteria* threshold);
-    void evalScanReynoldsStressDerivs(int currentScan,MRIDoubleMat& reynoldsDeriv);
+    void evalReynoldsStresses(mriThresholdCriteria* threshold);
+    void evalScanReynoldsStressDerivs(int currentScan,mriDoubleMat& reynoldsDeriv);
 
     // ADD NOISE
     void applyNoise(double noiseIntensity, double seed);
 
     // FILTER DATA
-    void applyMedianFilter(int qtyID,int maxIt,int order,int filterType,MRIThresholdCriteria* threshold);
+    void applyMedianFilter(int qtyID,int maxIt,int order,int filterType,mriThresholdCriteria* threshold);
     
     // File List Printing
     void printSequenceFiles(std::string outFIleName);
@@ -123,34 +123,34 @@ class MRISequence{
     void makeScanDifference(int firstScanID, int secondScanID);
     void makeScanAverage(int numberOfMeasures, int firstScanID, int secondScanID);
     // Eval Time Derivatives
-    void evalTimeDerivs(int currentScan, int currentCell, MRIDoubleVec& timeDeriv);
-    void evalScanTimeDerivs(int currentScan,MRIDoubleMat& timeDeriv);
+    void evalTimeDerivs(int currentScan, int currentCell, mriDoubleVec& timeDeriv);
+    void evalScanTimeDerivs(int currentScan,mriDoubleMat& timeDeriv);
   
     // STATISTICS
-    void evalScanDifferencePDF(int otherScan, int refScan, const int pdfQuantity, int numberOfBins, bool useBox, MRIDoubleVec& limitBox, MRIDoubleVec& binCenters, MRIDoubleVec& binArray);
+    void evalScanDifferencePDF(int otherScan, int refScan, const int pdfQuantity, int numberOfBins, bool useBox, mriDoubleVec& limitBox, mriDoubleVec& binCenters, mriDoubleVec& binArray);
     void extractSinglePointTimeCurve(int cellNumber, int exportQty, string fileName);
     void formDifferenceBinLimits(int otherScan, int refScan, 
                                  int pdfQuantity, double& currInterval,
-                                 const MRIDoubleVec& limitBox, 
+                                 const mriDoubleVec& limitBox, 
                                  int numberOfBins, 
-                                 MRIDoubleVec& binMin, 
-                                 MRIDoubleVec& binMax, 
-                                 MRIDoubleVec& binCenter);
+                                 mriDoubleVec& binMin, 
+                                 mriDoubleVec& binMax, 
+                                 mriDoubleVec& binCenter);
     
     // TRANFORMATION
-    void crop(const MRIDoubleVec& limitBox);
+    void crop(const mriDoubleVec& limitBox);
     void scaleVelocities(double factor);
-    void scalePositions(const MRIDoubleVec& origin, double factor);
+    void scalePositions(const mriDoubleVec& origin, double factor);
 
     // MESSAGE PASSING
-    void distributeSequenceData(MRICommunicator* comm);
+    void distributeSequenceData(mriCommunicator* comm);
 
     // CLEAN COMPONENTS ON BOUNDARY
-    void cleanNormalComponentOnBoundary(MRIThresholdCriteria* threshold);
-    void interpolateBoundaryVelocities(MRIThresholdCriteria* threshold);
+    void cleanNormalComponentOnBoundary(mriThresholdCriteria* threshold);
+    void interpolateBoundaryVelocities(mriThresholdCriteria* threshold);
 
     // TEMPLATE FLOW SEQUENCE
-    void createSampleCase(MRISamples sampleType,const MRIDoubleVec& params);
+    void createSampleCase(mriTemplateType sampleType,const mriDoubleVec& params);
 };
 
 #endif // MRISEQUENCE_H

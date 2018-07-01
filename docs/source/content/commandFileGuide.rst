@@ -88,7 +88,7 @@ Using the TEMPLATETYPE token it is possible to create a pre-defined flow configu
 
 1. **ZEROVELOCITY**, a velocity field with uniformly zero velocities. 
 2. **CONSTANT**, a constant flow along one of the coordinate axis, x,y or z. 
-3. **POISEILLE**, a parabolic velocity profile in a cilinder.
+3. **POISEUILLE**, a parabolic velocity profile in a cilinder.
 4. **STAGNATION**, stagnation point flow. 
 5. **CYLINDRICALVOLTEX**. 
 6. **SPHERICALVORTEX**. 
@@ -101,7 +101,7 @@ Specification of the selected template is completed by specifing a few parameter
 
 Example input: ::
 
-  TEMPLATEPARAMS: sizeX,sizeY,sizeZ,distX,distY,distZ,time,direction
+  TEMPLATEPARAMS: sizeX,sizeY,sizeZ,distX,distY,distZ,time,direction,auxParams1,auxParams2,auxParams3... 
 
 These parameters are:
 
@@ -113,6 +113,24 @@ These parameters are:
 6. **distZ**, cell spacing in the z direction.
 7. **time**, time parameter (used only for the **TRANSIENT** template)
 8. **direction**, orientation parameter.
+9. **auxParamters**, template specific parameters.
+
+The auxiliary parameters for the various templates are:
+
+1. **ZEROVELOCITY**, no additional parameters. 
+2. **CONSTANT**, no additional parameters.
+3. **POISEUILLE**, two addtional parameters:
+
+   - Radius of the cylindrical domain.
+   - Peak velocity.
+
+4. **STAGNATION**, no additional parameters.
+5. **CYLINDRICALVOLTEX**, no additional parameters. 
+6. **SPHERICALVORTEX**, no additional parameters. 
+7. **TOROIDALVORTEX**, no additional parameters. 
+8. **TRANSIENT**, no additional parameters. 
+9. **CONSTANTWITHSTEP**, no additional parameters. 
+10. **ROTATINGVORTEX**, no additional parameters.
 
 Output file type
 """"""""""""""""
@@ -164,55 +182,30 @@ Example input: ::
 
 Note that when scaling the position, the measurement grid is **translated in space** and the minimum coordinates are set equal to the **origin** of the axis system (0.0,0.0,0.0).
 
-SMP Filter
-^^^^^^^^^^
+Solenoidal Filter
+^^^^^^^^^^^^^^^^^
 
-SMP Filter activation
-"""""""""""""""""""""
+Use the USESMPFILTER token to apply a solenoidal filter. Four possible options can be specified:
 
-Use the USESMPFILTER token to activate/deactivate the SMP filter. 
-
-Two possible inputs can be specified:
-
-1. **TRUE**. The filter is active.
-2. **FALSE**. The filter is inactive.
+1. Use **boundary filter**. This activates a boundary condition filter after the main filter. This provides improvement in the situation where solid walls are present in the domain and one wants to both have a solenoidal velocity field plus satisfy the boundary conditions at the interface between fluid and walls. 
+2. Use **constant flow waveforms**. This includes three constant waveform at each SMP iteration. This helps to speed up the convergence especially for flows characterized by a strong average component.
+3. The SMP **convergence tolerance**. This is the tolerance for the relative change in the 2-norm of the residual between successive iterations.
+4. The **number of iterations**. Maximum number of iterations for the iterative solver.
 
 Example input: :: 
 
-  USESMPFILTER: TRUE
-
-Use Constant flow waveforms
-"""""""""""""""""""""""""""
-
-The USECONSTANTPATTERNS will include three constant waveform at each SMP iteration. This helps to speed up the convergence especially for flows characterized by a strong average component.
-
-Example input: ::
-
-  USECONSTANTPATTERNS: TRUE
-
-Iteration tolerance and number of iterations
-""""""""""""""""""""""""""""""""""""""""""""
-
-The SMP convergence tolerance can be specified using the SMPITERATIONTOLERANCE token. This is the tolerance for the relative change in the 2-norm of the residual between successive iterations.
-
-Example input: ::
-
-  SMPITERATIONTOLERANCE: 1.0e-4
-
-Example input: ::
-
-  SMPMAXITERATIONS: 1000
+  USESMPFILTER: TRUE,TRUE,1.0e-3,2000
 
 Adding Noise
 ^^^^^^^^^^^^
 
-In some situations you may want to add Gaussianly distributed, component independent noise, to an input velocity field. To do so, the ADDNOISE token allows to enter the intensity of the noise as a percent of the maximum velocity module.
+In some situations you may want to add Gaussianly distributed, component independent noise, to an input velocity field. To do so, the ADDNOISE token allows to enter the intensity of the noise as a percent of the maximum velocity module together with the seed for the random number generator
 
 Example input: ::
 
-  ADDNOISE: 10.0
+  ADDNOISE: 10.0,1234
 
-This will use 10\% of the maximum velocity module in the field as the standard deviation of the Gaussian noise intensity.
+This will use 10\% of the maximum velocity module in the field as the standard deviation of the Gaussian noise intensity and a random seed equal to **1234**.
 
 Physical Constants
 ^^^^^^^^^^^^^^^^^^
@@ -270,12 +263,11 @@ This means that all the cells with concentration greater than 0.5 will be consid
 Export to PPE Poisson Solver
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The **EXPORTTOPOISSON** and **POISSONFILE** tell the application to export a finite element input file for successive solution with a PPE solver. 
+The **EXPORTTOPOISSON** token tells the application to export a finite element input file for successive solution with a PPE solver. 
 
 Example input: ::
 
-  EXPORTTOPOISSON: TRUE
-  POISSONFILE: poissonInputFile.txt
+  EXPORTTOPOISSON: poissonInputFile.txt
 
 Components of the pressure gradient to evaluate
 """""""""""""""""""""""""""""""""""""""""""""""
@@ -311,12 +303,11 @@ In case the turbulent viscosity is not read from file, the token **SMAGORINSKYCO
 Export to Laplace wall distancing solver
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The **EXPORTTODISTANCE** and **DISTANCEFILE** options tell the application to export a finite element input file for wall distance evaluation.
+The **EXPORTTODISTANCE** token tell the application to export a finite element input file for wall distance evaluation.
 
 Example input: ::
 
-  EXPORTTODISTANCE: TRUE
-  DISTANCEFILE: distanceInputFile.txt
+  EXPORTTODISTANCE: distanceInputFile.txt
 
 Vortex Criteria
 ^^^^^^^^^^^^^^^

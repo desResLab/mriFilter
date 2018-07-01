@@ -23,7 +23,7 @@ void PrintBinsToFile(std::string fileName, int totalSamples, double binInterval,
 }
 
 // Sample Velocities
-void MRIScan::sampleVelocities(MRISamplingOptions SamplingOptions, MRIIntVec& bins){
+void mriScan::sampleVelocities(mriSamplingOptions SamplingOptions, mriIntVec& bins){
   random_device rand_dev;
   mt19937 generator(rand_dev());
   uniform_int_distribution<int>  distr(0, topology->totalCells - 1);
@@ -33,7 +33,7 @@ void MRIScan::sampleVelocities(MRISamplingOptions SamplingOptions, MRIIntVec& bi
   for(int loopA=0;loopA<bins.size();loopA++){
     bins[loopA] = 0.0;
   }
-  MRIBoolVec visited(topology->totalCells - 1, false);
+  mriBoolVec visited(topology->totalCells - 1, false);
 
   // Set End Index
   int endIndex = 0;
@@ -68,7 +68,7 @@ void MRIScan::sampleVelocities(MRISamplingOptions SamplingOptions, MRIIntVec& bi
                            (cells[currentCell].velocity[2]*cells[currentCell].velocity[2]));
 
       // Increment Counter
-      if((SamplingOptions.useBox)&&(MRIUtils::isPointInsideBox(currentXCoord,currentYCoord,currentZCoord,SamplingOptions.limitBox))){
+      if((SamplingOptions.useBox)&&(mriUtils::isPointInsideBox(currentXCoord,currentYCoord,currentZCoord,SamplingOptions.limitBox))){
         // Increment The Number of Samples
         count++;
         // Assign to the Right Bin

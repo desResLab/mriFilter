@@ -9,12 +9,12 @@
 // ===========================================
 // COMPUTE PRESSURE GRADIENTS FOR GENERIC CELL
 // ===========================================
-void MRIScan::evalCellPressureGradients(int currentCell,
-                                        const MRIDoubleVec& timeDeriv, 
-                                        const MRIDoubleMat& firstDerivs, 
-                                        const MRIDoubleMat& secondDerivs,
-                                        const MRIDoubleMat& ReynoldsStressGrad,
-                                        MRIDoubleVec& pressureGrad){
+void mriScan::evalCellPressureGradients(int currentCell,
+                                        const mriDoubleVec& timeDeriv, 
+                                        const mriDoubleMat& firstDerivs, 
+                                        const mriDoubleMat& secondDerivs,
+                                        const mriDoubleMat& ReynoldsStressGrad,
+                                        mriDoubleVec& pressureGrad){
 
   // SET PARAMETER
   int pressureGradientType = 3;
@@ -68,17 +68,17 @@ double findParabolicDeriv(double y1, double y2, double y3, double h1, double h2,
 }
 
 // Eval Time Derivatives: TODO: Complete for Transient Case
-void MRISequence::evalTimeDerivs(int currentScan, int currentCell, MRIDoubleVec& timeDeriv){
+void mriSequence::evalTimeDerivs(int currentScan, int currentCell, mriDoubleVec& timeDeriv){
   // Eval Difference Formulae
   if (sequence.size()>1){
     // multiple Scan
     bool isFirstScan = (currentScan == 0);
     bool isLastScan = (currentScan == (sequence.size()-1));
 
-    MRIDoubleVec currVel(3);
-    MRIDoubleVec prevVel(3);
-    MRIDoubleVec nextVel(3);
-    MRIDoubleVec nextNextVel(3);
+    mriDoubleVec currVel(3);
+    mriDoubleVec prevVel(3);
+    mriDoubleVec nextVel(3);
+    mriDoubleVec nextNextVel(3);
 
     if (isFirstScan){
       if (isCyclic){
@@ -86,8 +86,8 @@ void MRISequence::evalTimeDerivs(int currentScan, int currentCell, MRIDoubleVec&
         // Assume Same Time Step
         double deltaT1 = deltaT2;
         // Get The Velocities
-        MRIDoubleVec firstPart(3,0.0);
-        MRIDoubleVec secondPart(3,0.0);
+        mriDoubleVec firstPart(3,0.0);
+        mriDoubleVec secondPart(3,0.0);
         //
         currVel[0] = sequence[currentScan]->cells[currentCell].velocity[0];
         currVel[1] = sequence[currentScan]->cells[currentCell].velocity[1];
@@ -148,8 +148,8 @@ void MRISequence::evalTimeDerivs(int currentScan, int currentCell, MRIDoubleVec&
         // Assume Same Time Step
         double deltaT2 = deltaT1;
         // Get The Velocities
-        MRIDoubleVec firstPart(3,0.0);
-        MRIDoubleVec secondPart(3,0.0);
+        mriDoubleVec firstPart(3,0.0);
+        mriDoubleVec secondPart(3,0.0);
         //
         currVel[0] = sequence[currentScan]->cells[currentCell].velocity[0];
         currVel[1] = sequence[currentScan]->cells[currentCell].velocity[1];
@@ -203,8 +203,8 @@ void MRISequence::evalTimeDerivs(int currentScan, int currentCell, MRIDoubleVec&
         timeDeriv[2] = (sequence[currentScan]->cells[currentCell].velocity[2] - sequence[currentScan-1]->cells[currentCell].velocity[2])/(deltaT);                
       }
     }else{
-      MRIDoubleVec firstPart(3,0.0);
-      MRIDoubleVec secondPart(3,0.0);
+      mriDoubleVec firstPart(3,0.0);
+      mriDoubleVec secondPart(3,0.0);
       double deltaT1 = sequence[currentScan]->scanTime - sequence[currentScan-1]->scanTime;
       double deltaT2 = sequence[currentScan+1]->scanTime - sequence[currentScan]->scanTime;
       // Get The Velocities
@@ -247,10 +247,10 @@ void MRISequence::evalTimeDerivs(int currentScan, int currentCell, MRIDoubleVec&
 // ==================================
 // EVAL TIME DERIVATIVES FOR THE SCAN
 // ==================================
-void MRISequence::evalScanTimeDerivs(int currentScan,MRIDoubleMat& timeDeriv){
+void mriSequence::evalScanTimeDerivs(int currentScan,mriDoubleMat& timeDeriv){
   timeDeriv.clear();
-  MRIDoubleVec temp;
-  MRIDoubleVec cellTimeDeriv(3);
+  mriDoubleVec temp;
+  mriDoubleVec cellTimeDeriv(3);
   for(int loopA=0;loopA<sequence[currentScan]->topology->totalCells;loopA++){
     temp.clear();
     evalTimeDerivs(currentScan,loopA,cellTimeDeriv);
@@ -264,10 +264,10 @@ void MRISequence::evalScanTimeDerivs(int currentScan,MRIDoubleMat& timeDeriv){
 // ================================
 // EVAL REYNOLDS STRESS DERIVATIVES
 // ================================
-void MRISequence::evalScanReynoldsStressDerivs(int currentScan,MRIDoubleMat& reynoldsDeriv){
+void mriSequence::evalScanReynoldsStressDerivs(int currentScan,mriDoubleMat& reynoldsDeriv){
   reynoldsDeriv.clear();
-  MRIDoubleVec temp;
-  MRIDoubleMat rsg;
+  mriDoubleVec temp;
+  mriDoubleMat rsg;
   rsg.resize(3);
   for(int loopA=0;loopA<3;loopA++){
     rsg[loopA].resize(3);
@@ -285,7 +285,7 @@ void MRISequence::evalScanReynoldsStressDerivs(int currentScan,MRIDoubleMat& rey
 // ==========================================
 // EVAL FIRST AND SECOND DERIVATIVES IN SPACE
 // ==========================================
-void MRIScan::evalSpaceDerivs(int currentCell, MRIThresholdCriteria* threshold, MRIDoubleMat& firstDerivs, MRIDoubleMat& secondDerivs){
+void mriScan::evalSpaceDerivs(int currentCell, mriThresholdCriteria* threshold, mriDoubleMat& firstDerivs, mriDoubleMat& secondDerivs){
   // FirstDerivs
   // DVX/DX DVY/DX DVZ/DX
   // DVX/DY DVY/DY DVZ/DY
@@ -295,7 +295,7 @@ void MRIScan::evalSpaceDerivs(int currentCell, MRIThresholdCriteria* threshold, 
   double cellQty = 0.0;
 
   // Map Index To Coords
-  MRIIntVec currentCellCoords(kNumberOfDimensions);
+  mriIntVec currentCellCoords(kNumberOfDimensions);
   topology->mapIndexToCoords(currentCell,currentCellCoords);
   int firstCell,secondCell,thirdCell,fourthCell,nextCell;
 
@@ -536,7 +536,7 @@ void MRIScan::evalSpaceDerivs(int currentCell, MRIThresholdCriteria* threshold, 
           }
         }else{
           // Show Error Message
-          throw MRIException("Error: Both First and Second Cells are Zero in EvalFirstSpaceDerivs");
+          throw mriException("Error: Both First and Second Cells are Zero in EvalFirstSpaceDerivs");
         }
 
         // SECOND DERIVS
@@ -557,7 +557,7 @@ void MRIScan::evalSpaceDerivs(int currentCell, MRIThresholdCriteria* threshold, 
           secondDerivs[loopA][loopB] = (secondVComponent-2.0*currentVComponent+firstVComponent)/(deltaPlus*deltaMinus);
         }else{
           // Show Error Message
-          throw MRIException("Error: Both First and Second Cells are Zero in EvalFirstSpaceDerivs");
+          throw mriException("Error: Both First and Second Cells are Zero in EvalFirstSpaceDerivs");
         }
       }
     }
@@ -567,9 +567,9 @@ void MRIScan::evalSpaceDerivs(int currentCell, MRIThresholdCriteria* threshold, 
 // ==========================================
 // EVAL FIRST AND SECOND DERIVATIVES IN SPACE
 // ==========================================
-void MRIScan::evalSpaceGradient(int currentCell,int qtyID, MRIDoubleVec& gradient){
+void mriScan::evalSpaceGradient(int currentCell,int qtyID, mriDoubleVec& gradient){
   // Map Index To Coords
-  MRIIntVec currentCellCoords(kNumberOfDimensions);
+  mriIntVec currentCellCoords(kNumberOfDimensions);
   topology->mapIndexToCoords(currentCell,currentCellCoords);
   int firstCell,secondCell;
   // Assemble Terms
@@ -661,7 +661,7 @@ void MRIScan::evalSpaceGradient(int currentCell,int qtyID, MRIDoubleVec& gradien
       gradient[loopA] = (secondVComponent-firstVComponent)/(deltaPlus + deltaMinus);
     }else{
       // Show Error Message
-      throw MRIException("Error: Both First and Second Cells are Zero in EvalFirstSpaceDerivs");
+      throw mriException("Error: Both First and Second Cells are Zero in EvalFirstSpaceDerivs");
     }
   }
 }
@@ -681,15 +681,15 @@ void printDerivatives(double** firstDerivs, double** secondDerivs){
 }
 
 // EVAL PRESSURE GRADIENTS
-void MRISequence::computePressureGradients(MRIThresholdCriteria* threshold){
+void mriSequence::computePressureGradients(mriThresholdCriteria* threshold){
   
   // Allocate Local Velocity Gradients
-  MRIDoubleVec timeDerivs(kNumberOfDimensions);
-  MRIDoubleVec tmp;
+  mriDoubleVec timeDerivs(kNumberOfDimensions);
+  mriDoubleVec tmp;
   // First and Second Derivatives
-  MRIDoubleMat firstDerivs;
-  MRIDoubleMat secondDerivs;
-  MRIDoubleMat ReynoldsStressGrad;
+  mriDoubleMat firstDerivs;
+  mriDoubleMat secondDerivs;
+  mriDoubleMat ReynoldsStressGrad;
 
   firstDerivs.resize(kNumberOfDimensions);
   secondDerivs.resize(kNumberOfDimensions);
@@ -700,7 +700,7 @@ void MRISequence::computePressureGradients(MRIThresholdCriteria* threshold){
     secondDerivs[loopA].resize(kNumberOfDimensions);
     ReynoldsStressGrad[loopA].resize(kNumberOfDimensions);
   }
-  MRIDoubleVec currentGradient(kNumberOfDimensions);
+  mriDoubleVec currentGradient(kNumberOfDimensions);
     
   // Write Message
   writeSchMessage(string("\n"));
@@ -710,7 +710,7 @@ void MRISequence::computePressureGradients(MRIThresholdCriteria* threshold){
   for(int loopA=0;loopA<sequence.size();loopA++){
     
     // Write Message
-    writeSchMessage(string("Computing Pressure Gradient: Step "+MRIUtils::intToStr(loopA+1)+"/"+MRIUtils::intToStr(sequence.size())+"..."));
+    writeSchMessage(string("Computing Pressure Gradient: Step "+mriUtils::intToStr(loopA+1)+"/"+mriUtils::intToStr(sequence.size())+"..."));
 
     // EVALUATE REYNOLDS STRESSES
     sequence[loopA]->evalReynoldsStress(threshold);
@@ -744,7 +744,7 @@ void MRISequence::computePressureGradients(MRIThresholdCriteria* threshold){
 }
 
 // CHECK IF NEIGHBOR ARE NOT VISITED
-bool MRIScan::areThereNotVisitedNeighbor(int cell, bool* visitedCell){
+bool mriScan::areThereNotVisitedNeighbor(int cell, bool* visitedCell){
   std::vector<int> otherCells;
   // Should I consider also the diagonal neighbors!!!
   getCartesianNeighbourCells(cell,otherCells,false);
@@ -759,7 +759,7 @@ bool MRIScan::areThereNotVisitedNeighbor(int cell, bool* visitedCell){
 }
 
 // CHECK IF NEIGHBOR ARE VISITED
-bool MRIScan::areThereVisitedNeighbor(int cell, bool* visitedCell, bool* isBoundaryCell, int &visitedNeighbor){
+bool mriScan::areThereVisitedNeighbor(int cell, bool* visitedCell, bool* isBoundaryCell, int &visitedNeighbor){
   std::vector<int> otherCells;
   // Should I consider also the diagonal neighbors!!!
   getCartesianNeighbourCells(cell,otherCells,false);
@@ -777,7 +777,7 @@ bool MRIScan::areThereVisitedNeighbor(int cell, bool* visitedCell, bool* isBound
 }
 
 // GET CELL FROM STACK
-int MRIScan::getCellFromStack(std::vector<int> &cellStack, bool* visitedCell, bool* isBoundaryCell, bool &finished, bool& secondStage){
+int mriScan::getCellFromStack(std::vector<int> &cellStack, bool* visitedCell, bool* isBoundaryCell, bool &finished, bool& secondStage){
   // Check if Stack is Empty
   if (cellStack.size() ==  0){
     finished = true;

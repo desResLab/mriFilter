@@ -1,17 +1,15 @@
 #ifndef MRIIMAGEDATA_H
 #define MRIIMAGEDATA_H
 
-class MRIImageData
-{
-public:
+class mriImageData{
   public:
     // Data Members
     int sizeX;
     int sizeY;
     short* rawData;
     // Constructor and Destructor
-    MRIImageData();
-    ~MRIImageData();
+    mriImageData();
+    ~mriImageData();
 };
 
 #endif // MRIIMAGEDATA_H

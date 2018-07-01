@@ -5,7 +5,7 @@ using namespace std;
 // ====================================
 // READS HEADER AND ASSIGNS PLT OPTIONS
 // ====================================
-void assignPLTOptions(const MRIStringVec& tokens, pltOptionRecord& pltOptions){
+void assignPLTOptions(const mriStringVec& tokens, pltOptionRecord& pltOptions){
   for(size_t loopA=0;loopA<tokens.size();loopA++){
     if(boost::to_upper_copy(tokens[loopA]) == "I"){
       pltOptions.type = pltUNIFORM;
@@ -26,7 +26,7 @@ void assignPLTOptions(const MRIStringVec& tokens, pltOptionRecord& pltOptions){
       pltOptions.type = pltSTRUCTURED;
     }else if(boost::to_upper_copy(tokens[loopA]) == "DATAPACKING"){
       if(boost::to_upper_copy(tokens[loopA+1]) != "POINT"){
-        throw MRIException("Error: invalid DATAPACKING format");
+        throw mriException("Error: invalid DATAPACKING format");
       }
     }
   }
@@ -35,7 +35,7 @@ void assignPLTOptions(const MRIStringVec& tokens, pltOptionRecord& pltOptions){
 // ==============================================
 // READS TOKENIZED STRING AND ASSIGNS PLT OPTIONS
 // ==============================================
-void assignVTKOptions(int lineNum, const MRIStringVec& tokens, vtkStructuredPointsOptionRecord &vtkOptions){
+void assignVTKOptions(int lineNum, const mriStringVec& tokens, vtkStructuredPointsOptionRecord &vtkOptions){
   for(size_t loopA=0;loopA<tokens.size();loopA++){
     if(boost::to_upper_copy(tokens[loopA]) == "ASCII"){
       vtkOptions.isASCII = true;
@@ -111,13 +111,13 @@ void initVTKStructuredPointsOptions(vtkStructuredPointsOptionRecord &opts){
 // READ EXPANSION FILE
 // ===================
 void readExpansionFile(string fileName,
-                       MRIIntVec& tot,
-                       MRIDoubleVec& lengthX,
-                       MRIDoubleVec& lengthY,
-                       MRIDoubleVec& lengthZ,
-                       MRIDoubleVec& minlimits,
-                       MRIDoubleVec& maxlimits,
-                       MRIExpansion* exp){
+                       mriIntVec& tot,
+                       mriDoubleVec& lengthX,
+                       mriDoubleVec& lengthY,
+                       mriDoubleVec& lengthZ,
+                       mriDoubleVec& minlimits,
+                       mriDoubleVec& maxlimits,
+                       mriExpansion* exp){
 
   // ASSIGN FILE
   int lineCount = 0;
@@ -129,7 +129,7 @@ void readExpansionFile(string fileName,
   // GET TOTAL CELLS
   lineCount++;
   std::getline(inFile,Buffer);
-  ResultArray = MRIUtils::extractSubStringFromBufferMS(Buffer);
+  ResultArray = mriUtils::extractSubStringFromBufferMS(Buffer);
   tot[0] = atoi(ResultArray[0].c_str());
   tot[1] = atoi(ResultArray[1].c_str());
   tot[2] = atoi(ResultArray[2].c_str());
@@ -141,7 +141,7 @@ void readExpansionFile(string fileName,
   while(lengthCount<tot[0]){
     std::getline(inFile,Buffer);
     boost::trim(Buffer);
-    ResultArray = MRIUtils::extractSubStringFromBufferMS(Buffer);
+    ResultArray = mriUtils::extractSubStringFromBufferMS(Buffer);
     for(size_t loopA=0;loopA<ResultArray.size();loopA++){
       // Assign Length
       lengthX.push_back(atof(ResultArray[loopA].c_str()));
@@ -155,7 +155,7 @@ void readExpansionFile(string fileName,
   while(lengthCount<tot[1]){
     std::getline(inFile,Buffer);
     boost::trim(Buffer);
-    ResultArray = MRIUtils::extractSubStringFromBufferMS(Buffer);
+    ResultArray = mriUtils::extractSubStringFromBufferMS(Buffer);
     for(size_t loopA=0;loopA<ResultArray.size();loopA++){
       // Assign Length
       lengthY.push_back(atof(ResultArray[loopA].c_str()));
@@ -169,7 +169,7 @@ void readExpansionFile(string fileName,
   while(lengthCount<tot[2]){
     std::getline(inFile,Buffer);
     boost::trim(Buffer);
-    ResultArray = MRIUtils::extractSubStringFromBufferMS(Buffer);
+    ResultArray = mriUtils::extractSubStringFromBufferMS(Buffer);
     for(size_t loopA=0;loopA<ResultArray.size();loopA++){
       // Assign Length
       lengthZ.push_back(atof(ResultArray[loopA].c_str()));
@@ -181,7 +181,7 @@ void readExpansionFile(string fileName,
   // GET MIN LIMITS
   lineCount++;
   std::getline(inFile,Buffer);
-  ResultArray = MRIUtils::extractSubStringFromBufferMS(Buffer);
+  ResultArray = mriUtils::extractSubStringFromBufferMS(Buffer);
   minlimits[0] = atof(ResultArray[0].c_str());
   minlimits[1] = atof(ResultArray[1].c_str());
   minlimits[2] = atof(ResultArray[2].c_str());
@@ -189,7 +189,7 @@ void readExpansionFile(string fileName,
   // GET MAX LIMITS
   lineCount++;
   std::getline(inFile,Buffer);
-  ResultArray = MRIUtils::extractSubStringFromBufferMS(Buffer);
+  ResultArray = mriUtils::extractSubStringFromBufferMS(Buffer);
   maxlimits[0] = atof(ResultArray[0].c_str());
   maxlimits[1] = atof(ResultArray[1].c_str());
   maxlimits[2] = atof(ResultArray[2].c_str());
@@ -197,12 +197,12 @@ void readExpansionFile(string fileName,
   // GET EXPANSION COEFFICIENTS
   std::vector<double> tempExpansion;
   while(std::getline(inFile,Buffer)){
-    ResultArray = MRIUtils::extractSubStringFromBufferMS(Buffer);
+    ResultArray = mriUtils::extractSubStringFromBufferMS(Buffer);
     tempExpansion.push_back(atof(ResultArray[0].c_str()));
   }
 
   // CREATE EXPANSION
-  exp = new MRIExpansion((int)tempExpansion.size()-3);
+  exp = new mriExpansion((int)tempExpansion.size()-3);
   exp->fillFromVector(tempExpansion);
 
   // CLOSE FILE

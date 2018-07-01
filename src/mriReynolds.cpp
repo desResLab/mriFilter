@@ -4,7 +4,7 @@
 // BOUSSINESQ APPROXIMATION
 // ========================
 // EVAL TURBULENT VISCOSITY
-void MRIScan::evalEddyViscosity_simple(MRIDoubleVec& nuT){
+void mriScan::evalEddyViscosity_simple(mriDoubleVec& nuT){
   // Loop through all cells
   for(int loopA=0;loopA<topology->totalCells;loopA++){
     // JET Filippo
@@ -14,11 +14,11 @@ void MRIScan::evalEddyViscosity_simple(MRIDoubleVec& nuT){
   }
 }
 // EVAL TURBULENT KINETIC ENERGY
-void MRIScan::evalTurbulentKineticEnergy(MRIThresholdCriteria* threshold, MRIDoubleVec& turbK){
+void mriScan::evalTurbulentKineticEnergy(mriThresholdCriteria* threshold, mriDoubleVec& turbK){
   // First and Second Cell Derivatives
 
-  MRIDoubleMat firstDerivs;
-  MRIDoubleMat secondDerivs;
+  mriDoubleMat firstDerivs;
+  mriDoubleMat secondDerivs;
   firstDerivs.resize(3);
   secondDerivs.resize(3);
   for(int loopA=0;loopA<3;loopA++){
@@ -100,13 +100,13 @@ int getReynoldsStressIndex(int loopA,int loopB){
 // ========================
 // EVAL TURBULENT VISCOSITY
 // ========================
-void MRIScan::evalReynoldsStress(MRIThresholdCriteria* threshold){
+void mriScan::evalReynoldsStress(mriThresholdCriteria* threshold){
   // Allocate
-  MRIDoubleVec turbNu(topology->totalCells,0.0);
-  MRIDoubleVec turbK(topology->totalCells,0.0);
+  mriDoubleVec turbNu(topology->totalCells,0.0);
+  mriDoubleVec turbK(topology->totalCells,0.0);
   // First and Second Cell Derivatives
-  MRIDoubleMat firstDerivs;
-  MRIDoubleMat secondDerivs;
+  mriDoubleMat firstDerivs;
+  mriDoubleMat secondDerivs;
 
   firstDerivs.resize(3);
   secondDerivs.resize(3);
@@ -199,14 +199,14 @@ void MRIScan::evalReynoldsStress(MRIThresholdCriteria* threshold){
 // ================================================
 // EVAL SMAGORINSKY LILLY TURBULENT VISCOSITY MODEL
 // ================================================
-void MRIScan::evalSmagorinskyLillyTurbViscosity(double density, double smagorinskyCoeff, MRIThresholdCriteria* threshold, MRIDoubleMat& turbViscosity){
+void mriScan::evalSmagorinskyLillyTurbViscosity(double density, double smagorinskyCoeff, mriThresholdCriteria* threshold, mriDoubleMat& turbViscosity){
   double modS = 0.0;
   double currCharDist = 0.0;
   double sTerm = 0.0;
-  MRIDoubleVec tmp;
+  mriDoubleVec tmp;
   // First and Second Derivatives
-  MRIDoubleMat firstDerivs;
-  MRIDoubleMat secondDerivs;
+  mriDoubleMat firstDerivs;
+  mriDoubleMat secondDerivs;
   firstDerivs.resize(kNumberOfDimensions);
   secondDerivs.resize(kNumberOfDimensions);
   for(int loopA=0;loopA<kNumberOfDimensions;loopA++){
@@ -239,13 +239,13 @@ void MRIScan::evalSmagorinskyLillyTurbViscosity(double density, double smagorins
 // ==============================
 // EVAL REYNOLDS STRESS GRADIENTS
 // ==============================
-void MRIScan::evalReynoldsStressGradient(int currentCell, MRIDoubleMat& ReynoldsStressGradient){
+void mriScan::evalReynoldsStressGradient(int currentCell, mriDoubleMat& ReynoldsStressGradient){
   // FirstDerivs
   // DRXX/DX DRYX/DX DRZX/DX
   // DRXY/DY DRYY/DY DRZY/DY
   // DRXZ/DZ DRYZ/DZ DRZZ/DZ
   // Map Index To Coords
-  MRIIntVec currentCellCoords(kNumberOfDimensions);
+  mriIntVec currentCellCoords(kNumberOfDimensions);
   topology->mapIndexToCoords(currentCell,currentCellCoords);
   int firstCell,secondCell;
   // Assemble Terms
@@ -339,7 +339,7 @@ void MRIScan::evalReynoldsStressGradient(int currentCell, MRIDoubleMat& Reynolds
         ReynoldsStressGradient[loopA][loopB] = (secondVComponent-firstVComponent)/(deltaPlus + deltaMinus);
       }else{
         // Show Error Message
-        throw MRIException("ERROR: Both First and Second Cells are Zero in EvalFirstSpaceDerivs");
+        throw mriException("ERROR: Both First and Second Cells are Zero in EvalFirstSpaceDerivs");
       }
 
     }

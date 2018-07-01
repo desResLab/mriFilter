@@ -5,56 +5,57 @@
 # include "mriCommunicator.h"
 # include "mriThresholdCriteria.h"
 
-class MRISequence;
+class mriSequence;
 
 // GENERIC MRI OPERATION
-class MRIOperation{
+class mriOperation{
   public:
-    MRIOperation();
-    virtual ~MRIOperation();
+    mriOperation();
+    virtual ~mriOperation();
 
     // DATA MEMBER
-    virtual void processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq) = 0;
+    virtual void processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq) = 0;
 };
 
 // SCALE VELOCITIES
-class MRIOpScaleVelocities: public MRIOperation{
+class mriOpScaleVelocities: public mriOperation{
   public:
     double factor;
 
     // DATA MEMBER
-    virtual void processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq);
+    virtual void processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq);
 };
 
 // SCALE CELLS
-class MRIOpScaleCells: public MRIOperation{
+class mriOpScaleCells: public mriOperation{
   public:
-    MRIDoubleVec origin;
+    mriDoubleVec origin;
     double factor;
 
     // DATA MEMBER
-    virtual void processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq);
+    virtual void processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq);
 };
 
 // SAVE SEQUENCE AT CURRENT STATE
-class MRIOpSaveState: public MRIOperation{
+class mriOpSaveState: public mriOperation{
   public:
     // DATA MEMBER
-    virtual void processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq);
+    virtual void processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq);
 };
 
 // APPLY NOISE
-class MRIOpApplyNoise: public MRIOperation{
+class mriOpApplyNoise: public mriOperation{
   public:
     double noiseIntensity;
+    double seed;
     // CONSTRUCTOR
-    MRIOpApplyNoise(double noiseIntensity);
+    mriOpApplyNoise(double noiseIntensity, double seed);
     // DATA MEMBER
-    virtual void processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq);
+    virtual void processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq);
 };
 
 // APPLY SMOOTHING FILTER
-class MRIOpApplySmoothing: public MRIOperation{
+class mriOpApplySmoothing: public mriOperation{
   public:
     // Filtering Options
     int numIterations;
@@ -62,27 +63,27 @@ class MRIOpApplySmoothing: public MRIOperation{
     int filterOrder;
 
     // DATA MEMBER
-    MRIOpApplySmoothing(int filterNumIterations, int filterType, int filterOrder);
-    virtual void processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq);
+    mriOpApplySmoothing(int filterNumIterations, int filterType, int filterOrder);
+    virtual void processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq);
 };
 
 // CLEAN NORMAL COMPONENT ON BOUNDARY
-class MRIOpCleanNormalComponentOnBoundary: public MRIOperation{
+class mriOpCleanNormalComponentOnBoundary: public mriOperation{
   public:
         
     // DATA MEMBER
-    virtual void processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq);
+    virtual void processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq);
 };
 
 // INTERPOLATE BOUNDARY VELOCITIES
-class MRIOpInterpolateVelocityOnBoundary: public MRIOperation{
+class mriOpInterpolateVelocityOnBoundary: public mriOperation{
   public:
     // DATA MEMBER
-    virtual void processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq);
+    virtual void processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq);
 };
 
 // INTERPOLATE BOUNDARY VELOCITIES
-class MRIOpApplySolenoidalFilter: public MRIOperation{
+class mriOpApplySolenoidalFilter: public mriOperation{
   public:
     bool applyBCFilter;
     bool useConstantPatterns;
@@ -90,44 +91,44 @@ class MRIOpApplySolenoidalFilter: public MRIOperation{
     int maxIt;
 
     // CONSTRUCTOR
-    MRIOpApplySolenoidalFilter(bool applyBCFilter,bool useConstantPatterns,double itTol,int maxIt);
+    mriOpApplySolenoidalFilter(bool applyBCFilter,bool useConstantPatterns,double itTol,int maxIt);
     // DATA MEMBER
-    virtual void processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq);
+    virtual void processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq);
 };
 
 // APPLY THRESHOLD
-class MRIOpApplyThreshold: public MRIOperation{
+class mriOpApplyThreshold: public mriOperation{
   public:
     // DATA MEMBER
-    virtual void processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq);
+    virtual void processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq);
 };
 
 // COMPUTE VORTEX CRITERIA
-class MRIOpComputeVortexCriteria: public MRIOperation{
+class mriOpComputeVortexCriteria: public mriOperation{
   public:
     bool computeVorticity;
     bool computeEnstrophy;
     // DATA MEMBER
-    virtual void processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq);
+    virtual void processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq);
 };
 
 // COMPUTE SMP VORTEX CRITERION
-class MRIOpComputeSMPVortexCriteria: public MRIOperation{
+class mriOpComputeSMPVortexCriteria: public mriOperation{
   public:
     // DATA MEMBER
-    virtual void processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq);
+    virtual void processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq);
 };
 
 // WRITE EXPANSION COEFFICIENTS
-class MRIOpWriteExpansionCoefficients: public MRIOperation{
+class mriOpWriteExpansionCoefficients: public mriOperation{
   public:
     string outputFileName;
     // DATA MEMBER
-    virtual void processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq);
+    virtual void processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq);
 };
 
 // EXPORT FOR FINITE ELEMENT POISSON SOLVER
-class MRIOpExportForPoissonSolver: public MRIOperation{
+class mriOpExportForPoissonSolver: public mriOperation{
   public:
     string fileName;
     double density;
@@ -145,7 +146,7 @@ class MRIOpExportForPoissonSolver: public MRIOperation{
     double smagorinskyCoeff;
 
     // CONSTRUCTOR
-    MRIOpExportForPoissonSolver(string fileName,
+    mriOpExportForPoissonSolver(string fileName,
                                 double density,
                                 double viscosity,
                                 bool PPE_IncludeAccelerationTerm,
@@ -157,51 +158,51 @@ class MRIOpExportForPoissonSolver: public MRIOperation{
                                 double smagorinskyCoeff);
 
     // DATA MEMBER
-    virtual void processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq);
+    virtual void processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq);
 };
 
 // EXPORT FOR DISTANCE COMPUTATION
-class MRIOpExportForDistanceSolver: public MRIOperation{
+class mriOpExportForDistanceSolver: public mriOperation{
   public:
     string distanceFileName;
     // DATA MEMBER
-    virtual void processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq);
+    virtual void processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq);
 };
 
 // EVALUATE STATISTICS OF TWO SCANS
-class MRIOpEvalStatistics: public MRIOperation{
+class mriOpEvalStatistics: public mriOperation{
   public:
     int numberOfBins;
     bool useBox;
-    MRIDoubleVec limitBox;
+    mriDoubleVec limitBox;
     string statFileNameFirst;
     string statFileNameSecond;
     string statFileNameDiff;
 
     // DATA MEMBER
-    virtual void processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq);
+    virtual void processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq);
 };
 
 // COMPUTE SCAN MATRICES
-class MRIOpComputeScanMatrices: public MRIOperation{
+class mriOpComputeScanMatrices: public mriOperation{
   public:
     // DATA MEMBER
-    virtual void processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq);
+    virtual void processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq);
 };
 
 // SHOW FACE FLUX PATTERNS
-class MRIOpShowFaceFluxPatterns: public MRIOperation{
+class mriOpShowFaceFluxPatterns: public mriOperation{
   public:
     string faceFluxFileName;
     // DATA MEMBER
-    virtual void processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq);
+    virtual void processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq);
 };
 
 // EVALUATE CONCENTRATION GRADIENT
-class MRIOpEvalConcentrationGradient: public MRIOperation{
+class mriOpEvalConcentrationGradient: public mriOperation{
   public:
     // DATA MEMBER
-    virtual void processSequence(MRICommunicator* comm, MRIThresholdCriteria* thresholdCriteria, MRISequence* seq);
+    virtual void processSequence(mriCommunicator* comm, mriThresholdCriteria* thresholdCriteria, mriSequence* seq);
 };
 
-#endif // MRIOPERATION_H
+#endif // mriOPERATION_H

@@ -6,7 +6,7 @@
 // ===========
 // CONSTRUCTOR
 // ===========
-MRIExpansion::MRIExpansion(int totVortex){
+mriExpansion::mriExpansion(int totVortex){
   totalVortices = totVortex;
   constantFluxCoeff = new double[3];
   vortexCoeff = new double[totVortex];
@@ -23,7 +23,7 @@ MRIExpansion::MRIExpansion(int totVortex){
 // ================
 // COPY CONSTRUCTOR
 // ================
-MRIExpansion::MRIExpansion(MRIExpansion* otherExp){
+mriExpansion::mriExpansion(mriExpansion* otherExp){
   totalVortices = otherExp->totalVortices;
   constantFluxCoeff = new double[3];
   vortexCoeff = new double[totalVortices];
@@ -40,7 +40,7 @@ MRIExpansion::MRIExpansion(MRIExpansion* otherExp){
 // ==========================
 // CONSTRUCT FROM STD::VECTOR
 // ==========================
-void MRIExpansion::fillFromVector(std::vector<double> Expansion){
+void mriExpansion::fillFromVector(std::vector<double> Expansion){
   // INITIALIZE VALUES
   for(int loopA=0;loopA<3;loopA++){
     constantFluxCoeff[loopA] = Expansion[loopA];
@@ -51,7 +51,7 @@ void MRIExpansion::fillFromVector(std::vector<double> Expansion){
 }
 
 // Distructor
-MRIExpansion::~MRIExpansion(){
+mriExpansion::~mriExpansion(){
   delete[] constantFluxCoeff;
   delete[] vortexCoeff;
 }
@@ -59,7 +59,7 @@ MRIExpansion::~MRIExpansion(){
 // ===========================
 // Apply ratio-based Threshold
 // ===========================
-void MRIExpansion::applyVortexThreshold(int thresholdType, double ratio){
+void mriExpansion::applyVortexThreshold(int thresholdType, double ratio){
   // Init
   double maxCoeff = 0.0;
   double currValue = 0.0;
@@ -87,7 +87,7 @@ void MRIExpansion::applyVortexThreshold(int thresholdType, double ratio){
 // =============
 // PRINT TO FILE
 // =============
-void MRIExpansion::writeToFile(std::string outFile){
+void mriExpansion::writeToFile(std::string outFile){
   // Open Output File
   FILE* fid;
   fid = fopen(outFile.c_str(),"w");
@@ -106,7 +106,7 @@ void MRIExpansion::writeToFile(std::string outFile){
 // ==========
 // GET 2 NORM
 // ==========
-double MRIExpansion::get2Norm(bool onlyVortex){
+double mriExpansion::get2Norm(bool onlyVortex){
   // Init
   double currNorm = 0.0;
   // Consider Constant Flux Coefficient

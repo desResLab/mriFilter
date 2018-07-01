@@ -1,16 +1,16 @@
 # include "mriSequence.h"
 
 // FORM BIN LIMITS
-void MRISequence::formDifferenceBinLimits(int otherScan, int refScan, 
+void mriSequence::formDifferenceBinLimits(int otherScan, int refScan, 
                                           int pdfQuantity, double& currInterval,
-                                          const MRIDoubleVec& limitBox, 
+                                          const mriDoubleVec& limitBox, 
                                           int numberOfBins, 
-                                          MRIDoubleVec& binMin, 
-                                          MRIDoubleVec& binMax, 
-                                          MRIDoubleVec& binCenter){
+                                          mriDoubleVec& binMin, 
+                                          mriDoubleVec& binMax, 
+                                          mriDoubleVec& binCenter){
   // Get The Scans out of the sequence
-  MRIScan* scanOther = getScan(otherScan);
-  MRIScan* scanRef = getScan(refScan);
+  mriScan* scanOther = getScan(otherScan);
+  mriScan* scanRef = getScan(refScan);
   // Initialize Limits
   double minRange = std::numeric_limits<double>::max();
   double maxRange = -std::numeric_limits<double>::max();
@@ -25,7 +25,7 @@ void MRISequence::formDifferenceBinLimits(int otherScan, int refScan,
     // Get Value
     currValue = (otherQuantity - refQuantity);
     // Check If Within the Bin 
-    if (MRIUtils::isPointInsideBox(topology->cellLocations[loopA][0],
+    if (mriUtils::isPointInsideBox(topology->cellLocations[loopA][0],
                                    topology->cellLocations[loopA][1],
                                    topology->cellLocations[loopA][2],limitBox)){
       // Assign Values
@@ -51,15 +51,15 @@ void MRISequence::formDifferenceBinLimits(int otherScan, int refScan,
 }
 
 // Constructor
-MRISequence::MRISequence(bool cyclic){
+mriSequence::mriSequence(bool cyclic){
   // Set If Cyclic
   isCyclic = cyclic;
   // Initialize Topology
-  topology = new MRITopology();
+  topology = new mriTopology();
 }
 
 // Copy Constructor
-MRISequence::MRISequence(MRISequence* copySequence){
+mriSequence::mriSequence(mriSequence* copySequence){
   // Copy Cyclic Property
   isCyclic = copySequence->isCyclic;
   // Copy cells totals
@@ -94,16 +94,16 @@ MRISequence::MRISequence(MRISequence* copySequence){
 
   // Fill with Zero Scans
   for(int loopB=0;loopB<sequence.size();loopB++){
-    MRIScan* newScan = new MRIScan(*copySequence->getScan(loopB));
+    mriScan* newScan = new mriScan(*copySequence->getScan(loopB));
     sequence.push_back(newScan);
   }
 }
 
 // Destructor
-MRISequence::~MRISequence(){}
+mriSequence::~mriSequence(){}
 
 // Print the File List Log
-void MRISequence::printSequenceFiles(std::string outFIleName){
+void mriSequence::printSequenceFiles(std::string outFIleName){
   // Open Output File
 	FILE* outFile;
 	outFile = fopen(outFIleName.c_str(),"w");
@@ -117,7 +117,7 @@ void MRISequence::printSequenceFiles(std::string outFIleName){
 }
 
 // Add a Scan to the Sequence
-void MRISequence::addScan(MRIScan* scan){
+void mriSequence::addScan(mriScan* scan){
   // Add the Scan
   sequence.push_back(scan);
   // Assign the Topology Pointer
@@ -125,12 +125,12 @@ void MRISequence::addScan(MRIScan* scan){
 }
 
 // Get a Scan Pointer From the Sequence
-MRIScan* MRISequence::getScan(int scanNumber){
+mriScan* mriSequence::getScan(int scanNumber){
   return sequence[scanNumber];
 }
 
 // EXPORT SEQUENCE TO TECPLOT FILE
-void MRISequence::exportToTECPLOT(std::string outfileName){
+void mriSequence::exportToTECPLOT(std::string outfileName){
   writeSchMessage(std::string("\n"));
   writeSchMessage(std::string("EXPORTING -------------------------------------\n"));
   for(int loopA=0;loopA<sequence.size();loopA++){
@@ -139,7 +139,7 @@ void MRISequence::exportToTECPLOT(std::string outfileName){
 }
 
 // EXCTRACT SINGKLE POINT CURVE IN TIME
-void MRISequence::extractSinglePointTimeCurve(int cellNumber, int exportQty, std::string fileName){
+void mriSequence::extractSinglePointTimeCurve(int cellNumber, int exportQty, std::string fileName){
   // Open Output File
 	FILE* outFile;
 	outFile = fopen(fileName.c_str(),"w");
@@ -186,14 +186,14 @@ void MRISequence::extractSinglePointTimeCurve(int cellNumber, int exportQty, std
 }
 
 // Export to Poisson Solver
-void MRISequence::exportForPoisson(string inputFileName,double density,double viscosity,MRIThresholdCriteria* threshold,
+void mriSequence::exportForPoisson(string inputFileName,double density,double viscosity,mriThresholdCriteria* threshold,
                                    bool PPE_IncludeAccelerationTerm,bool PPE_IncludeAdvectionTerm,bool PPE_IncludeDiffusionTerm,bool PPE_IncludeReynoldsTerm,
                                    bool readMuTFromFile, string muTFile, double smagorinskyCoeff){
   string name;
-  MRIDoubleMat timeDeriv;
-  // MRIDoubleMat reynoldsDeriv;
+  mriDoubleMat timeDeriv;
+  // mriDoubleMat reynoldsDeriv;
   for(int loopA=0;loopA<sequence.size();loopA++){
-    name = inputFileName + "_" + MRIUtils::floatToStr(loopA);
+    name = inputFileName + "_" + mriUtils::floatToStr(loopA);
     if(PPE_IncludeAccelerationTerm){
       printf("Computing Time Derivatives for Scan %d...",loopA);
       evalScanTimeDerivs(loopA,timeDeriv);
@@ -206,10 +206,10 @@ void MRISequence::exportForPoisson(string inputFileName,double density,double vi
 }
 
 // EXPORT TO WALL DISTANCE SOLVER
-void MRISequence::exportForDistancing(string inputFileName, MRIThresholdCriteria* threshold){
+void mriSequence::exportForDistancing(string inputFileName, mriThresholdCriteria* threshold){
   string name;
   for(int loopA=0;loopA<sequence.size();loopA++){
-    name = inputFileName + "_" + MRIUtils::floatToStr(loopA);
+    name = inputFileName + "_" + mriUtils::floatToStr(loopA);
     sequence[loopA]->exportForDistancing(name,threshold);
   }
 }
@@ -225,7 +225,7 @@ string getSequenceOutputFileName(string outfileName, int loopA){
 }
 
 // EXPORT TO SEQUENCE OF VTK FILES
-void MRISequence::exportToVTK(string outfileName,MRIThresholdCriteria* thresholdCriteria){
+void mriSequence::exportToVTK(string outfileName,mriThresholdCriteria* thresholdCriteria){
   // Export All Data
   for(int loopA=0;loopA<sequence.size();loopA++){    
     string outName = getSequenceOutputFileName(outfileName,loopA);
@@ -234,8 +234,8 @@ void MRISequence::exportToVTK(string outfileName,MRIThresholdCriteria* threshold
 }
 
 // PHYSICS FILTERING FOR ALL SCANS
-void MRISequence::applySMPFilter(MRICommunicator* comm, bool isBC, 
-                                 MRIThresholdCriteria* thresholdCriteria,
+void mriSequence::applySMPFilter(mriCommunicator* comm, bool isBC, 
+                                 mriThresholdCriteria* thresholdCriteria,
                                  double itTol,
                                  int maxIt,
                                  bool useConstantPatterns){
@@ -250,7 +250,7 @@ void MRISequence::applySMPFilter(MRICommunicator* comm, bool isBC,
 }
 
 // SAVE INITIAL VELOCITIES
-void MRISequence::saveVelocity(){
+void mriSequence::saveVelocity(){
   // Export All Data
   writeSchMessage("\n");
   for(int loopA=0;loopA<sequence.size();loopA++){
@@ -261,7 +261,7 @@ void MRISequence::saveVelocity(){
 
 
 // APPLY THRESHOLDING TO ALL SCANS
-void MRISequence::applyThresholding(MRIThresholdCriteria* thresholdCriteria){
+void mriSequence::applyThresholding(mriThresholdCriteria* thresholdCriteria){
   // Export All Data
   writeSchMessage("\n");
   for(int loopA=0;loopA<sequence.size();loopA++){
@@ -270,7 +270,7 @@ void MRISequence::applyThresholding(MRIThresholdCriteria* thresholdCriteria){
 }
 
 // EVAL VORTEX CRITERIA
-void MRISequence::evalVortexCriteria(MRIThresholdCriteria* thresholdCriteria){
+void mriSequence::evalVortexCriteria(mriThresholdCriteria* thresholdCriteria){
   // Export All Data
   writeSchMessage("\n");
   for(int loopA=0;loopA<sequence.size();loopA++){
@@ -279,7 +279,7 @@ void MRISequence::evalVortexCriteria(MRIThresholdCriteria* thresholdCriteria){
 }
 
 // EVAL VORTICITY
-void MRISequence::evalVorticity(MRIThresholdCriteria* thresholdCriteria){
+void mriSequence::evalVorticity(mriThresholdCriteria* thresholdCriteria){
   // Export All Data
   writeSchMessage("\n");
   for(int loopA=0;loopA<sequence.size();loopA++){
@@ -288,7 +288,7 @@ void MRISequence::evalVorticity(MRIThresholdCriteria* thresholdCriteria){
 }
 
 // EVAL ENSTROPHY
-void MRISequence::evalEnstrophy(MRIThresholdCriteria* thresholdCriteria){
+void mriSequence::evalEnstrophy(mriThresholdCriteria* thresholdCriteria){
   // Export All Data
   writeSchMessage("\n");
   for(int loopA=0;loopA<sequence.size();loopA++){
@@ -297,7 +297,7 @@ void MRISequence::evalEnstrophy(MRIThresholdCriteria* thresholdCriteria){
 }
 
 // EVAL SMP VORTEX CRITERION
-void MRISequence::evalSMPVortexCriteria(){
+void mriSequence::evalSMPVortexCriteria(){
   // Export All Data
   writeSchMessage("\n");
   for(int loopA=0;loopA<sequence.size();loopA++){
@@ -306,7 +306,7 @@ void MRISequence::evalSMPVortexCriteria(){
 }
 
 // EVAL EXPANSION FILE
-void MRISequence::writeExpansionFile(string fileName){
+void mriSequence::writeExpansionFile(string fileName){
   // Export All Data
   writeSchMessage("\n");
   for(int loopA=0;loopA<sequence.size();loopA++){
@@ -315,7 +315,7 @@ void MRISequence::writeExpansionFile(string fileName){
 }
 
 // Scale velocities for all Scans
-void MRISequence::scaleVelocities(double factor){
+void mriSequence::scaleVelocities(double factor){
   writeSchMessage(std::string("Scaling Velocities..."));
   for(int loopA=0;loopA<sequence.size();loopA++){
     sequence[loopA]->scaleVelocities(factor);
@@ -324,14 +324,14 @@ void MRISequence::scaleVelocities(double factor){
 }
 
 // Scale Positions
-void MRISequence::scalePositions(const MRIDoubleVec& origin, double factor){
+void mriSequence::scalePositions(const mriDoubleVec& origin, double factor){
   writeSchMessage(std::string("Scaling Positions..."));
   topology->scalePositions(origin,factor);
   writeSchMessage(std::string("Done.\n"));  
 }
 
 // Add noise to measurements
-void MRISequence::applyNoise(double noiseIntensity, double seed){
+void mriSequence::applyNoise(double noiseIntensity, double seed){
   writeSchMessage(std::string("Applying Noise..."));
   for(int loopA=0;loopA<sequence.size();loopA++){
     sequence[loopA]->applyGaussianNoise(noiseIntensity, seed);
@@ -342,7 +342,7 @@ void MRISequence::applyNoise(double noiseIntensity, double seed){
 // =============================
 // DISTRIBUTION OF SEQUENCE DATA
 // =============================
-void MRISequence::distributeSequenceData(MRICommunicator* comm){
+void mriSequence::distributeSequenceData(mriCommunicator* comm){
   // Create New Sequence
   for(int loopA=0;loopA<this->sequence.size();loopA++){
     sequence[loopA]->distributeScanData(comm);
@@ -352,7 +352,7 @@ void MRISequence::distributeSequenceData(MRICommunicator* comm){
 // =============================
 // PERFORM BASIC DATA FILTERING
 // =============================
-void MRISequence::applyMedianFilter(int qtyID,int maxIt,int order,int filterType,MRIThresholdCriteria* threshold){
+void mriSequence::applyMedianFilter(int qtyID,int maxIt,int order,int filterType,mriThresholdCriteria* threshold){
   // Create New Sequence
   for(int loopA=0;loopA<this->sequence.size();loopA++){
     sequence[loopA]->applyMedianFilter(qtyID,maxIt,order,filterType,threshold);
@@ -362,7 +362,7 @@ void MRISequence::applyMedianFilter(int qtyID,int maxIt,int order,int filterType
 // ===========================
 // CLEAN COMPONENT ON BOUNDARY
 // ===========================
-void MRISequence::cleanNormalComponentOnBoundary(MRIThresholdCriteria* threshold){
+void mriSequence::cleanNormalComponentOnBoundary(mriThresholdCriteria* threshold){
   for(int loopA=0;loopA<this->sequence.size();loopA++){
     sequence[loopA]->cleanNormalComponentOnBoundary(threshold);
   }
@@ -371,7 +371,7 @@ void MRISequence::cleanNormalComponentOnBoundary(MRIThresholdCriteria* threshold
 // ===============================
 // INTERPOLATE BOUNDARY VELOCITIES
 // ===============================
-void MRISequence::interpolateBoundaryVelocities(MRIThresholdCriteria* threshold){
+void mriSequence::interpolateBoundaryVelocities(mriThresholdCriteria* threshold){
   printf("Interpolating Boundary Velocities...\n");
   for(int loopA=0;loopA<this->sequence.size();loopA++){
     sequence[loopA]->interpolateBoundaryVelocities(threshold);
@@ -381,7 +381,7 @@ void MRISequence::interpolateBoundaryVelocities(MRIThresholdCriteria* threshold)
 // ===============================
 // EVALUATE REYNOLDS STRESS TENSOR
 // ===============================
-void MRISequence::evalReynoldsStresses(MRIThresholdCriteria* threshold){
+void mriSequence::evalReynoldsStresses(mriThresholdCriteria* threshold){
   for(int loopA=0;loopA<sequence.size();loopA++){
     printf("Evaluating Reynolds Stress Tensor for Scan %d...",loopA);
     sequence[loopA]->evalReynoldsStress(threshold);
@@ -392,7 +392,7 @@ void MRISequence::evalReynoldsStresses(MRIThresholdCriteria* threshold){
 // =============================
 // CREATE SEQUENCE MESH TOPOLOGY
 // =============================
-void MRISequence::createTopology(){
+void mriSequence::createTopology(){
   // Take Time
   float cellConn_BeginTime,cellConn_TotalTime;
   float faceConn_BeginTime,faceConn_TotalTime;
@@ -442,8 +442,8 @@ void MRISequence::createTopology(){
 // =============
 // CROP SEQUENCE
 // =============
-void MRISequence::crop(const MRIDoubleVec& limitBox){
-  MRIBoolVec indexesToCrop;
+void mriSequence::crop(const mriDoubleVec& limitBox){
+  mriBoolVec indexesToCrop;
 
   // Crop Topology
   topology->crop(limitBox,indexesToCrop);
@@ -457,13 +457,13 @@ void MRISequence::crop(const MRIDoubleVec& limitBox){
 }
 
 // Eval The Difference PDF of Scans
-void MRISequence::evalScanDifferencePDF(int otherScan, int refScan, const int pdfQuantity, int numberOfBins, bool useBox, MRIDoubleVec& limitBox, MRIDoubleVec& binCenters, MRIDoubleVec& binArray){
+void mriSequence::evalScanDifferencePDF(int otherScan, int refScan, const int pdfQuantity, int numberOfBins, bool useBox, mriDoubleVec& limitBox, mriDoubleVec& binCenters, mriDoubleVec& binArray){
   // Get The Scans out of the sequence
-  MRIScan* scanOther = getScan(otherScan);
-  MRIScan* scanRef = getScan(refScan);
+  mriScan* scanOther = getScan(otherScan);
+  mriScan* scanRef = getScan(refScan);
   // Allocate Quantities
-  MRIDoubleVec binMin(numberOfBins);
-  MRIDoubleVec binMax(numberOfBins);
+  mriDoubleVec binMin(numberOfBins);
+  mriDoubleVec binMax(numberOfBins);
   // Form Bin 
   double currInterval = 0.0;
   formDifferenceBinLimits(otherScan,refScan,pdfQuantity,currInterval,limitBox,numberOfBins,binMin,binMax,binCenters);
@@ -485,31 +485,31 @@ void MRISequence::evalScanDifferencePDF(int otherScan, int refScan, const int pd
     // Get Value
     currValue = (otherQuantity - refQuantity);
     // Assign Value to Bin
-    if (MRIUtils::isPointInsideBox(topology->cellLocations[loopA][0],
+    if (mriUtils::isPointInsideBox(topology->cellLocations[loopA][0],
                                    topology->cellLocations[loopA][1],
                                    topology->cellLocations[loopA][2],
                                    limitBox)){
       // COMPLETE
-      MRIUtils::assignToBin(currValue,numberOfBins,binMin,binMax,binArray);
+      mriUtils::assignToBin(currValue,numberOfBins,binMin,binMax,binArray);
     }
   }
   // Normalize
-  MRIUtils::normalizeBinArray(binArray,currInterval);
+  mriUtils::normalizeBinArray(binArray,currInterval);
 }
 
 // READ SCAN FROM EXPANSION FILE
-void MRISequence::readFromExpansionFiles(const MRIStringVec& fileNames, const MRIDoubleVec& Times, bool applyThreshold, int thresholdType,double thresholdRatio){
+void mriSequence::readFromExpansionFiles(const mriStringVec& fileNames, const mriDoubleVec& Times, bool applyThreshold, int thresholdType,double thresholdRatio){
 
   // Allocate Variables
-  MRIIntVec tot(3);
-  MRIDoubleVec lengthX;
-  MRIDoubleVec lengthY;
-  MRIDoubleVec lengthZ;
-  MRIDoubleVec minlimits(3);
-  MRIDoubleVec maxlimits(3);
-  MRIExpansion* exp = NULL;
+  mriIntVec tot(3);
+  mriDoubleVec lengthX;
+  mriDoubleVec lengthY;
+  mriDoubleVec lengthZ;
+  mriDoubleVec minlimits(3);
+  mriDoubleVec maxlimits(3);
+  mriExpansion* exp = NULL;
 
-  MRIScan* scan = NULL;
+  mriScan* scan = NULL;
 
   // Loop Through the files
   for(int loopA=0;loopA<fileNames.size();loopA++){
@@ -518,13 +518,13 @@ void MRISequence::readFromExpansionFiles(const MRIStringVec& fileNames, const MR
     readExpansionFile(fileNames[loopA],tot,lengthX,lengthY,lengthZ,minlimits,maxlimits,exp);
 
     // Build a New Topology from this file
-    MRITopology* topo = new MRITopology(tot,lengthX,lengthY,lengthZ,minlimits,maxlimits);
+    mriTopology* topo = new mriTopology(tot,lengthX,lengthY,lengthZ,minlimits,maxlimits);
 
     if(loopA == 0){
       // Assign as the full sequence topology
       topology = topo;
       // Add Scan
-      scan = new MRIScan(Times[loopA]);
+      scan = new mriScan(Times[loopA]);
       scan->rebuildFromExpansion(exp, true);
       addScan(scan);
     }else{
@@ -532,7 +532,7 @@ void MRISequence::readFromExpansionFiles(const MRIStringVec& fileNames, const MR
       if(topology->isCompatibleTopology(topo)){
 
         // Add Scan From File
-        scan = new MRIScan(Times[loopA]);
+        scan = new mriScan(Times[loopA]);
         scan->rebuildFromExpansion(exp, true);
         addScan(scan);
 
@@ -550,16 +550,16 @@ void MRISequence::readFromExpansionFiles(const MRIStringVec& fileNames, const MR
 
 // Make Difference of Scans
 // Put the Result Of the Operation in firstScan
-void MRISequence::makeScanDifference(int firstScanID, int secondScanID){
+void mriSequence::makeScanDifference(int firstScanID, int secondScanID){
   // Get Scans
   if((firstScanID<0)||(firstScanID>sequence.size())){
-    throw MRIException("Cannot Make Difference. Invalid ID for First Scan.");
+    throw mriException("Cannot Make Difference. Invalid ID for First Scan.");
   }
   if((secondScanID<0)||(secondScanID>sequence.size())){
-    throw MRIException("Cannot Make Difference. Invalid ID for Second Scan.");
+    throw mriException("Cannot Make Difference. Invalid ID for Second Scan.");
   }
-  MRIScan* firstScan = getScan(firstScanID);
-  MRIScan* secondScan = getScan(secondScanID);
+  mriScan* firstScan = getScan(firstScanID);
+  mriScan* secondScan = getScan(secondScanID);
   // set the Tolerance Value
   double DistTol = 1.0e-4;
   // If they Belong to the same sequence they must be compatible
@@ -575,16 +575,16 @@ void MRISequence::makeScanDifference(int firstScanID, int secondScanID){
 
 // Make Average
 // Put the Result Of the Operation in firstScan
-void MRISequence::makeScanAverage(int numberOfMeasures, int firstScanID, int secondScanID){
+void mriSequence::makeScanAverage(int numberOfMeasures, int firstScanID, int secondScanID){
   // Get Scans
   if((firstScanID<0)||(firstScanID>sequence.size())){
-    throw MRIException("Cannot Make Difference. Invalid ID for First Scan.");
+    throw mriException("Cannot Make Difference. Invalid ID for First Scan.");
   }
   if((secondScanID<0)||(secondScanID>sequence.size())){
-    throw MRIException("Cannot Make Difference. Invalid ID for Second Scan.");
+    throw mriException("Cannot Make Difference. Invalid ID for Second Scan.");
   }
-  MRIScan* firstScan = sequence[firstScanID];
-  MRIScan* secondScan = sequence[secondScanID];
+  mriScan* firstScan = sequence[firstScanID];
+  mriScan* secondScan = sequence[secondScanID];
   // Get Distance Tolerance
   double DistTol = 1.0e-4;
   // If they Belong to the same sequence they must be compatible
@@ -603,36 +603,44 @@ void MRISequence::makeScanAverage(int numberOfMeasures, int firstScanID, int sec
 // ============================================
 // WRITE SEQUENCE TOPOLOGY STATISTICS TO STDOUT
 // ============================================
-string MRISequence::writeStatistics(){
+string mriSequence::writeStatistics(){
   string myresult = "\n";
   myresult += "--------------------------------\n";
   myresult += "SEQUENCE STATISTICS\n";
   myresult += "--------------------------------\n";
-  myresult += "Total Number Of Cells: "+MRIUtils::intToStr(topology->totalCells)+"\n";
+  myresult += "Total Number Of Cells: "+mriUtils::intToStr(topology->totalCells)+"\n";
   myresult += "--------------------------------\n";
   myresult += "Total Number Of Coordinate Cells\n";
-  myresult += "X Direction: "+MRIUtils::intToStr(topology->cellTotals[0])+"\n";
-  myresult += "Y Direction: "+MRIUtils::intToStr(topology->cellTotals[1])+"\n";
-  myresult += "Z Direction: "+MRIUtils::intToStr(topology->cellTotals[2])+"\n";
+  myresult += "X Direction: "+mriUtils::intToStr(topology->cellTotals[0])+"\n";
+  myresult += "Y Direction: "+mriUtils::intToStr(topology->cellTotals[1])+"\n";
+  myresult += "Z Direction: "+mriUtils::intToStr(topology->cellTotals[2])+"\n";
   myresult += "Cells Lengths\n";
-  myresult += "X Direction - MIN: "+MRIUtils::floatToStr(*min_element(topology->cellLengths[0].begin(),topology->cellLengths[0].end()))+"\n";
-  myresult += "X Direction - MAX: "+MRIUtils::floatToStr(*max_element(topology->cellLengths[0].begin(),topology->cellLengths[0].end()))+"\n";
-  myresult += "Y Direction - MIN: "+MRIUtils::floatToStr(*min_element(topology->cellLengths[1].begin(),topology->cellLengths[1].end()))+"\n";
-  myresult += "Y Direction - MAX: "+MRIUtils::floatToStr(*max_element(topology->cellLengths[1].begin(),topology->cellLengths[1].end()))+"\n";
-  myresult += "Z Direction - MIN: "+MRIUtils::floatToStr(*min_element(topology->cellLengths[2].begin(),topology->cellLengths[2].end()))+"\n";
-  myresult += "Z Direction - MAX: "+MRIUtils::floatToStr(*max_element(topology->cellLengths[2].begin(),topology->cellLengths[2].end()))+"\n";
+  myresult += "X Direction - MIN: "+mriUtils::floatToStr(*min_element(topology->cellLengths[0].begin(),topology->cellLengths[0].end()))+"\n";
+  myresult += "X Direction - MAX: "+mriUtils::floatToStr(*max_element(topology->cellLengths[0].begin(),topology->cellLengths[0].end()))+"\n";
+  myresult += "Y Direction - MIN: "+mriUtils::floatToStr(*min_element(topology->cellLengths[1].begin(),topology->cellLengths[1].end()))+"\n";
+  myresult += "Y Direction - MAX: "+mriUtils::floatToStr(*max_element(topology->cellLengths[1].begin(),topology->cellLengths[1].end()))+"\n";
+  myresult += "Z Direction - MIN: "+mriUtils::floatToStr(*min_element(topology->cellLengths[2].begin(),topology->cellLengths[2].end()))+"\n";
+  myresult += "Z Direction - MAX: "+mriUtils::floatToStr(*max_element(topology->cellLengths[2].begin(),topology->cellLengths[2].end()))+"\n";
   myresult += "--------------------------------\n";
   myresult += "Domain Size\n";
-  myresult += "Minimum X: "+MRIUtils::floatToStr(topology->domainSizeMin[0])+"\n";
-  myresult += "Maximum X: "+MRIUtils::floatToStr(topology->domainSizeMax[0])+"\n";
-  myresult += "Minimum Y: "+MRIUtils::floatToStr(topology->domainSizeMin[1])+"\n";
-  myresult += "Maximum Y: "+MRIUtils::floatToStr(topology->domainSizeMax[1])+"\n";
-  myresult += "Minimum Z: "+MRIUtils::floatToStr(topology->domainSizeMin[2])+"\n";
-  myresult += "Maximum Z: "+MRIUtils::floatToStr(topology->domainSizeMax[2])+"\n";
+  myresult += "Minimum X: "+mriUtils::floatToStr(topology->domainSizeMin[0])+"\n";
+  myresult += "Maximum X: "+mriUtils::floatToStr(topology->domainSizeMax[0])+"\n";
+  myresult += "Minimum Y: "+mriUtils::floatToStr(topology->domainSizeMin[1])+"\n";
+  myresult += "Maximum Y: "+mriUtils::floatToStr(topology->domainSizeMax[1])+"\n";
+  myresult += "Minimum Z: "+mriUtils::floatToStr(topology->domainSizeMin[2])+"\n";
+  myresult += "Maximum Z: "+mriUtils::floatToStr(topology->domainSizeMax[2])+"\n";
   myresult += "--------------------------------\n";
-  myresult += "Number of Scans: "+MRIUtils::intToStr(sequence.size())+"\n";
+  myresult += "Number of Scans: "+mriUtils::intToStr(sequence.size())+"\n";
   myresult += "--------------------------------\n";
   myresult += "\n";
+  for(size_t loopA=0;loopA<sequence.size();loopA++){
+    myresult += "--------------------------------\n";
+    myresult += "Scan number: "+to_string(loopA)+"\n";
+    myresult += "Scan time: "+to_string(sequence[loopA]->scanTime)+"\n";
+    myresult += "Maximum Velocity Module: "+to_string(sequence[loopA]->maxVelModule)+"\n";
+    myresult += "--------------------------------\n";
+    myresult += "\n";
+  }
   // Return String
   return myresult;
 }
@@ -640,14 +648,14 @@ string MRISequence::writeStatistics(){
 // ====================
 // CREATE TEMPLATE CASE
 // ====================
-void MRISequence::createSampleCase(int sampleType, const MRIDoubleVec& params){
+void mriSequence::createSampleCase(int sampleType, const mriDoubleVec& params){
 
   // Loop over the file names
-  MRITopology* topo;
-  MRIScan* scan;
+  mriTopology* topo;
+  mriScan* scan;
 
   // Create New Topology from Sample
-  topo = new MRITopology();
+  topo = new mriTopology();
   topo->createFromTemplate(sampleType,params);  
 
   // If topology does not exists then assign 
@@ -655,18 +663,16 @@ void MRISequence::createSampleCase(int sampleType, const MRIDoubleVec& params){
     // Assign Current Topology
     topology = topo;
     // Create and Assign Scan
-    printf("Prima\n");
-    scan = new MRIScan(0.0);
+    scan = new mriScan(0.0);
     scan->topology = topo;
     scan->createFromTemplate(sampleType,params);
-    printf("Dopo\n");
     // Add to sequence
     addScan(scan);
   }else{
     // Check Compatibility 
     if(topology->isCompatibleTopology(topo)){
       // Create and Assign Scan
-      scan = new MRIScan(0.0);
+      scan = new mriScan(0.0);
       scan->topology = topo;
       scan->createFromTemplate(sampleType,params);
       // Add to sequence
@@ -703,17 +709,17 @@ void resetPLTOptions(pltOptionRecord& pltOptions){
 // ==========================
 // READ VTK STRUCTURED POINTS
 // ==========================
-void MRISequence::readFromASCIISequence(int asciiInputType,const MRIStringVec& asciiFileNames, const MRIDoubleVec& times){
+void mriSequence::readFromASCIISequence(int asciiInputType,const mriStringVec& asciiFileNames, const mriDoubleVec& times){
 
   // Loop over the file names
-  MRITopology* topo;
-  MRIScan* scan;
+  mriTopology* topo;
+  mriScan* scan;
   vtkStructuredPointsOptionRecord vtkOptions;
   pltOptionRecord pltOptions;
   for(int loopA=0;loopA<asciiFileNames.size();loopA++){
 
     // Read Topology
-    topo = new MRITopology();
+    topo = new mriTopology();
     if(asciiInputType == kInputVTK){
       resetVTKOptions(vtkOptions);
       topo->readFromVTK_ASCII(asciiFileNames[loopA],vtkOptions);  
@@ -728,7 +734,7 @@ void MRISequence::readFromASCIISequence(int asciiInputType,const MRIStringVec& a
       topology = topo;
       
       // Add Scan
-      scan = new MRIScan(times[loopA]);
+      scan = new mriScan(times[loopA]);
       if(asciiInputType == kInputVTK){
         scan->readFromVTK_ASCII(asciiFileNames[loopA],vtkOptions);
       }else if(asciiInputType == kInputPLT){
@@ -742,7 +748,7 @@ void MRISequence::readFromASCIISequence(int asciiInputType,const MRIStringVec& a
       if(topology->isCompatibleTopology(topo)){
 
         // Add Scan From File
-        scan = new MRIScan(times[loopA]);
+        scan = new mriScan(times[loopA]);
         if(asciiInputType == kInputVTK){
           scan->readFromVTK_ASCII(asciiFileNames[loopA],vtkOptions);
         }else if(asciiInputType == kInputPLT){

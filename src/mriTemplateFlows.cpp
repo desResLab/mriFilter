@@ -3,7 +3,7 @@
 using namespace std;
 
 // STAGNATION FLOW SOLUTION
-void MRIScan::assignStagnationFlowSignature(MRIDirection dir){
+void mriScan::assignStagnationFlowSignature(mriDirection dir){
   double bConst = -1.0;
   double xCoord,yCoord,zCoord;
   for(int loopA=0;loopA<topology->totalCells;loopA++){
@@ -37,9 +37,9 @@ void MRIScan::assignStagnationFlowSignature(MRIDirection dir){
 }
 
 // EVAL TANGENT DIRECTION
-void evalTangentDirection(MRIDirection dir, const MRIDoubleVec& radialVector, MRIDoubleVec& tangVector){
+void evalTangentDirection(mriDirection dir, const mriDoubleVec& radialVector, mriDoubleVec& tangVector){
   // Create Axial Direction
-  MRIDoubleVec axialVec(3,0.0);
+  mriDoubleVec axialVec(3,0.0);
   switch(dir){
     case kdirX:
       axialVec[0] = 1.0;
@@ -58,13 +58,13 @@ void evalTangentDirection(MRIDirection dir, const MRIDoubleVec& radialVector, MR
       break;    
   }
   // Perform External Product
-  MRIUtils::do3DExternalProduct(axialVec,radialVector,tangVector);
+  mriUtils::do3DExternalProduct(axialVec,radialVector,tangVector);
   // Normalize Result
-  MRIUtils::normalize3DVector(tangVector);
+  mriUtils::normalize3DVector(tangVector);
 }
 
 // ASSIGN CYLINDRICAL VORTEX FLOW 
-void MRIScan::assignCylindricalFlowSignature(MRIDirection dir){
+void mriScan::assignCylindricalFlowSignature(mriDirection dir){
   // Set Parameters
   // Get Min Dimension
   double minDist = min((topology->domainSizeMax[0]-topology->domainSizeMin[0]),
@@ -76,10 +76,10 @@ void MRIScan::assignCylindricalFlowSignature(MRIDirection dir){
   const double velMod = 10.0;
   // Init Coords
   double currRadius = 0.0;
-  MRIDoubleVec radialVector(3,0.0);
-  MRIDoubleVec tangVector(3,0.0);
+  mriDoubleVec radialVector(3,0.0);
+  mriDoubleVec tangVector(3,0.0);
   // Find the Centre Of the Domain
-  MRIDoubleVec centrePoint(3,0.0);
+  mriDoubleVec centrePoint(3,0.0);
   centrePoint[0] = 0.5 * (topology->domainSizeMax[0] + topology->domainSizeMin[0]);
   centrePoint[1] = 0.5 * (topology->domainSizeMax[1] + topology->domainSizeMin[1]);
   centrePoint[2] = 0.5 * (topology->domainSizeMax[2] + topology->domainSizeMin[2]);
@@ -106,8 +106,8 @@ void MRIScan::assignCylindricalFlowSignature(MRIDirection dir){
         break;
     }
     // Normalize Radial Direction
-    currRadius = MRIUtils::do3DEucNorm(radialVector);
-    MRIUtils::normalize3DVector(radialVector);
+    currRadius = mriUtils::do3DEucNorm(radialVector);
+    mriUtils::normalize3DVector(radialVector);
     // Eval Tangential Direction
     evalTangentDirection(dir,radialVector,tangVector);
     // Set Velocities    
@@ -123,7 +123,7 @@ void MRIScan::assignCylindricalFlowSignature(MRIDirection dir){
 }
 
 // ASSIGN SPHERICAL HILL VORTEX FLOW 
-void MRIScan::assignSphericalFlowSignature(MRIDirection dir){
+void mriScan::assignSphericalFlowSignature(mriDirection dir){
   // Set Parameters
   double minDist = min(topology->domainSizeMax[0]-topology->domainSizeMin[0],
                    min(topology->domainSizeMax[1]-topology->domainSizeMin[1],
@@ -141,10 +141,10 @@ void MRIScan::assignSphericalFlowSignature(MRIDirection dir){
   double axialComponentOut = 0.0;
   double radialComponentOut = 0.0;  
   // Allocate Radial and Axial Vectors
-  MRIDoubleVec axialVec(3,0.0);
-  MRIDoubleVec radialVec(3,0.0);
+  mriDoubleVec axialVec(3,0.0);
+  mriDoubleVec radialVec(3,0.0);
   // Find the Centre Of the Domain
-  MRIDoubleVec centrePoint(3,0.0);
+  mriDoubleVec centrePoint(3,0.0);
   centrePoint[0] = 0.5 * (topology->domainSizeMax[0]+topology->domainSizeMin[0]);
   centrePoint[1] = 0.5 * (topology->domainSizeMax[1]+topology->domainSizeMin[1]);
   centrePoint[2] = 0.5 * (topology->domainSizeMax[2]+topology->domainSizeMin[2]);
@@ -170,7 +170,7 @@ void MRIScan::assignSphericalFlowSignature(MRIDirection dir){
         radialVec[0] = 0.0;
         radialVec[1] = currentY;
         radialVec[2] = currentZ;
-        MRIUtils::normalize3DVector(radialVec);
+        mriUtils::normalize3DVector(radialVec);
         break;
       case kdirY:
         // Set Local Coordinates
@@ -184,7 +184,7 @@ void MRIScan::assignSphericalFlowSignature(MRIDirection dir){
         radialVec[0] = currentX;
         radialVec[1] = 0.0;
         radialVec[2] = currentZ;  
-        MRIUtils::normalize3DVector(radialVec);      
+        mriUtils::normalize3DVector(radialVec);      
         break;
       case kdirZ:
         // Set Local Coordinates
@@ -198,7 +198,7 @@ void MRIScan::assignSphericalFlowSignature(MRIDirection dir){
         radialVec[0] = currentX;
         radialVec[1] = currentY;
         radialVec[2] = 0.0;
-        MRIUtils::normalize3DVector(radialVec);
+        mriUtils::normalize3DVector(radialVec);
         break;
     }
     // Assign Concentration
@@ -225,7 +225,7 @@ void MRIScan::assignSphericalFlowSignature(MRIDirection dir){
 }
 
 // ASSIGN SPHERICAL VORTEX FLOW 
-void MRIScan::assignToroidalVortexFlowSignature(){
+void mriScan::assignToroidalVortexFlowSignature(){
   // Set Parameters
   const double CONST_A = 5.0;
   const double CONST_L = 1.3*1.3;
@@ -236,13 +236,13 @@ void MRIScan::assignToroidalVortexFlowSignature(){
   double radius = 0.0;
   double currModulus = 0.0;
   // Allocate Radial and Axial Vectors
-  MRIDoubleVec axialVec(3,0.0);
-  MRIDoubleVec radialVec(3,0.0); 
-  MRIDoubleVec tangVector(3,0.0);
-  MRIDoubleVec inclVector(3,0.0);
-  MRIDoubleVec velVector(3,0.0);
+  mriDoubleVec axialVec(3,0.0);
+  mriDoubleVec radialVec(3,0.0); 
+  mriDoubleVec tangVector(3,0.0);
+  mriDoubleVec inclVector(3,0.0);
+  mriDoubleVec velVector(3,0.0);
   // Find the Centre Of the Domain
-  MRIDoubleVec centrePoint(3,0.0);
+  mriDoubleVec centrePoint(3,0.0);
   centrePoint[0] = 0.5 * (topology->domainSizeMax[0]+topology->domainSizeMin[0]);
   centrePoint[1] = 0.5 * (topology->domainSizeMax[1]+topology->domainSizeMin[1]);
   centrePoint[2] = 0.5 * (topology->domainSizeMax[2]+topology->domainSizeMin[2]);
@@ -265,25 +265,25 @@ void MRIScan::assignToroidalVortexFlowSignature(){
     radialVec[0] = 0.0;
     radialVec[1] = currentY;
     radialVec[2] = currentZ;
-    MRIUtils::normalize3DVector(radialVec);
+    mriUtils::normalize3DVector(radialVec);
     for(int loopB=0;loopB<kNumberOfDimensions;loopB++){
         radialVec[loopB] *=  CONST_A;
     }
     
     // Find The Tangent Vector
-    MRIUtils::do3DExternalProduct(radialVec,axialVec,tangVector);
-    MRIUtils::normalize3DVector(tangVector);
+    mriUtils::do3DExternalProduct(radialVec,axialVec,tangVector);
+    mriUtils::normalize3DVector(tangVector);
     
     // Find The Inclined Vector
     inclVector[0] = currentX - radialVec[0];
     inclVector[1] = currentY - radialVec[1];
     inclVector[2] = currentZ - radialVec[2];
-    radius = MRIUtils::do3DEucNorm(inclVector);
-    MRIUtils::normalize3DVector(inclVector);
+    radius = mriUtils::do3DEucNorm(inclVector);
+    mriUtils::normalize3DVector(inclVector);
     
     // Eval Vel Vector
-    MRIUtils::do3DExternalProduct(inclVector,tangVector,velVector);
-    MRIUtils::normalize3DVector(velVector);
+    mriUtils::do3DExternalProduct(inclVector,tangVector,velVector);
+    mriUtils::normalize3DVector(velVector);
     
     // Eval Current Modulus
     currModulus = (8.0*radius/CONST_L)*exp(-(radius/CONST_L));
@@ -296,7 +296,7 @@ void MRIScan::assignToroidalVortexFlowSignature(){
 }
 
 // ASSIGN CONSTANT FLOW
-void MRIScan::assignConstantSignature(MRIDirection dir){
+void mriScan::assignConstantSignature(mriDirection dir){
   for(int loopA=0;loopA<topology->totalCells;loopA++){
     switch(dir){
       case kdirX:
@@ -321,9 +321,9 @@ void MRIScan::assignConstantSignature(MRIDirection dir){
 // ====================
 // TAYLOR FLOW VORTEX
 // ====================
-void MRIScan::assignTaylorVortexSignature(MRIDirection dir){
+void mriScan::assignTaylorVortexSignature(mriDirection dir){
   
-  MRIDoubleVec centrePoint(3,0.0);
+  mriDoubleVec centrePoint(3,0.0);
 
   centrePoint[0] = 0.5 * (topology->domainSizeMax[0] + topology->domainSizeMin[0]);
   centrePoint[1] = 0.5 * (topology->domainSizeMax[1] + topology->domainSizeMin[1]);
@@ -354,7 +354,7 @@ void MRIScan::assignTaylorVortexSignature(MRIDirection dir){
 
 
 // SET VELOCITIES TO ZERO
-void MRIScan::assignZeroVelocities(){
+void mriScan::assignZeroVelocities(){
   for(int loopA=0;loopA<topology->totalCells;loopA++){
     cells[loopA].velocity[0] = 0.0;
     cells[loopA].velocity[1] = 0.0;
@@ -363,7 +363,7 @@ void MRIScan::assignZeroVelocities(){
 }
 
 // Assign Constant Flow With Step
-void MRIScan::assignConstantFlowWithStep(){
+void mriScan::assignConstantFlowWithStep(){
   for(int loopA=0;loopA<topology->totalCells;loopA++){
     if ((topology->cellLocations[loopA][0] > (0.5*(topology->domainSizeMin[0] + topology->domainSizeMax[0])))&&
        (topology->cellLocations[loopA][1] > (0.5*(topology->domainSizeMin[1] + topology->domainSizeMax[1])))){
@@ -383,7 +383,7 @@ void MRIScan::assignConstantFlowWithStep(){
 }
 
 // Assign Standard Gaussian Random Velocities on the Three Separated Components
-void MRIScan::assignRandomStandardGaussianFlow(){
+void mriScan::assignRandomStandardGaussianFlow(){
   for(int loopA=0;loopA<topology->totalCells;loopA++){
     // Assign Constant Velocity
     cells[loopA].concentration = 10.0;
@@ -395,10 +395,12 @@ void MRIScan::assignRandomStandardGaussianFlow(){
 
 // =====================
 // ASSIGN POISEILLE FLOW
-// =====================
-void MRIScan::assignPoiseilleSignature(MRIDirection dir){
+// ===================== 
+void mriScan::assignPoiseuilleSignature(mriDirection dir, const mriDoubleVec& auxParams){
+  double totalDistance   = auxParams[0];
+  double peakVel         = auxParams[1];
   double currentVelocity = 0.0;
-  double conc = 0.0;
+  double conc            = 0.0;
   // SET CENTER POINT
   double centerPoint[3];
   centerPoint[0] = 0.5*(topology->domainSizeMax[0] + topology->domainSizeMin[0]);
@@ -406,37 +408,25 @@ void MRIScan::assignPoiseilleSignature(MRIDirection dir){
   centerPoint[2] = 0.5*(topology->domainSizeMax[2] + topology->domainSizeMin[2]);
   for(int loopA=0;loopA<topology->totalCells;loopA++){
     double currentDistance = 0.0;
-    double totalDistance = 0.0;
     // Set to Zero
-    cells[loopA].velocity[0] = 0.0;
-    cells[loopA].velocity[1] = 0.0;
-    cells[loopA].velocity[2] = 0.0;
+    cells[loopA].velocity[0]   = 0.0;
+    cells[loopA].velocity[1]   = 0.0;
+    cells[loopA].velocity[2]   = 0.0;
     cells[loopA].concentration = 0.0;
     switch(dir){
       case kdirX:
         currentDistance = sqrt((topology->cellLocations[loopA][1] - centerPoint[1])*(topology->cellLocations[loopA][1] - centerPoint[1]) +
                                (topology->cellLocations[loopA][2] - centerPoint[2])*(topology->cellLocations[loopA][2] - centerPoint[2]));
-        //totalDistance = 0.5*min(0.5*(domainSizeMax[1]-domainSizeMin[1]),0.5*(domainSizeMax[2]-domainSizeMin[2]));
-        //totalDistance = 0.00855;
-        totalDistance = 0.01;
         break;
       case kdirY:
         currentDistance = sqrt((topology->cellLocations[loopA][0] - centerPoint[0])*(topology->cellLocations[loopA][0] - centerPoint[0]) +
                                (topology->cellLocations[loopA][2] - centerPoint[2])*(topology->cellLocations[loopA][2] - centerPoint[2]));
-        //totalDistance = 0.5*min(0.5*(domainSizeMax[0]-domainSizeMin[0]),0.5*(domainSizeMax[2]-domainSizeMin[2]));
-        //totalDistance = 0.00855;
-        totalDistance = 0.01;
         break;
       case kdirZ:
         currentDistance = sqrt((topology->cellLocations[loopA][0] - centerPoint[0])*(topology->cellLocations[loopA][0] - centerPoint[0]) +
                                (topology->cellLocations[loopA][1] - centerPoint[1])*(topology->cellLocations[loopA][1] - centerPoint[1]));
-        //totalDistance = 0.5*min(0.5*(domainSizeMax[0]-domainSizeMin[0]),0.5*(domainSizeMax[1]-domainSizeMin[1]));
-        //totalDistance = 0.00855;
-        totalDistance = 0.01;
         break;
     }
-    //double peakVel = 0.22938;
-    double peakVel = 0.4265;
     // Apply a threshold
     if(currentDistance<totalDistance){
       currentVelocity = -(peakVel/(totalDistance*totalDistance))*(currentDistance*currentDistance) + peakVel;
@@ -462,7 +452,7 @@ void MRIScan::assignPoiseilleSignature(MRIDirection dir){
 }
 
 // ASSIGN CONCENTRATIONS AND VELOCITIES
-void MRIScan::assignVelocitySignature(MRIDirection dir, MRISamples sample, double currTime){
+void mriScan::assignVelocitySignature(mriDirection dir, mriTemplateType sample, double currTime, const mriDoubleVec& auxParams){
   switch(sample){
     case kZeroVelocity:
       assignZeroVelocities();
@@ -470,8 +460,8 @@ void MRIScan::assignVelocitySignature(MRIDirection dir, MRISamples sample, doubl
     case kConstantFlow:
       assignConstantSignature(dir);
       break;    
-    case kPoiseilleFlow:
-      assignPoiseilleSignature(dir);
+    case kPoiseuilleFlow:
+      assignPoiseuilleSignature(dir,auxParams);
       break;
     case kStagnationFlow:
       assignStagnationFlowSignature(dir);
@@ -497,17 +487,31 @@ void MRIScan::assignVelocitySignature(MRIDirection dir, MRISamples sample, doubl
   }
 }
 
-// CREATE SAMPLE FLOWS
-void MRIScan::createFromTemplate(MRISamples sampleType,const MRIDoubleVec& params){
+// =====================
+// CREATE TEMPLATE FLOWS
+// =====================
+void mriScan::createFromTemplate(mriTemplateType sampleType,const mriDoubleVec& params){
 
   // Store Parameter Values
-  int sizeX = int(params[0]);
-  int sizeY = int(params[1]);
-  int sizeZ = int(params[2]);
-  double distX = params[3];
-  double distY = params[4];
-  double distZ = params[5];
+  int sizeX       = int(params[0]);
+  int sizeY       = int(params[1]);
+  int sizeZ       = int(params[2]);
+  double distX    = params[3];
+  double distY    = params[4];
+  double distZ    = params[5];
   double currTime = params[6];  
+
+  // Slice the additional parameters if any
+  mriDoubleVec::const_iterator first;
+  mriDoubleVec::const_iterator last;
+  if(params.size()>8){
+    first = params.begin() + 8;
+    last  = params.end();
+  }else{
+    first = params.end();
+    last  = params.end();    
+  }
+  mriDoubleVec auxParams(first,last);
 
   // Template Orientation
   int dir = 0;
@@ -519,24 +523,19 @@ void MRIScan::createFromTemplate(MRISamples sampleType,const MRIDoubleVec& param
   }else if(direction == 2){
     dir = kdirZ;
   }else{
-    throw MRIException("ERROR: Invalid template direction in CreateSampleCase.\n");
+    throw mriException("ERROR: Invalid template direction in CreateSampleCase.\n");
   }
-
-  printf("Eccolo 3\n");
 
   //Allocate Based on the Topology
   cells.clear();
 
-  printf("Eccolo 4\n");
-  MRICell cell;
+  mriCell cell;
   for(int loopA=0;loopA<topology->totalCells;loopA++){
     cells.push_back(cell);
   }
 
   // Assign Concentrations and Velocities
-  printf("Eccolo 1\n");
-  assignVelocitySignature(dir,sampleType,currTime);
-  printf("Eccolo 2\n");
+  assignVelocitySignature(dir,sampleType,currTime,auxParams);
 
   // Find Velocity Modulus
   maxVelModule = 0.0;
@@ -550,7 +549,7 @@ void MRIScan::createFromTemplate(MRISamples sampleType,const MRIDoubleVec& param
 }
 
 // ASSIGN TIME DEPENDENT FLOW
-void MRIScan::assignTimeDependentPoiseilleSignature(double omega, double radius, double viscosity, double currtime, double maxVel){
+void mriScan::assignTimeDependentPoiseilleSignature(double omega, double radius, double viscosity, double currtime, double maxVel){
   // Eval omegaMod
   double omegaMod = ((omega*radius*radius)/viscosity);
   double relCoordX = 0.0;

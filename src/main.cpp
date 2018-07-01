@@ -15,7 +15,7 @@ using namespace std;
 // =================================================
 // READ FILES IN VARIOUS FORMATS AND DISTRIBUTE GRID
 // =================================================
-void readAndDistribute(MRICommunicator* comm, MRIOptions* opts, MRISequence* seq){
+void readAndDistribute(mriCommunicator* comm, mriOptions* opts, mriSequence* seq){
 
   // CHOOSE INPUT FORMAT
   if(opts->inputFormatType == itTEMPLATE){
@@ -53,7 +53,7 @@ void readAndDistribute(MRICommunicator* comm, MRIOptions* opts, MRISequence* seq
 // ============
 // WRITE OUTPUT
 // ============
-void writeOutput(MRICommunicator* comm, MRIOptions* opts, MRISequence* seq){  
+void writeOutput(mriCommunicator* comm, mriOptions* opts, mriSequence* seq){  
 
   // EXPORT FILE FROM ALL PROECESSORS IN ORDER
   if(comm->currProc == 0){
@@ -64,7 +64,7 @@ void writeOutput(MRICommunicator* comm, MRIOptions* opts, MRISequence* seq){
       // READ FROM FILE
       seq->exportToTECPLOT(opts->outputFileName);
     }else{
-      throw MRIException("ERROR: Invalid output file format.\n");
+      throw mriException("ERROR: Invalid output file format.\n");
     }
   }
 }
@@ -72,20 +72,20 @@ void writeOutput(MRICommunicator* comm, MRIOptions* opts, MRISequence* seq){
 // ===============================
 // RUN APPLICATION IN NORMAL MODE
 // ===============================
-void runApplication(MRIOptions* opts, MRICommunicator* comm){
+void runApplication(mriOptions* opts, mriCommunicator* comm){
 
   // CREATE NEW SEQUENCE
-  MRISequence* seq;
+  mriSequence* seq;
 
   // INIT SEQUENCE
-  seq = new MRISequence(true/*Cyclic Sequence*/);
+  seq = new mriSequence(true/*Cyclic Sequence*/);
 
   // READ AND DISTRIBUTED MEASUREMENT GRID
   readAndDistribute(comm,opts,seq);
 
   // SYNC PROCESSES
   int mpiError = MPI_Barrier(comm->mpiComm);
-  MRIUtils::checkMpiError(mpiError);
+  mriUtils::checkMpiError(mpiError);
 
   // PERFOM OPERATIONS ACCORDING TO LIST
   for(int loopA=0;loopA<opts->operationList.size();loopA++){
@@ -104,8 +104,8 @@ void runApplication(MRIOptions* opts, MRICommunicator* comm){
 // ============
 int main(int argc, char **argv){
 
-  // Init MRI Communicator
-  MRICommunicator* comm = new MRICommunicator();
+  // Init mri Communicator
+  mriCommunicator* comm = new mriCommunicator();
 
   // Initialize MPI
   MPI::Init();
@@ -116,36 +116,61 @@ int main(int argc, char **argv){
 
   //  Declare
   int val = 0;
-  MRIOptions* options;
+  mriOptions* options;
 
   // WRITE PROGRAM HEADER - ONLY MASTER NODE
   if(comm->currProc == 0){
     writeHeader();
 
     // Create Options
-    options = new MRIOptions();
+    options = new mriOptions();
 
-    // Read Options from Command Line
-    int res = options->getCommadLineOptions(argc,argv);
-    if(res != 0){
-      return -1;
-    }
-
-    // Read options from command file if required
-    if(options->useCommandFile){
-      int res = options->getOptionsFromCommandFile(options->commandFileName);
+    try{
+      // Read Options from Command Line
+      int res = options->getCommadLineOptions(argc,argv);
       if(res != 0){
         return -1;
       }
+    }catch (exception& ex){
+      if(comm->currProc == 0){
+        writeSchMessage(std::string("ERROR: Reading Command Line Options.\n"));
+        writeSchMessage(std::string(ex.what()));        
+        writeSchMessage(std::string("\n"));
+        writeSchMessage(std::string("Program Terminated.\n"));
+      }
+      // Finalize MPI
+      delete options;
+      MPI::Finalize();
+      return -1;
     }
 
+    try{
+      // Read options from command file if required
+      if(options->useCommandFile){
+        int res = options->getOptionsFromCommandFile(options->commandFileName);
+        if(res != 0){
+          return -1;
+        }
+      }
+    }catch (exception& ex){
+      if(comm->currProc == 0){
+        writeSchMessage(std::string("ERROR: Reading Command File.\n"));
+        writeSchMessage(std::string(ex.what()));        
+        writeSchMessage(std::string("\n"));
+        writeSchMessage(std::string("Program Terminated.\n"));
+      }
+      // Finalize MPI
+      delete options;
+      MPI::Finalize();
+      return -1;
+    }
   }else{
-    options = new MRIOptions();
+    options = new mriOptions();
   }
 
   // Wait for all processes
   int mpiError = MPI_Barrier(comm->mpiComm);
-  MRIUtils::checkMpiError(mpiError);
+  mriUtils::checkMpiError(mpiError);
 
   // Distribute Options using MPI
   if(comm->totProc > 1){
@@ -169,7 +194,7 @@ int main(int argc, char **argv){
       case rmHELP:
         if(comm->currProc == 0){
           // Write Program Help
-          MRIUtils::writeProgramHelp();
+          mriUtils::writeProgramHelp();
         }
         break;
       // PREFERRED RUNNING MODE
