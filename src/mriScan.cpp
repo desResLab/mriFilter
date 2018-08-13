@@ -1538,6 +1538,51 @@ void mriScan::exportForPoisson(string inputFileName,double density,double viscos
     }
   }
 
+  // Check if no fluid element is exported
+  if(elCount == 0){
+
+    // SAVE NODE COORDS ONLY FOR NODES NUMBERED IN USEDNODEMAP
+    if(topology->totalCells > 0){
+      double pos[3];
+      for(int loopA=0;loopA<totAuxNodes;loopA++){
+        pos[0] = topology->auxNodesCoords[loopA][0];
+        pos[1] = topology->auxNodesCoords[loopA][1];
+        pos[2] = topology->auxNodesCoords[loopA][2];
+        fprintf(outFile,"NODE %d %19.12e %19.12e %19.12e\n",loopA+1,pos[0],pos[1],pos[2]);
+      }
+
+      // ========================
+      // SAVE ELEMENT CONNECTIONS
+      // ========================
+      elCount = 0;
+      for(int loopA=0;loopA<topology->totalCells;loopA++){
+        fprintf(outFile,"ELEMENT HEXA8 %d 1 ",elCount+1);
+        elCount++;
+        for(int loopB=0;loopB<topology->cellConnections[loopA].size();loopB++){
+          fprintf(outFile,"%d ",topology->cellConnections[loopA][loopB] + 1);
+        }
+        fprintf(outFile,"\n");
+      }
+    }
+
+    // ========================
+    // SAVE ELEMENT DIFFUSIVITY
+    // ========================
+    elCount = 0;
+    for(int loopA=0;loopA<topology->totalCells;loopA++){
+      fprintf(outFile,"ELDIFF %d ",elCount+1);
+      fprintf(outFile,"%e ",1.0);
+      fprintf(outFile,"%e ",1.0);
+      fprintf(outFile,"%e ",1.0);
+      fprintf(outFile,"\n");
+      elCount++;
+    }  
+
+    // Return mesh with no source or Neumann boundary conditions
+    return;    
+
+  }
+
   // ==================
   // SAVE MESH TOPOLOGY
   // ==================
