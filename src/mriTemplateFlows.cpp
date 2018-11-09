@@ -154,8 +154,6 @@ void mriScan::assignSphericalFlowSignature(mriDirection dir){
     currentX = topology->cellLocations[loopA][0] - centrePoint[0];
     currentY = topology->cellLocations[loopA][1] - centrePoint[1];
     currentZ = topology->cellLocations[loopA][2] - centrePoint[2];
-    // Set a Zero Concentration
-    cells[loopA].concentration = 0.0;
     switch(dir){
       case kdirX:
         // Set Local Coordinates
@@ -210,10 +208,16 @@ void mriScan::assignSphericalFlowSignature(mriDirection dir){
     radialComponentOut = (3.0/2.0)*CONST_U0*((localR*localZ)/(CONST_A*CONST_A))*pow(((CONST_A*CONST_A)/(localR*localR+localZ*localZ)),2.5);
     // Set The Vector Components
     if (localR*localR+localZ*localZ<=CONST_A*CONST_A){
+      // Set a Zero Concentration
+      cells[loopA].concentration = 1.0;
+      // Set Velocities      
       cells[loopA].velocity[0] = axialComponentIn * axialVec[0] + radialComponentIn * radialVec[0];
       cells[loopA].velocity[1] = axialComponentIn * axialVec[1] + radialComponentIn * radialVec[1];
       cells[loopA].velocity[2] = axialComponentIn * axialVec[2] + radialComponentIn * radialVec[2];
     }else{
+      // Set a Zero Concentration
+      cells[loopA].concentration = 0.0;
+      // Set Velocities
       cells[loopA].velocity[0] = 0.0;
       cells[loopA].velocity[1] = 0.0;
       cells[loopA].velocity[2] = 0.0;
