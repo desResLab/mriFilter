@@ -253,7 +253,7 @@ class mriScan{
     void assignConstantSignature(mriDirection dir);
     void assignStagnationFlowSignature(mriDirection dir);
     void assignPoiseuilleSignature(mriDirection dir, const mriDoubleVec& auxParams);
-    void assignCylindricalFlowSignature(mriDirection dir);
+    void assignCylindricalFlowSignature(mriDirection dir, const mriDoubleVec& auxParams);
     void assignSphericalFlowSignature(mriDirection dir);
     void assignToroidalVortexFlowSignature();
     void assignTimeDependentPoiseilleSignature(double omega, double radius, double viscosity, double currtime, double maxVel);

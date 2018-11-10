@@ -64,17 +64,17 @@ void evalTangentDirection(mriDirection dir, const mriDoubleVec& radialVector, mr
 }
 
 // ASSIGN CYLINDRICAL VORTEX FLOW 
-void mriScan::assignCylindricalFlowSignature(mriDirection dir){
+void mriScan::assignCylindricalFlowSignature(mriDirection dir, const mriDoubleVec& auxParams){
   // Set Parameters
   // Get Min Dimension
   double minDist = min((topology->domainSizeMax[0]-topology->domainSizeMin[0]),
                    min((topology->domainSizeMax[1]-topology->domainSizeMin[1]),
                        (topology->domainSizeMax[2]-topology->domainSizeMin[2])));
   // Set the Minimum and Maximum Radius
-  const double minRadius = minDist * 0.1;
-  const double maxRadius = minDist * 0.4;
-  const double velMod = 10.0;
-  // Init Coords
+  const double minRadius = auxParams[0];
+  const double maxRadius = auxParams[1];
+  const double velMod = auxParams[2];
+ // Init Coords
   double currRadius = 0.0;
   mriDoubleVec radialVector(3,0.0);
   mriDoubleVec tangVector(3,0.0);
@@ -283,6 +283,7 @@ void mriScan::assignToroidalVortexFlowSignature(){
     inclVector[1] = currentY - radialVec[1];
     inclVector[2] = currentZ - radialVec[2];
     radius = mriUtils::do3DEucNorm(inclVector);
+void mriScan::assignCylindricalFlowSignature(mriDirection dir){
     mriUtils::normalize3DVector(inclVector);
     
     // Eval Vel Vector
@@ -471,7 +472,7 @@ void mriScan::assignVelocitySignature(mriDirection dir, mriTemplateType sample, 
       assignStagnationFlowSignature(dir);
       break;
     case kCylindricalVortex:
-      assignCylindricalFlowSignature(dir);
+      assignCylindricalFlowSignature(dir,auxParams);
       break;    
     case kSphericalVortex:
       assignSphericalFlowSignature(dir);
