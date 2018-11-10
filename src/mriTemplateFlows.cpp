@@ -123,13 +123,13 @@ void mriScan::assignCylindricalFlowSignature(mriDirection dir, const mriDoubleVe
 }
 
 // ASSIGN SPHERICAL HILL VORTEX FLOW 
-void mriScan::assignSphericalFlowSignature(mriDirection dir){
+void mriScan::assignSphericalFlowSignature(mriDirection dir, const mriDoubleVec& auxParams){
   // Set Parameters
   double minDist = min(topology->domainSizeMax[0]-topology->domainSizeMin[0],
                    min(topology->domainSizeMax[1]-topology->domainSizeMin[1],
                        topology->domainSizeMax[2]-topology->domainSizeMin[2]));
-  const double CONST_U0 = 0.1;
-  const double CONST_A = minDist * 0.4;
+  const double CONST_U0 = auxParams[0];
+  const double CONST_A = auxParams[1];
   // Init Local Coords
   double currentX = 0.0;
   double currentY = 0.0;
@@ -229,10 +229,10 @@ void mriScan::assignSphericalFlowSignature(mriDirection dir){
 }
 
 // ASSIGN SPHERICAL VORTEX FLOW 
-void mriScan::assignToroidalVortexFlowSignature(){
+void mriScan::assignToroidalVortexFlowSignature(const mriDoubleVec& auxParams){
   // Set Parameters
-  const double CONST_A = 5.0;
-  const double CONST_L = 1.3*1.3;
+  const double CONST_A = auxParams[0];
+  const double CONST_L = auxParams[1];
   // Init Local Coords
   double currentX = 0.0;
   double currentY = 0.0;
@@ -283,7 +283,6 @@ void mriScan::assignToroidalVortexFlowSignature(){
     inclVector[1] = currentY - radialVec[1];
     inclVector[2] = currentZ - radialVec[2];
     radius = mriUtils::do3DEucNorm(inclVector);
-void mriScan::assignCylindricalFlowSignature(mriDirection dir){
     mriUtils::normalize3DVector(inclVector);
     
     // Eval Vel Vector
@@ -475,10 +474,10 @@ void mriScan::assignVelocitySignature(mriDirection dir, mriTemplateType sample, 
       assignCylindricalFlowSignature(dir,auxParams);
       break;    
     case kSphericalVortex:
-      assignSphericalFlowSignature(dir);
+      assignSphericalFlowSignature(dir,auxParams);
       break;   
     case kToroidalVortex:
-      assignToroidalVortexFlowSignature();
+      assignToroidalVortexFlowSignature(auxParams);
       break;  
     case kTransientFlow:
       assignTimeDependentPoiseilleSignature(2*3.1415,8.0,1.0e-3,currTime,1.0);

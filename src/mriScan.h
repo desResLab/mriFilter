@@ -254,8 +254,8 @@ class mriScan{
     void assignStagnationFlowSignature(mriDirection dir);
     void assignPoiseuilleSignature(mriDirection dir, const mriDoubleVec& auxParams);
     void assignCylindricalFlowSignature(mriDirection dir, const mriDoubleVec& auxParams);
-    void assignSphericalFlowSignature(mriDirection dir);
-    void assignToroidalVortexFlowSignature();
+    void assignSphericalFlowSignature(mriDirection dir,const mriDoubleVec& auxParams);
+    void assignToroidalVortexFlowSignature(const mriDoubleVec& auxParams);
     void assignTimeDependentPoiseilleSignature(double omega, double radius, double viscosity, double currtime, double maxVel);
     void assignConstantFlowWithStep();
     void assignTaylorVortexSignature(mriDirection dir);
