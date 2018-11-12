@@ -125,9 +125,22 @@ The auxiliary parameters for the various templates are:
    - Peak velocity.
 
 4. **STAGNATION**, no additional parameters.
-5. **CYLINDRICALVOLTEX**, no additional parameters. 
-6. **SPHERICALVORTEX**, no additional parameters. 
-7. **TOROIDALVORTEX**, no additional parameters. 
+5. **CYLINDRICALVOLTEX**
+
+   - Minimum radius.
+   - Maximum radius.
+   - Velocity modulus.
+ 
+6. **SPHERICALVORTEX**
+
+   - Characteristic velocity.
+   - Radius of the sphere.
+
+7. **TOROIDALVORTEX**
+
+   - Radius of the toroid centerline.
+   - Constant to determine the velocity.
+   
 8. **TRANSIENT**, no additional parameters. 
 9. **CONSTANTWITHSTEP**, no additional parameters. 
 10. **ROTATINGVORTEX**, no additional parameters.
