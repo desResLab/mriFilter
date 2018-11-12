@@ -90,7 +90,7 @@ Using the TEMPLATETYPE token it is possible to create a pre-defined flow configu
 2. **CONSTANT**, a constant flow along one of the coordinate axis, x,y or z. 
 3. **POISEUILLE**, a parabolic velocity profile in a cilinder.
 4. **STAGNATION**, stagnation point flow. 
-5. **CYLINDRICALVOLTEX**. 
+5. **CYLINDRICALVORTEX**. 
 6. **SPHERICALVORTEX**. 
 7. **TOROIDALVORTEX**. 
 8. **TRANSIENT**. 
@@ -125,7 +125,7 @@ The auxiliary parameters for the various templates are:
    - Peak velocity.
 
 4. **STAGNATION**, no additional parameters.
-5. **CYLINDRICALVOLTEX**
+5. **CYLINDRICALVORTEX**
 
    - Minimum radius.
    - Maximum radius.

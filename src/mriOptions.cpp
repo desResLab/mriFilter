@@ -495,7 +495,7 @@ int mriOptions::getOptionsFromCommandFile(string commandFile){
         templateType = kPoiseuilleFlow;
       }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("STAGNATION")){
         templateType = kStagnationFlow;
-      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("CYLINDRICALVOLTEX")){
+      }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("CYLINDRICALVORTEX")){
         templateType = kCylindricalVortex;
       }else if(boost::to_upper_copy(tokenizedString.at(1)) == string("SPHERICALVORTEX")){
         templateType = kSphericalVortex;
