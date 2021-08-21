@@ -676,7 +676,7 @@ void mriOptions::DistributeProgramOptions(mriCommunicator* comm){
   boolParams[9] =  evalSMPVortexCriterion;
   boolParams[10] =  evalPressure;
   boolParams[11] =  exportToPoisson;
-  mpiError = MPI_Bcast(boolParams,size,MPI::BOOL,0,comm->mpiComm);
+  mpiError = MPI_Bcast(boolParams,size,MPI_BOOL,0,comm->mpiComm);
   mriUtils::checkMpiError(mpiError);
   if(comm->currProc > 0){
     generateCommandFile = boolParams[0];

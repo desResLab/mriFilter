@@ -2283,6 +2283,7 @@ int mriScan::getOppositeCell(int cell, double* normal){
       }
     }
   }
+  return -1;
 }
 
 // =====================================
@@ -2307,6 +2308,9 @@ void mriScan::cleanNormalComponentOnBoundary(mriThresholdCriteria* threshold){
         projectCellVelocity(currCell,currFaceNormal);
         // Get Opposite Cells
         otherCell = getOppositeCell(currCell,currFaceNormal);
+        if(otherCell == -1){
+          throw mriException("Error in getOppositeCell. Return negative number.\n");
+        }
         // Project Velocity of Current Cell
         projectCellVelocity(otherCell,currFaceNormal);
       }

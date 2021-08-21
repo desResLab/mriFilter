@@ -81,7 +81,7 @@ void runApplication(mriOptions* opts, mriCommunicator* comm){
   seq = new mriSequence(true/*Cyclic Sequence*/);
 
   // READ AND DISTRIBUTED MEASUREMENT GRID
-  readAndDistribute(comm,opts,seq);
+  readAndDistribute(comm,opts,seq);  
 
   // SYNC PROCESSES
   int mpiError = MPI_Barrier(comm->mpiComm);
@@ -108,7 +108,7 @@ int main(int argc, char **argv){
   mriCommunicator* comm = new mriCommunicator();
 
   // Initialize MPI
-  MPI::Init();
+  MPI_Init(NULL,NULL);
   int rank; int nproc;
   comm->mpiComm = MPI_COMM_WORLD;
   MPI_Comm_rank(comm->mpiComm, &comm->currProc);
@@ -140,7 +140,7 @@ int main(int argc, char **argv){
       }
       // Finalize MPI
       delete options;
-      MPI::Finalize();
+      MPI_Finalize();
       return -1;
     }
 
@@ -161,7 +161,7 @@ int main(int argc, char **argv){
       }
       // Finalize MPI
       delete options;
-      MPI::Finalize();
+      MPI_Finalize();
       return -1;
     }
   }else{
@@ -218,7 +218,7 @@ int main(int argc, char **argv){
     }
     // Finalize MPI
     delete options;
-    MPI::Finalize();
+    MPI_Finalize();
     return -1;
   }
   if(comm->currProc == 0){
@@ -228,7 +228,7 @@ int main(int argc, char **argv){
   // Finalize MPI
   //delete comm;
   delete options;
-  MPI::Finalize();
+  MPI_Finalize();
   return 0;
 }
 
