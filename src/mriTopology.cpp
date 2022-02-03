@@ -1346,7 +1346,7 @@ void mriTopology::createFromTemplate(mriTemplateType sampleType,const mriDoubleV
   // Allocate CellLocations
   cellLocations.resize(totalCells);
   for(int loopA=0;loopA<totalCells;loopA++){
-    cellLocations[loopA].resize(totalCells);
+    cellLocations[loopA].resize(3);
   }
 
   // Assign Coordinates
@@ -1356,4 +1356,5 @@ void mriTopology::createFromTemplate(mriTemplateType sampleType,const mriDoubleV
     cellLocations[loopA][1] = currentCoords[1] * distY;
     cellLocations[loopA][2] = currentCoords[2] * distZ;
   }
+
 }

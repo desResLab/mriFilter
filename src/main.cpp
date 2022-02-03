@@ -47,7 +47,7 @@ void readAndDistribute(mriCommunicator* comm, mriOptions* opts, mriSequence* seq
   }
   
   // Compute the topology for all sequences
-  seq->createTopology();
+  seq->createTopology();  
 }
 
 // ============

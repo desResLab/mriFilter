@@ -5,6 +5,7 @@ using namespace std;
 // Handle the possibiliy of writing messages to some Error Log or to Native Client Instances
 void writeSchMessage(std::string Msg){
   printf("%s",Msg.c_str());
+  fflush(stdout);
 }
 
 void writeHeader(){
